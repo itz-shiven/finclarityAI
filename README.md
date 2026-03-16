@@ -1,0 +1,2 @@
+# finclarityAI
+GenAI Hackathon,ET
