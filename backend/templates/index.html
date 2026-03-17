@@ -10,8 +10,8 @@
 
     <title>FinClarity</title>
 
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/responsive.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
     <link rel="stylesheet" href="https://unpkg.com/simplebar@latest/dist/simplebar.css">
 
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
@@ -41,7 +41,7 @@
 
                     <!-- <button class="primary-btn">Get Started</button> -->
 
-                    <button class="secondary-btn" onclick="window.location.href='login.html'">
+                    <button class="secondary-btn" onclick="window.location.href='{{ url_for('login_page') }}'">
                         Get Started
                     </button>
                 </div>
@@ -55,7 +55,7 @@
         <section class="hero">
 
             <video autoplay muted loop playsinline class="hero-video">
-                <source src="assets/sssss.mp4" type="video/mp4">
+                <source src="{{ url_for('static', filename='images/sssss.mp4') }}" type="video/mp4">
             </video>
 
             <div class="container hero-grid">
@@ -84,6 +84,49 @@
             </div>
 
         </section>
+
+        <!-- <section class="scroll-line-section">
+
+            <svg viewBox="0 0 1622 845" xmlns="http://www.w3.org/2000/svg">
+
+                <defs>
+
+                    <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+
+                        <stop offset="0%" stop-color="#2E2A27" />
+                        <stop offset="30%" stop-color="#2E2A27" />
+
+                        <stop offset="50%" stop-color="#4f4741" />
+                        <stop offset="70%" stop-color="#8b7f75" />
+                        <stop offset="90%" stop-color="#cfc7c1" />
+                        <stop offset="100%" stop-color="#ffffff" />
+
+                    </linearGradient>
+
+                </defs>
+
+                <path id="line" d="
+M-200 40
+C-120 120 -40 180 7.91455 85.3282
+C120 260 220 320 340 300
+C460 280 520 200 500 120
+C480 40 400 -10 320 10
+C240 30 200 100 190 170
+C170 320 220 420 320 450
+C420 480 460 540 440 610
+C410 720 500 780 600 740
+C700 700 760 620 820 600
+C880 580 940 620 960 680
+C980 740 920 780 860 760
+C800 740 900 520 1050 520
+C1200 520 1220 860 1290 830
+C1380 780 1480 580 1700 675.329
+" stroke="url(#lineGradient)" stroke-width="16" fill="none" stroke-linecap="round" stroke-linejoin="round"
+                    transform="translate(-10,0)" />
+
+            </svg>
+
+        </section> -->
 
 
 
@@ -202,9 +245,31 @@
             </div>
 
         </div>
-        <script src="js/chatbot.js" defer></script>
+        <script src="{{ url_for('static', filename='js/chatbot.js') }}"></script>
         <script src="https://unpkg.com/simplebar@latest/dist/simplebar.min.js"></script>
     </div>
+    <script>
+
+        const path = document.getElementById("line");
+        const pathLength = path.getTotalLength();
+
+        path.style.strokeDasharray = pathLength;
+        path.style.strokeDashoffset = pathLength;
+
+        window.addEventListener("scroll", () => {
+
+            const scrollTop = window.scrollY;
+            const docHeight = document.body.scrollHeight - window.innerHeight;
+
+            const scrollPercent = scrollTop / docHeight;
+
+            const draw = pathLength * scrollPercent;
+
+            path.style.strokeDashoffset = pathLength - draw;
+
+        });
+
+    </script>
 </body>
 
 </html>
