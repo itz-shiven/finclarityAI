@@ -1,0 +1,40 @@
+/* LOGIN RESPONSIVE */
+@media (max-width: 900px) {
+
+  .login-container {
+    flex-direction: column;
+  }
+
+  .login-left {
+    padding: 50px 30px;
+    align-items: center;
+    text-align: center;
+  }
+
+  .login-left form {
+    align-items: center;
+  }
+
+  .login-left input {
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .login-right {
+    padding: 40px 0;
+  }
+
+}
+
+/* SMALL PHONES */
+@media (max-width: 480px) {
+
+  .login-left h2 {
+    font-size: 24px;
+  }
+
+  .login-left input {
+    max-width: 280px;
+  }
+
+}
