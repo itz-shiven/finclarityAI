@@ -75,7 +75,8 @@ def signup():
 
         auth_data = auth_res.json()
 
-        if auth_res.status_code == 200 and auth_data.get("id"):
+        user_id = auth_data.get("id") or auth_data.get("user", {}).get("id")
+        if auth_res.status_code == 200 and user_id:
             return jsonify({"status": "success"})
 
         # Supabase returns 422 when the user already exists
