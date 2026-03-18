@@ -132,8 +132,8 @@ if(data.status === "success"){
 
 alert("Login successful");
 
-/* redirect to homepage */
-window.location.href="/";
+/* redirect to dashboard */
+window.location.href = data.redirect || "/dashboard";
 
 }else{
 
