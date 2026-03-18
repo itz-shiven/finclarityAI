@@ -2,7 +2,6 @@ import os
 import requests
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
-from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv   # ✅ ADD THIS
 
 load_dotenv()  # ✅ ADD THIS (loads .env)
@@ -63,38 +62,33 @@ def signup():
         if not name or not email or not password:
             return jsonify({"status": "error", "message": "Missing required fields"})
 
-        # check if user exists
-        check_res = requests.get(
-            f"{SUPABASE_URL}/rest/v1/users",
-            headers=HEADERS,
-            params={"email": f"eq.{email}"}
-        )
-
-        if check_res.status_code != 200:
-            return jsonify({"status": "error", "message": "Database error"})
-
-        if check_res.json():
-            return jsonify({"status": "exists"})
-
-        hashed_password = generate_password_hash(password)
-
-        insert_res = requests.post(
-            f"{SUPABASE_URL}/rest/v1/users",
+        # Use Supabase Auth API to register the user
+        auth_res = requests.post(
+            f"{SUPABASE_URL}/auth/v1/signup",
             headers=HEADERS,
             json={
-                "name": name,
                 "email": email,
-                "password": hashed_password
+                "password": password,
+                "data": {"name": name}
             }
         )
 
-        if insert_res.status_code in [200, 201]:
+        auth_data = auth_res.json()
+
+        if auth_res.status_code == 200 and auth_data.get("id"):
             return jsonify({"status": "success"})
-        else:
-            return jsonify({
-                "status": "error",
-                "message": insert_res.text
-            })
+
+        # Supabase returns 422 when the user already exists
+        if auth_res.status_code == 422:
+            return jsonify({"status": "exists"})
+
+        error_msg = (
+            auth_data.get("msg")
+            or auth_data.get("error_description")
+            or auth_data.get("message")
+            or auth_res.text
+        )
+        return jsonify({"status": "error", "message": error_msg})
 
     except Exception as e:
         print("Signup Error:", str(e))
@@ -114,23 +108,19 @@ def login():
         if not email or not password:
             return jsonify({"status": "error", "message": "Missing email or password"})
 
-        response = requests.get(
-            f"{SUPABASE_URL}/rest/v1/users",
+        # Use Supabase Auth API to authenticate
+        auth_res = requests.post(
+            f"{SUPABASE_URL}/auth/v1/token?grant_type=password",
             headers=HEADERS,
-            params={"email": f"eq.{email}"}
+            json={
+                "email": email,
+                "password": password
+            }
         )
 
-        if response.status_code != 200:
-            return jsonify({"status": "error", "message": "Database error"})
+        auth_data = auth_res.json()
 
-        users = response.json()
-
-        if not users:
-            return jsonify({"status": "fail", "message": "User not found"})
-
-        user = users[0]
-
-        if check_password_hash(user["password"], password):
+        if auth_res.status_code == 200 and auth_data.get("access_token"):
             return jsonify({"status": "success", "redirect": "/dashboard"})
         else:
             return jsonify({"status": "fail", "message": "Invalid credentials"})
