@@ -8,7 +8,6 @@ from dotenv import load_dotenv   # ✅ ADD THIS
 load_dotenv()  # ✅ ADD THIS (loads .env)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
 app = Flask(
     __name__,
     template_folder=os.path.join(BASE_DIR, "templates"),
@@ -22,8 +21,6 @@ CORS(app)
 # -------------------------
 SUPABASE_URL = os.getenv("SUPABASE_URL")   # ✅ removed fallback
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")   # ✅ removed hardcoded key
-
-# ⚠️ safety check (VERY IMPORTANT)
 if not SUPABASE_URL or not SUPABASE_KEY:
     raise ValueError("Missing SUPABASE credentials. Check your .env file.")
 
@@ -56,6 +53,9 @@ def signup():
     try:
         data = request.get_json()
 
+        if not data:
+            return jsonify({"status": "error", "message": "No data received"})
+
         name = data.get("name")
         email = data.get("email")
         password = data.get("password")
@@ -63,21 +63,36 @@ def signup():
         if not name or not email or not password:
             return jsonify({"status": "error", "message": "Missing required fields"})
 
-        # check if user exists
+        # -------------------------
+        # CHECK IF USER EXISTS
+        # -------------------------
         check_res = requests.get(
             f"{SUPABASE_URL}/rest/v1/users",
             headers=HEADERS,
             params={"email": f"eq.{email}"}
         )
 
+        print("CHECK STATUS:", check_res.status_code)
+        print("CHECK RESPONSE:", check_res.text)
+
         if check_res.status_code != 200:
-            return jsonify({"status": "error", "message": "Database error"})
+            return jsonify({
+                "status": "error",
+                "message": "Database fetch error",
+                "details": check_res.text
+            })
 
         if check_res.json():
             return jsonify({"status": "exists"})
 
+        # -------------------------
+        # HASH PASSWORD
+        # -------------------------
         hashed_password = generate_password_hash(password)
 
+        # -------------------------
+        # INSERT USER
+        # -------------------------
         insert_res = requests.post(
             f"{SUPABASE_URL}/rest/v1/users",
             headers=HEADERS,
@@ -88,18 +103,24 @@ def signup():
             }
         )
 
+        print("INSERT STATUS:", insert_res.status_code)
+        print("INSERT RESPONSE:", insert_res.text)
+
         if insert_res.status_code in [200, 201]:
             return jsonify({"status": "success"})
-        else:
-            return jsonify({
-                "status": "error",
-                "message": insert_res.text
-            })
+
+        return jsonify({
+            "status": "error",
+            "message": "Insert failed",
+            "details": insert_res.text
+        })
 
     except Exception as e:
-        print("Signup Error:", str(e))
-        return jsonify({"status": "error", "message": str(e)})
-
+        print("Signup Exception:", str(e))
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        })
 # -------------------------
 # LOGIN API
 # -------------------------
