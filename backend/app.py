@@ -75,21 +75,35 @@ def signup():
 
         auth_data = auth_res.json()
 
-        user_id = auth_data.get("id") or auth_data.get("user", {}).get("id")
-        if auth_res.status_code == 200 and user_id:
-            return jsonify({"status": "success"})
+        if auth_res.status_code == 200:
+            user_obj = auth_data.get("user") or {}
+            user_id = auth_data.get("id") or user_obj.get("id")
+            identities = auth_data.get("identities") or user_obj.get("identities")
 
-        # Supabase returns 422 when the user already exists
-        if auth_res.status_code == 422:
-            return jsonify({"status": "exists"})
+            if user_id:
+                # Empty identities means email is already registered (email confirmation enabled)
+                if isinstance(identities, list) and len(identities) == 0:
+                    return jsonify({"status": "exists"})
+                return jsonify({"status": "success"})
 
+        # Check the error body to distinguish "user already exists" from other failures.
+        # Supabase may use status 400, 422, or 409 depending on project settings.
         error_msg = (
             auth_data.get("msg")
             or auth_data.get("error_description")
             or auth_data.get("message")
-            or auth_res.text
+            or ""
         )
-        return jsonify({"status": "error", "message": error_msg})
+        error_code = auth_data.get("error_code") or ""
+
+        if (
+            "already registered" in error_msg.lower()
+            or "already exists" in error_msg.lower()
+            or error_code == "user_already_exists"
+        ):
+            return jsonify({"status": "exists"})
+
+        return jsonify({"status": "error", "message": error_msg or auth_res.text})
 
     except Exception as e:
         print("Signup Error:", str(e))
