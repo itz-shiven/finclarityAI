@@ -60,12 +60,13 @@ def login_page():
 
 @app.route("/dashboard")
 def dashboard():
-    if 'user_id' not in session:
+    if 'user_id' not in session and 'is_guest' not in session:
         return redirect(url_for('login_page'))
 
+    username = session.get("user_name", "User")
     return render_template(
         "dashboard.html",
-        username=session.get("user_name", "User")
+        username=username
     )
 
 # -------------------------
@@ -173,6 +174,7 @@ def login():
 # GOOGLE LOGIN API
 # -------------------------
 
+
 @app.route("/api/google-login", methods=["POST"])
 def google_login():
     try:
@@ -235,6 +237,7 @@ def google_login():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
 
+
 @app.route("/api/user", methods=["GET"])
 def get_user():
     if 'user_id' in session:
@@ -243,11 +246,40 @@ def get_user():
             "user": {
                 "id": session.get('user_id'),
                 "name": session.get('user_name'),
-                "email": session.get('user_email')
+                "email": session.get('user_email'),
+                "isGuest": False
+            }
+        })
+    elif 'is_guest' in session:
+        return jsonify({
+            "status": "success",
+            "user": {
+                "id": None,
+                "name": "Guest",
+                "email": None,
+                "isGuest": True
             }
         })
 
     return jsonify({"status": "error", "message": "Not logged in"}), 401
+
+# -------------------------
+# GUEST LOGIN API
+# -------------------------
+
+
+@app.route("/api/guest-login", methods=["POST"])
+def guest_login():
+    try:
+        session['is_guest'] = True
+        session['user_name'] = 'Guest'
+
+        return jsonify({
+            "status": "success",
+            "redirect": "/dashboard"
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
 
 # -------------------------
 # LOGOUT API
@@ -267,6 +299,10 @@ def logout():
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
+        # Check if user is logged in (not guest)
+        if 'is_guest' in session or 'user_id' not in session:
+            return jsonify({"status": "error", "message": "Please login to use the chatbot"}), 401
+
         data = request.get_json()
         message = data.get("message")
 

@@ -125,20 +125,20 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             try {
-                await window.supabase.auth.signInWithOAuth({
+                const { data, error } = await window.supabase.auth.signInWithOAuth({
                     provider: "google",
                     options: {
-                        redirectTo: window.location.origin + "/dashboard"
+                        redirectTo: window.location.origin
                     }
                 });
 
                 if (error) {
-                    console.error(error);
+                    console.error("OAuth error:", error);
                     alert("Google login failed");
                 }
 
             } catch (err) {
-                console.error("OAuth error:", err);
+                console.error("OAuth crash:", err);
             }
         });
     });
@@ -147,30 +147,37 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 /* -------------------------
-HANDLE GOOGLE CALLBACK
+HANDLE GOOGLE CALLBACK (FINAL FIX)
 --------------------------*/
 
 window.addEventListener("load", async () => {
 
     if (!window.supabase) return;
 
-    if (!window.location.hash.includes("access_token")) return;
+    const { data: { session }, error } = await window.supabase.auth.getSession();
 
-    const { data: { user } } = await window.supabase.auth.getUser();
+    if (session && session.user) {
 
-    if (user) {
+        const user = session.user;
 
-        await fetch("/api/google-login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                name: user.user_metadata.full_name,
-                email: user.email
-            })
-        });
+        console.log("User logged in:", user);
+
+        try {
+            await fetch("/api/google-login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: user.user_metadata?.full_name || "User",
+                    email: user.email
+                })
+            });
+        } catch (err) {
+            console.error("Backend sync error:", err);
+        }
 
         window.location.href = "/dashboard";
     }
+
 });
 
 
@@ -181,17 +188,32 @@ GUEST
 const guestLink = document.getElementById("guestLink");
 
 if (guestLink) {
-    guestLink.addEventListener("click", function (e) {
+    guestLink.addEventListener("click", async function (e) {
 
         e.preventDefault();
 
-        localStorage.setItem("currentUser", JSON.stringify({
-            id: null,
-            name: "Guest",
-            email: null,
-            isGuest: true
-        }));
+        try {
+            const res = await fetch("/api/guest-login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" }
+            });
 
-        window.location.href = "/dashboard";
+            const data = await res.json();
+
+            if (data.status === "success") {
+                localStorage.setItem("currentUser", JSON.stringify({
+                    id: null,
+                    name: "Guest",
+                    email: null,
+                    isGuest: true
+                }));
+                window.location.href = data.redirect || "/dashboard";
+            } else {
+                alert("Failed to continue as guest");
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Server error");
+        }
     });
 }

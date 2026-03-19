@@ -10,208 +10,167 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- Flask Static CSS -->
+    <!-- CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
 </head>
 
 <body>
-    <div class="dashboard-container">
+<div class="dashboard-container">
 
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <span class="logo-icon">₿</span>
-                    <span class="logo-text">Finclarity</span>
-                </div>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <span class="logo-icon">₿</span>
+                <span class="logo-text">Finclarity</span>
             </div>
-
-            <nav class="nav-menu">
-                <a href="{{ url_for('dashboard') }}" class="nav-item active">
-                    <i class="fas fa-home"></i>
-                    <span>Dashboard</span>
-                </a>
-                <a href="#" class="nav-item">
-                    <i class="fas fa-chart-line"></i>
-                    <span>Financial Insights</span>
-                </a>
-                <a href="#" class="nav-item">
-                    <i class="fas fa-exchange-alt"></i>
-                    <span>Transactions</span>
-                </a>
-                <a href="#" class="nav-item">
-                    <i class="fas fa-wallet"></i>
-                    <span>Budgets</span>
-                </a>
-            </nav>
-
-            <!-- User -->
-            <div class="user-profile">
-                <div class="user-avatar">{{ username[0]|upper }}</div>
-                <div class="user-info">
-                    <p class="user-name">{{ username }}</p>
-                    <p class="user-role">Finance Manager</p>
-                </div>
-            </div>
-        </aside>
-
-        <!-- Main Content -->
-        <div class="main-wrapper">
-            <!-- Header -->
-            <header class="top-header">
-                <input type="text" placeholder="Search...">
-                <div class="header-actions">
-                    <button class="header-btn"><i class="fas fa-bell"></i></button>
-                    <button class="header-btn"><i class="fas fa-cog"></i></button>
-                </div>
-            </header>
-
-            <!-- Main Content Area -->
-            <main class="main-content">
-                <!-- Welcome Section -->
-                <div class="welcome-section">
-                    <h1>Good day, {{ username }} 👋</h1>
-                    <p class="welcome-subtitle">Here's your financial overview</p>
-                </div>
-
-                <!-- Action Cards -->
-                <div class="cards-grid">
-                    <div class="action-card">
-                        <i class="fas fa-plus-circle"></i>
-                        <span>Add Transaction</span>
-                    </div>
-                    <div class="action-card">
-                        <i class="fas fa-lightbulb"></i>
-                        <span>View Insights</span>
-                    </div>
-                    <div class="action-card">
-                        <i class="fas fa-chart-pie"></i>
-                        <span>Track Budget</span>
-                    </div>
-                    <div class="action-card">
-                        <i class="fas fa-file-alt"></i>
-                        <span>Reports</span>
-                    </div>
-                </div>
-
-                <!-- Chat Section -->
-                <div class="chat-section">
-                    <div class="chat-container">
-                        <!-- New Chat Section -->
-                        <div class="new-chat-area">
-                            <h2>Start New Conversation</h2>
-                            <p>Ask me anything about your finances</p>
-                            <div class="quick-prompts">
-                                <button class="prompt-btn">💰 Budget Analysis</button>
-                                <button class="prompt-btn">📊 Spending Trends</button>
-                                <button class="prompt-btn">🎯 Financial Goals</button>
-                                <button class="prompt-btn">💡 Money Tips</button>
-                            </div>
-                        </div>
-
-                        <!-- Divider -->
-                        <div class="chat-divider">
-                            <span>or</span>
-                        </div>
-
-                        <!-- Recent Chats -->
-                        <div class="recent-chats">
-                            <h3>Recent Conversations</h3>
-                            <div class="chats-list">
-                                <div class="chat-item">
-                                    <div class="chat-icon"><i class="fas fa-comment-dots"></i></div>
-                                    <div class="chat-details">
-                                        <p class="chat-title">How to save more this month?</p>
-                                        <p class="chat-time">2 hours ago</p>
-                                    </div>
-                                </div>
-                                <div class="chat-item">
-                                    <div class="chat-icon"><i class="fas fa-comment-dots"></i></div>
-                                    <div class="chat-details">
-                                        <p class="chat-title">Investment recommendations</p>
-                                        <p class="chat-time">Yesterday</p>
-                                    </div>
-                                </div>
-                                <div class="chat-item">
-                                    <div class="chat-icon"><i class="fas fa-comment-dots"></i></div>
-                                    <div class="chat-details">
-                                        <p class="chat-title">Budget tracking advice</p>
-                                        <p class="chat-time">3 days ago</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Chat Input Area -->
-                    <div class="chat-input-area">
-                        <div class="chat-input-wrapper">
-                            <input type="text" id="chatInput" placeholder="Ask something about your finances...">
-                            <button id="sendBtn"><i class="fas fa-paper-plane"></i></button>
-                        </div>
-                        <p class="chat-footer-text">Finclarity AI can help with budgets, investments, and financial
-                            planning</p>
-                    </div>
-                </div>
-            </main>
         </div>
+
+        <nav class="nav-menu">
+            <a href="{{ url_for('dashboard') }}" class="nav-item active">
+                <i class="fas fa-home"></i><span>Dashboard</span>
+            </a>
+            <a href="#" class="nav-item"><i class="fas fa-chart-line"></i><span>Financial Insights</span></a>
+            <a href="#" class="nav-item"><i class="fas fa-exchange-alt"></i><span>Transactions</span></a>
+            <a href="#" class="nav-item"><i class="fas fa-wallet"></i><span>Budgets</span></a>
+        </nav>
+
+        <div class="user-profile">
+            <div class="user-avatar">{{ username[0]|upper }}</div>
+            <div class="user-info">
+                <p class="user-name">{{ username }}</p>
+                <p class="user-role">Finance Manager</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <div class="main-wrapper">
+
+        <!-- Header -->
+        <header class="top-header">
+            <input type="text" placeholder="Search...">
+            <div class="header-actions">
+                <button class="header-btn"><i class="fas fa-bell"></i></button>
+                <button class="header-btn" id="settingsBtn"><i class="fas fa-cog"></i></button>
+
+                <div class="settings-dropdown" id="settingsDropdown">
+                    <button id="logoutBtn" class="settings-option">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <main class="main-content">
+
+            <div class="welcome-section">
+                <h1>Good day, {{ username }} 👋</h1>
+                <p class="welcome-subtitle">Here's your financial overview</p>
+            </div>
+
+            <!-- Cards -->
+            <div class="cards-grid">
+                <div class="action-card"><i class="fas fa-plus-circle"></i><span>Add Transaction</span></div>
+                <div class="action-card"><i class="fas fa-lightbulb"></i><span>View Insights</span></div>
+                <div class="action-card"><i class="fas fa-chart-pie"></i><span>Track Budget</span></div>
+                <div class="action-card"><i class="fas fa-file-alt"></i><span>Reports</span></div>
+            </div>
+
+            <!-- Chat -->
+            <div class="chat-section">
+
+                <div class="chat-container">
+
+                    <!-- New Chat -->
+                    <div class="new-chat-area" id="newChatArea">
+                        <h2>Start New Conversation</h2>
+                        <p>Ask me anything about your finances</p>
+
+                        <div class="quick-prompts">
+                            <button class="prompt-btn">💰 Budget Analysis</button>
+                            <button class="prompt-btn">📊 Spending Trends</button>
+                            <button class="prompt-btn">🎯 Financial Goals</button>
+                            <button class="prompt-btn">💡 Money Tips</button>
+                        </div>
+                    </div>
+
+                    <div class="chat-divider"><span>or</span></div>
+
+                    <!-- Recent -->
+                    <div class="recent-chats">
+                        <h3>Recent Conversations</h3>
+                        <div class="chats-list">
+                            <div class="chat-item">
+                                <div class="chat-icon"><i class="fas fa-comment-dots"></i></div>
+                                <div class="chat-details">
+                                    <p class="chat-title">How to save more this month?</p>
+                                    <p class="chat-time">2 hours ago</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Input -->
+                <div class="chat-input-area">
+                    <div class="chat-input-wrapper">
+                        <input type="text" id="chatInput" placeholder="Ask something about your finances...">
+                        <button id="sendBtn"><i class="fas fa-paper-plane"></i></button>
+                    </div>
+                    <p class="chat-footer-text">
+                        Finclarity AI can help with budgets, investments, and financial planning
+                    </p>
+                </div>
+
+            </div>
+
+        </main>
     </div>
+</div>
 
-    <!-- Flask Static JS -->
-    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 
-    <script>
-        // Send chat message
-        document.getElementById("sendBtn").addEventListener("click", async () => {
-            const input = document.getElementById("chatInput");
-            const message = input.value.trim();
+<!-- 🔥 SUPABASE INIT (IMPORTANT) -->
+<script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-            if (!message) return;
+    const supabase = createClient(
+        "https://oooykmtjwolypmqkdxpk.supabase.co",
+        "YOUR_ANON_KEY"
+    );
 
-            try {
-                const res = await fetch("/chat", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ message })
-                });
+    window.supabase = supabase;
+</script>
 
-                const data = await res.json();
-                console.log("Response:", data.reply);
-                alert(data.reply);
-                input.value = "";
-            } catch (error) {
-                console.error("Error:", error);
-                alert("Error sending message. Please try again.");
-            }
-        });
 
-        // Allow Enter key to send
-        document.getElementById("chatInput").addEventListener("keypress", (e) => {
-            if (e.key === "Enter") {
-                document.getElementById("sendBtn").click();
-            }
-        });
+<!-- MAIN JS -->
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 
-        // Quick prompt buttons
-        document.querySelectorAll(".prompt-btn").forEach(btn => {
-            btn.addEventListener("click", () => {
-                document.getElementById("chatInput").value = btn.textContent;
-                document.getElementById("chatInput").focus();
-            });
-        });
 
-        // Recent chat items
-        document.querySelectorAll(".chat-item").forEach(item => {
-            item.addEventListener("click", () => {
-                const title = item.querySelector(".chat-title").textContent;
-                document.getElementById("chatInput").value = "Tell me more about: " + title;
-                document.getElementById("chatInput").focus();
-            });
-        });
-    </script>
+<!-- 🔥 SMALL SAFE UI SCRIPT ONLY -->
+<script>
+    function handleGuestUI() {
+        const area = document.getElementById("newChatArea");
+
+        if (window.currentUserData && window.currentUserData.isGuest && area) {
+            area.innerHTML = `
+                <div style="text-align:center;padding:40px;">
+                    <i class="fas fa-lock" style="font-size:48px;margin-bottom:20px;"></i>
+                    <h2>Login Required</h2>
+                    <p>Please sign in to use AI Assistant</p>
+                    <button onclick="window.location.href='/login'"
+                        style="padding:10px 20px;margin-top:15px;">
+                        Sign In
+                    </button>
+                </div>
+            `;
+        }
+    }
+
+    setTimeout(handleGuestUI, 500);
+</script>
 
 </body>
-
 </html>

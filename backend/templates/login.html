@@ -4,128 +4,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Finclarity Auth</title>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
     <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
-
 </head>
 
 <body>
 
-    <div class="container" id="container">
+<div class="container" id="container">
 
-        <!-- SIGN UP -->
-        <div class="form-container sign-up-container">
+    <!-- SIGN UP -->
+    <div class="form-container sign-up-container">
+        <form id="signupForm">
 
-            <form id="signupForm">
+            <h1>Create Account</h1>
 
-                <h1>Create Account</h1>
+            <div class="social-container">
+                <a href="#"><i class="fab fa-facebook-f"></i></a>
 
-                <div class="social-container">
-                    <a href="#"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#" id="googleLogin"><i class="fab fa-google"></i></a>
-                    <a href="#"><i class="fab fa-linkedin-in"></i></a>
-                </div>
+                <!-- ✅ GOOGLE BUTTON FIXED -->
+                <a href="#" class="google-btn">
+                    <i class="fab fa-google"></i>
+                </a>
 
-                <span>or use your email</span>
+                <a href="#"><i class="fab fa-linkedin-in"></i></a>
+            </div>
 
-                <input type="text" id="signupName" placeholder="Name" required>
-                <input type="email" id="signupEmail" placeholder="Email" required>
-                <input type="password" id="signupPassword" placeholder="Password" required>
+            <span>or use your email</span>
 
-                <button type="submit">Sign Up</button>
+            <input type="text" id="signupName" placeholder="Name" required>
+            <input type="email" id="signupEmail" placeholder="Email" required>
+            <input type="password" id="signupPassword" placeholder="Password" required>
 
-            </form>
+            <button type="submit">Sign Up</button>
 
-        </div>
-
-
-        <!-- SIGN IN -->
-        <div class="form-container sign-in-container">
-
-            <form id="loginForm">
-
-                <h1>Welcome Back</h1>
-
-                <div class="social-container">
-                    <a href="#"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#"><i class="fab fa-google"></i></a>
-                    <a href="#"><i class="fab fa-linkedin-in"></i></a>
-                </div>
-
-                <span>or use your account</span>
-
-                <input type="email" id="loginEmail" placeholder="Email" required>
-                <input type="password" id="loginPassword" placeholder="Password" required>
-
-                <a href="#">Forgot password?</a>
-
-                <button type="submit">Log In</button>
-
-                <p style="margin-top: 15px; font-size: 12px; color: #666;">
-                    or <a href="#" id="guestLink"
-                        style="color: #7a4fb5; text-decoration: none; font-weight: 600;">continue as guest</a>
-                </p>
-
-            </form>
-
-        </div>
+        </form>
+    </div>
 
 
-        <!-- OVERLAY -->
-        <div class="overlay-container">
+    <!-- SIGN IN -->
+    <div class="form-container sign-in-container">
+        <form id="loginForm">
 
-            <div class="overlay">
+            <h1>Welcome Back</h1>
 
-                <div class="overlay-panel overlay-left">
+            <div class="social-container">
+                <a href="#"><i class="fab fa-facebook-f"></i></a>
 
-                    <h1>Welcome Back!</h1>
+                <!-- ✅ GOOGLE BUTTON FIXED -->
+                <a href="#" class="google-btn">
+                    <i class="fab fa-google"></i>
+                </a>
 
-                    <p style="padding-bottom:20px;">Already have an account?</p>
-                    <p style="padding-bottom:20px;">Login with your personal info</p>
+                <a href="#"><i class="fab fa-linkedin-in"></i></a>
+            </div>
 
-                    <button class="ghost" id="signIn">Log In</button>
+            <span>or use your account</span>
 
-                </div>
+            <input type="email" id="loginEmail" placeholder="Email" required>
+            <input type="password" id="loginPassword" placeholder="Password" required>
+
+            <a href="#">Forgot password?</a>
+
+            <button type="submit">Log In</button>
+
+            <p style="margin-top: 15px; font-size: 12px; color: #666;">
+                or <a href="#" id="guestLink"
+                    style="color: #7a4fb5; text-decoration: none; font-weight: 600;">
+                    continue as guest
+                </a>
+            </p>
+
+        </form>
+    </div>
 
 
-                <div class="overlay-panel overlay-right">
+    <!-- OVERLAY -->
+    <div class="overlay-container">
+        <div class="overlay">
 
-                    <h1>The Future of Intelligent Financial Research Platforms</h1>
+            <div class="overlay-panel overlay-left">
+                <h1>Welcome Back!</h1>
+                <p style="padding-bottom:20px;">Already have an account?</p>
+                <p style="padding-bottom:20px;">Login with your personal info</p>
+                <button class="ghost" id="signIn">Log In</button>
+            </div>
 
-                    <p style="padding-bottom:20px;">Start your journey with us</p>
-
-                    <button class="ghost" id="signUp">Sign Up</button>
-
-                </div>
-
+            <div class="overlay-panel overlay-right">
+                <h1>The Future of Intelligent Financial Research Platforms</h1>
+                <p style="padding-bottom:20px;">Start your journey with us</p>
+                <button class="ghost" id="signUp">Sign Up</button>
             </div>
 
         </div>
-
     </div>
 
-    <div style="position:absolute;top:30px;left:40px;font-size:32px;font-weight:700;">
-        FinClarity AI
-    </div>
-    <!-- 🔥 SUPABASE INIT (MODULE) -->
+</div>
+
+<div style="position:absolute;top:30px;left:40px;font-size:32px;font-weight:700;">
+    FinClarity AI
+</div>
+
+
+<!-- 🔥 SUPABASE INIT (FINAL FIXED) -->
 <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-    window.supabase = createClient(
-        "https://oooykmtjwolypmqkdxpk.supabase.co",
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwczovL3N1cGFiYXNlLmNvbS9hdXRoL3JvbGVzIjpbImFub25pbW91cyJdLCJodHRwczovL3N1cGFiYXNlLmNvbS9hdXRoL2NsYWltcyI6eyJyb2xlIjoiYW5vbmltb3VzIn0sImlhdCI6MTY5ODQ4ODQyOSwiZXhwIjoxOTk0NDg4NDI5fQ.7n8j8lHqjKZtVh7mM8a2e7u9vO8nPzqj8b"
-    );
+    const SUPABASE_URL = "https://oooykmtjwolypmqkdxpk.supabase.co";
+    const SUPABASE_ANON_KEY = "YOUR_ANON_KEY"; // 🔥 replace
+
+    window.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 </script>
+
 
 <!-- YOUR JS -->
 <script src="{{ url_for('static', filename='js/login.js') }}"></script>
 
 </body>
-
 </html>
