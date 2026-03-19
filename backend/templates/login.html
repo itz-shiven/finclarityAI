@@ -28,7 +28,7 @@
 
                 <div class="social-container">
                     <a href="#"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#"><i class="fab fa-google"></i></a>
+                    <a href="#" id="googleLogin"><i class="fab fa-google"></i></a>
                     <a href="#"><i class="fab fa-linkedin-in"></i></a>
                 </div>
 
@@ -113,8 +113,18 @@
     <div style="position:absolute;top:30px;left:40px;font-size:32px;font-weight:700;">
         FinClarity AI
     </div>
+    <!-- 🔥 SUPABASE INIT (MODULE) -->
+<script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-    <script src="{{ url_for('static', filename='js/login.js') }}"></script>
+    window.supabase = createClient(
+        "https://oooykmtjwolypmqkdxpk.supabase.co",
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwczovL3N1cGFiYXNlLmNvbS9hdXRoL3JvbGVzIjpbImFub25pbW91cyJdLCJodHRwczovL3N1cGFiYXNlLmNvbS9hdXRoL2NsYWltcyI6eyJyb2xlIjoiYW5vbmltb3VzIn0sImlhdCI6MTY5ODQ4ODQyOSwiZXhwIjoxOTk0NDg4NDI5fQ.7n8j8lHqjKZtVh7mM8a2e7u9vO8nPzqj8b"
+    );
+</script>
+
+<!-- YOUR JS -->
+<script src="{{ url_for('static', filename='js/login.js') }}"></script>
 
 </body>
 
