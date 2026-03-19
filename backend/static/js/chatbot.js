@@ -1,179 +1,186 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-const toggle = document.getElementById("chat-toggle");
-const chatWindow = document.getElementById("chat-window");
-const closeBtn = document.getElementById("close-chat");
+    const toggle = document.getElementById("chat-toggle");
+    const chatWindow = document.getElementById("chat-window");
+    const closeBtn = document.getElementById("close-chat");
 
-const sendBtn = document.getElementById("send-btn");
-const input = document.getElementById("chat-input");
-const messages = document.getElementById("chat-messages");
+    const sendBtn = document.getElementById("send-btn");
+    const input = document.getElementById("chat-input");
+    const messages = document.getElementById("chat-messages");
 
 
-/* =========================
-CHAT OPEN / CLOSE
-========================= */
+    /* =========================
+    CHAT OPEN / CLOSE
+    ========================= */
 
-if (toggle) {
-toggle.addEventListener("click", () => {
+    if (toggle) {
+        toggle.addEventListener("click", () => {
 
-chatWindow.classList.toggle("active");
+            chatWindow.classList.toggle("active");
 
-if (chatWindow.classList.contains("active")) {
-setTimeout(() => {
-if(input) input.focus();
-}, 200);
-}
+            if (chatWindow.classList.contains("active")) {
+                setTimeout(() => {
+                    if (input) input.focus();
+                }, 200);
+            }
 
-});
-}
+        });
+    }
 
 
-/* =========================
-CLOSE CHAT
-========================= */
+    /* =========================
+    CLOSE CHAT
+    ========================= */
 
-if (closeBtn) {
-closeBtn.addEventListener("click", () => {
-chatWindow.classList.remove("active");
-});
-}
+    if (closeBtn) {
+        closeBtn.addEventListener("click", () => {
+            chatWindow.classList.remove("active");
+        });
+    }
 
 
-/* =========================
-SEND BUTTON
-========================= */
+    /* =========================
+    SEND BUTTON
+    ========================= */
 
-if (sendBtn) {
-sendBtn.addEventListener("click", sendMessage);
-}
+    if (sendBtn) {
+        sendBtn.addEventListener("click", sendMessage);
+    }
 
 
-/* =========================
-ENTER KEY SEND
-========================= */
+    /* =========================
+    ENTER KEY SEND
+    ========================= */
 
-if (input) {
-input.addEventListener("keypress", function (e) {
+    if (input) {
+        input.addEventListener("keypress", function (e) {
 
-if (e.key === "Enter") {
-e.preventDefault();
-sendMessage();
-}
+            if (e.key === "Enter") {
+                e.preventDefault();
+                sendMessage();
+            }
 
-});
-}
+        });
+    }
 
 
-/* =========================
-SEND MESSAGE FUNCTION
-========================= */
+    /* =========================
+    SEND MESSAGE FUNCTION
+    ========================= */
 
-function sendMessage() {
+    function sendMessage() {
 
-if(!input || !messages) return;
+        // ✅ Check if guest user trying to send message
+        if (window.currentUserData && window.currentUserData.isGuest) {
+            alert("Please sign in to use the AI Assistant");
+            window.location.href = '/login';
+            return;
+        }
 
-const text = input.value.trim();
+        if (!input || !messages) return;
 
-if (text === "") return;
+        const text = input.value.trim();
 
+        if (text === "") return;
 
-/* USER MESSAGE */
 
-const userMsg = document.createElement("div");
-userMsg.className = "user-message";
-userMsg.innerText = text;
+        /* USER MESSAGE */
 
-messages.appendChild(userMsg);
+        const userMsg = document.createElement("div");
+        userMsg.className = "user-message";
+        userMsg.innerText = text;
 
-input.value = "";
+        messages.appendChild(userMsg);
 
-messages.scrollTop = messages.scrollHeight;
+        input.value = "";
 
+        messages.scrollTop = messages.scrollHeight;
 
-/* BOT THINKING */
 
-setTimeout(() => {
+        /* BOT THINKING */
 
-const botThinking = document.createElement("div");
-botThinking.className = "bot-message";
-botThinking.innerText = "AI is thinking... 🤖";
+        setTimeout(() => {
 
-messages.appendChild(botThinking);
+            const botThinking = document.createElement("div");
+            botThinking.className = "bot-message";
+            botThinking.innerText = "AI is thinking... 🤖";
 
-messages.scrollTop = messages.scrollHeight;
+            messages.appendChild(botThinking);
 
-}, 500);
+            messages.scrollTop = messages.scrollHeight;
 
+        }, 500);
 
-/* BOT REPLY */
 
-setTimeout(() => {
+        /* BOT REPLY */
 
-const botReply = document.createElement("div");
-botReply.className = "bot-message";
-botReply.innerText = "AI response placeholder 🤖";
+        setTimeout(() => {
 
-messages.appendChild(botReply);
+            const botReply = document.createElement("div");
+            botReply.className = "bot-message";
+            botReply.innerText = "AI response placeholder 🤖";
 
-messages.scrollTop = messages.scrollHeight;
+            messages.appendChild(botReply);
 
-}, 1200);
+            messages.scrollTop = messages.scrollHeight;
 
-}
+        }, 1200);
 
+    }
 
-/* =========================
-SCROLL PROGRESS BAR
-========================= */
 
-window.addEventListener("scroll", () => {
+    /* =========================
+    SCROLL PROGRESS BAR
+    ========================= */
 
-const scrollTop = document.documentElement.scrollTop;
+    window.addEventListener("scroll", () => {
 
-const scrollHeight =
-document.documentElement.scrollHeight -
-document.documentElement.clientHeight;
+        const scrollTop = document.documentElement.scrollTop;
 
-const progress = (scrollTop / scrollHeight) * 100;
+        const scrollHeight =
+            document.documentElement.scrollHeight -
+            document.documentElement.clientHeight;
 
-const bar = document.querySelector(".scroll-progress");
+        const progress = (scrollTop / scrollHeight) * 100;
 
-if (bar) {
-bar.style.width = progress + "%";
-}
+        const bar = document.querySelector(".scroll-progress");
 
-});
+        if (bar) {
+            bar.style.width = progress + "%";
+        }
 
+    });
 
-/* =========================
-SVG SCROLL LINE ANIMATION
-========================= */
 
-const path = document.getElementById("line");
+    /* =========================
+    SVG SCROLL LINE ANIMATION
+    ========================= */
 
-if (path) {
+    const path = document.getElementById("line");
 
-const length = path.getTotalLength();
+    if (path) {
 
-path.style.strokeDasharray = length;
-path.style.strokeDashoffset = length;
+        const length = path.getTotalLength();
 
-window.addEventListener("scroll", () => {
+        path.style.strokeDasharray = length;
+        path.style.strokeDashoffset = length;
 
-const scroll = window.scrollY;
+        window.addEventListener("scroll", () => {
 
-const height =
-document.body.scrollHeight -
-window.innerHeight;
+            const scroll = window.scrollY;
 
-const progress = scroll / height;
+            const height =
+                document.body.scrollHeight -
+                window.innerHeight;
 
-const draw = length * progress;
+            const progress = scroll / height;
 
-path.style.strokeDashoffset = length - draw;
+            const draw = length * progress;
 
-});
+            path.style.strokeDashoffset = length - draw;
 
-}
+        });
+
+    }
 
 });
