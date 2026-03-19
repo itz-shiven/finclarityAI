@@ -43,6 +43,7 @@ if (signupForm) {
             const res = await fetch("/api/signup", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                credentials: "include",
                 body: JSON.stringify({ name, email, password })
             });
 
@@ -84,12 +85,18 @@ if (loginForm) {
             const res = await fetch("/api/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                credentials: "include",
                 body: JSON.stringify({ email, password })
             });
 
             const data = await res.json();
 
             if (data.status === "success") {
+                // Store user info in localStorage for quick access
+                localStorage.setItem("currentUser", JSON.stringify({
+                    email: email,
+                    isGuest: false
+                }));
                 alert("Login successful");
                 window.location.href = data.redirect || "/dashboard";
             } else {
@@ -163,14 +170,24 @@ window.addEventListener("load", async () => {
         console.log("User logged in:", user);
 
         try {
-            await fetch("/api/google-login", {
+            const response = await fetch("/api/google-login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                credentials: "include",
                 body: JSON.stringify({
                     name: user.user_metadata?.full_name || "User",
                     email: user.email
                 })
             });
+
+            const data = await response.json();
+            if (data.status === "success") {
+                localStorage.setItem("currentUser", JSON.stringify({
+                    name: user.user_metadata?.full_name || "User",
+                    email: user.email,
+                    isGuest: false
+                }));
+            }
         } catch (err) {
             console.error("Backend sync error:", err);
         }
@@ -195,7 +212,8 @@ if (guestLink) {
         try {
             const res = await fetch("/api/guest-login", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" }
+                headers: { "Content-Type": "application/json" },
+                credentials: "include"
             });
 
             const data = await res.json();

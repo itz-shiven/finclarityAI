@@ -34,6 +34,7 @@ async function checkSupabaseAuth() {
             await fetch("/api/google-login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                credentials: "include",
                 body: JSON.stringify({
                     name: user.user_metadata?.full_name || "User",
                     email: user.email
@@ -42,7 +43,9 @@ async function checkSupabaseAuth() {
 
         } else {
             // No session → check backend auth
-            const res = await fetch('/api/user');
+            const res = await fetch('/api/user', {
+                credentials: 'include'
+            });
 
             if (!res.ok) {
                 window.location.href = '/login';
@@ -240,7 +243,9 @@ function setupSettings() {
 
 function loadUserData() {
 
-    fetch('/api/user')
+    fetch('/api/user', {
+        credentials: 'include'
+    })
         .then(res => res.json())
         .then(data => {
             if (data.status === 'success') {
@@ -262,11 +267,11 @@ function loadUserData() {
 // PLACEHOLDERS
 // ============================================
 
-function setupSidebarToggle() {}
-function setupNavigation() {}
-function setupChatPanel() {}
-function setupActionCards() {}
-function setupResponsive() {}
+function setupSidebarToggle() { }
+function setupNavigation() { }
+function setupChatPanel() { }
+function setupActionCards() { }
+function setupResponsive() { }
 
 
 // ============================================
