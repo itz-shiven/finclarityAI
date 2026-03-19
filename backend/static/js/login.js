@@ -126,8 +126,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
             console.log("Google clicked");
 
+            // Wait for Supabase to load
+            let attempts = 0;
+            while (!window.supabase && attempts < 10) {
+                await new Promise(resolve => setTimeout(resolve, 200));
+                attempts++;
+            }
+
             if (!window.supabase) {
-                alert("Supabase not loaded");
+                alert("Authentication service not loaded. Please refresh and try again.");
                 return;
             }
 
@@ -135,17 +142,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 const { data, error } = await window.supabase.auth.signInWithOAuth({
                     provider: "google",
                     options: {
-                        redirectTo: window.location.origin
+                        redirectTo: `${window.location.origin}/login`
                     }
                 });
 
                 if (error) {
                     console.error("OAuth error:", error);
-                    alert("Google login failed");
+                    alert("Google login failed: " + (error.message || "Unknown error"));
                 }
 
             } catch (err) {
                 console.error("OAuth crash:", err);
+                alert("Google login error. Please try again.");
             }
         });
     });
@@ -159,40 +167,64 @@ HANDLE GOOGLE CALLBACK (FINAL FIX)
 
 window.addEventListener("load", async () => {
 
-    if (!window.supabase) return;
+    if (!window.supabase) {
+        console.log("Supabase not initialized yet, retrying...");
+        setTimeout(arguments.callee, 500);
+        return;
+    }
 
-    const { data: { session }, error } = await window.supabase.auth.getSession();
+    try {
+        const { data: { session }, error } = await window.supabase.auth.getSession();
 
-    if (session && session.user) {
-
-        const user = session.user;
-
-        console.log("User logged in:", user);
-
-        try {
-            const response = await fetch("/api/google-login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({
-                    name: user.user_metadata?.full_name || "User",
-                    email: user.email
-                })
-            });
-
-            const data = await response.json();
-            if (data.status === "success") {
-                localStorage.setItem("currentUser", JSON.stringify({
-                    name: user.user_metadata?.full_name || "User",
-                    email: user.email,
-                    isGuest: false
-                }));
-            }
-        } catch (err) {
-            console.error("Backend sync error:", err);
+        if (error) {
+            console.error("Session fetch error:", error);
+            return;
         }
 
-        window.location.href = "/dashboard";
+        if (session && session.user) {
+
+            const user = session.user;
+
+            console.log("User logged in:", user);
+
+            try {
+                const response = await fetch("/api/google-login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        name: user.user_metadata?.full_name || "User",
+                        email: user.email
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.status === "success") {
+                    console.log("Backend session set successfully");
+                    localStorage.setItem("currentUser", JSON.stringify({
+                        name: user.user_metadata?.full_name || "User",
+                        email: user.email,
+                        isGuest: false
+                    }));
+
+                    // Add a small delay to ensure session is fully set
+                    setTimeout(() => {
+                        window.location.href = "/dashboard";
+                    }, 300);
+                } else {
+                    console.error("Backend login failed:", data);
+                    alert("Failed to set up account. Please try again.");
+                }
+            } catch (err) {
+                console.error("Backend sync error:", err);
+                alert("Error syncing with backend. Please try again.");
+            }
+        } else {
+            console.log("No active session");
+        }
+    } catch (err) {
+        console.error("Supabase session error:", err);
     }
 
 });

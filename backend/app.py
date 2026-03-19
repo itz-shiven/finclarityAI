@@ -21,6 +21,8 @@ app = Flask(
 app.secret_key = os.getenv("SECRET_KEY", "change-this-in-production")
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = False  # True in production
+# Allow cross-site redirects from OAuth
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 CORS(app, supports_credentials=True)
 

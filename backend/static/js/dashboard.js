@@ -7,8 +7,10 @@ document.addEventListener('DOMContentLoaded', async function () {
     // 🔥 FIRST: check Supabase session
     await checkSupabaseAuth();
 
-    // Then load normal data
-    loadUserData();
+    // Then load normal data (wait for it to complete)
+    await loadUserData();
+
+    // Finally initialize dashboard
     initializeDashboard();
 });
 
@@ -19,10 +21,20 @@ document.addEventListener('DOMContentLoaded', async function () {
 
 async function checkSupabaseAuth() {
 
-    if (!window.supabase) return;
+    if (!window.supabase) {
+        console.log("Supabase not loaded, checking backend session only");
+        await checkBackendSession();
+        return;
+    }
 
     try {
         const { data: { session }, error } = await window.supabase.auth.getSession();
+
+        if (error) {
+            console.error("Supabase session error:", error);
+            await checkBackendSession();
+            return;
+        }
 
         if (session && session.user) {
 
@@ -31,29 +43,58 @@ async function checkSupabaseAuth() {
             console.log("Supabase user detected:", user);
 
             // Sync with backend
-            await fetch("/api/google-login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({
-                    name: user.user_metadata?.full_name || "User",
-                    email: user.email
-                })
-            });
+            try {
+                const res = await fetch("/api/google-login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        name: user.user_metadata?.full_name || "User",
+                        email: user.email
+                    })
+                });
+
+                const data = await res.json();
+                if (data.status !== "success") {
+                    console.error("Failed to sync with backend");
+                    await checkBackendSession();
+                }
+            } catch (syncErr) {
+                console.error("Sync error:", syncErr);
+                await checkBackendSession();
+            }
 
         } else {
-            // No session → check backend auth
-            const res = await fetch('/api/user', {
-                credentials: 'include'
-            });
-
-            if (!res.ok) {
-                window.location.href = '/login';
-            }
+            // No Supabase session → check backend auth
+            console.log("No Supabase session, checking backend");
+            await checkBackendSession();
         }
 
     } catch (err) {
         console.error("Auth check error:", err);
+        await checkBackendSession();
+    }
+}
+
+async function checkBackendSession() {
+    try {
+        const res = await fetch('/api/user', {
+            credentials: 'include'
+        });
+
+        if (!res.ok) {
+            console.log("No backend session, redirecting to login");
+            window.location.href = '/login';
+            return;
+        }
+
+        const data = await res.json();
+        if (data.status !== 'success') {
+            console.log("Backend session invalid, redirecting to login");
+            window.location.href = '/login';
+        }
+    } catch (err) {
+        console.error("Backend session check error:", err);
         window.location.href = '/login';
     }
 }
@@ -241,15 +282,16 @@ function setupSettings() {
 // USER DATA
 // ============================================
 
-function loadUserData() {
+async function loadUserData() {
 
-    fetch('/api/user', {
+    return fetch('/api/user', {
         credentials: 'include'
     })
         .then(res => res.json())
         .then(data => {
             if (data.status === 'success') {
                 window.currentUserData = data.user;
+                console.log("User data loaded:", window.currentUserData);
             }
         })
         .catch(err => {
@@ -258,6 +300,7 @@ function loadUserData() {
             const localUser = localStorage.getItem('currentUser');
             if (localUser) {
                 window.currentUserData = JSON.parse(localUser);
+                console.log("User data loaded from localStorage:", window.currentUserData);
             }
         });
 }
