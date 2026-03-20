@@ -3,6 +3,7 @@ FINCLARITY AI - Dashboard Interactivity (FINAL)
 ============================================ */
 
 document.addEventListener('DOMContentLoaded', async function () {
+    console.log("Dashboard DOM loaded");
 
     // 🔥 FIRST: check Supabase session
     await checkSupabaseAuth();
@@ -12,6 +13,9 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // Finally initialize dashboard
     initializeDashboard();
+    
+    // Setup Settings and Logout
+    setupSettingsAndLogout();
 });
 
 
@@ -111,7 +115,6 @@ function initializeDashboard() {
     setupChatInput();
     setupActionCards();
     setupResponsive();
-    setupSettings();
 }
 
 
@@ -412,6 +415,7 @@ function setupResponsive() { }
 // ============================================
 
 function setupSettingsAndLogout() {
+    console.log("Setting up settings and logout listeners");
     const settingsBtn = document.getElementById('settingsBtn');
     const settingsMenu = document.getElementById('settingsMenu');
     
@@ -426,6 +430,8 @@ function setupSettingsAndLogout() {
                 settingsMenu.classList.remove('show');
             }
         });
+    } else {
+        console.warn("Settings elements not found!");
     }
 
     const dropdownLogoutBtn = document.getElementById('dropdownLogoutBtn');
@@ -451,6 +457,7 @@ function setupSettingsAndLogout() {
     if (dropdownLogoutBtn && logoutModal) {
         dropdownLogoutBtn.addEventListener('click', (e) => {
             e.preventDefault();
+            console.log("Logout triggered");
             if(settingsMenu) settingsMenu.classList.remove('show');
             logoutModal.classList.add('show');
         });
@@ -464,19 +471,24 @@ function setupSettingsAndLogout() {
 
     if (confirmLogoutBtn) {
         confirmLogoutBtn.addEventListener('click', async () => {
+            console.log("Logout confirmed by user");
             try {
+                // Supabase Logout (if active)
+                if (window.supabase) {
+                    await window.supabase.auth.signOut();
+                }
+                // Backend Logout
                 await fetch('/api/logout', { method: 'POST' });
             } catch (e) {
-                console.error("Backend logout error", e);
+                console.error("Logout process error", e);
             }
+            
+            // Final cleanup and redirect
             localStorage.removeItem('supabase.auth.token');
+            sessionStorage.clear();
             window.location.href = "/"; 
         });
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    setupSettingsAndLogout();
-});
-
-console.log('Finclarity AI Dashboard loaded successfully');
+console.log('Finclarity AI Dashboard main logic initialized');
