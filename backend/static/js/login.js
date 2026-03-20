@@ -165,16 +165,27 @@ document.addEventListener("DOMContentLoaded", () => {
 HANDLE GOOGLE CALLBACK (FINAL FIX)
 --------------------------*/
 
+/* -------------------------
+HANDLE GOOGLE CALLBACK (FINAL FIX)
+--------------------------*/
+
 window.addEventListener("load", async () => {
 
+    // THE FIX: Wait up to 2 seconds for Supabase to load
+    let attempts = 0;
+    while (!window.supabase && attempts < 10) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        attempts++;
+    }
+
     if (!window.supabase) {
-        console.log("Supabase not initialized yet, retrying...");
-        setTimeout(arguments.callee, 500);
-        return;
+        console.error("Supabase failed to initialize on callback.");
+        return; // Now it is safe to return if it completely failed to load
     }
 
     try {
         const { data: { session }, error } = await window.supabase.auth.getSession();
+        // ... the rest of the existing code ...
 
         if (error) {
             console.error("Session fetch error:", error);
