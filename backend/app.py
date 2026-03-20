@@ -181,7 +181,6 @@ def login():
 def google_login():
     try:
         data = request.get_json()
-
         name = data.get("name")
         email = data.get("email")
 
@@ -189,20 +188,25 @@ def google_login():
             return jsonify({"status": "error", "message": "Email required"})
 
         # Check if user exists
+        print(f"DEBUG: Checking if {email} exists in Supabase...")
         response = requests.get(
             f"{SUPABASE_URL}/rest/v1/users",
             headers=HEADERS,
             params={"email": f"eq.{email}"}
         )
-
+        
+        # 🚨 NEW: Print exact Supabase error if the GET fails
         if response.status_code != 200:
-            return jsonify({"status": "error", "message": "Database error"})
+            print(f"🚨 SUPABASE GET ERROR: {response.text}")
+            return jsonify({"status": "error", "message": f"Database error: {response.text}"})
 
         users = response.json()
 
         if users:
+            print("DEBUG: User found! Logging them in.")
             user = users[0]
         else:
+            print("DEBUG: User not found. Attempting to create new user...")
             # Create new user
             insert_res = requests.post(
                 f"{SUPABASE_URL}/rest/v1/users",
@@ -214,8 +218,10 @@ def google_login():
                 }
             )
 
+            # 🚨 NEW: Print exact Supabase error if the POST fails
             if insert_res.status_code not in [200, 201]:
-                return jsonify({"status": "error", "message": "Insert failed"})
+                print(f"🚨 SUPABASE INSERT ERROR: {insert_res.text}")
+                return jsonify({"status": "error", "message": f"Insert failed: {insert_res.text}"})
 
             # Fetch again
             fetch_res = requests.get(
@@ -223,13 +229,13 @@ def google_login():
                 headers=HEADERS,
                 params={"email": f"eq.{email}"}
             )
-
             user = fetch_res.json()[0]
 
         # SET SESSION
         session['user_id'] = user.get('id')
         session['user_name'] = user.get('name')
         session['user_email'] = user.get('email')
+        print("DEBUG: Session successfully created!")
 
         return jsonify({
             "status": "success",
@@ -237,8 +243,8 @@ def google_login():
         })
 
     except Exception as e:
+        print(f"🚨 PYTHON CRASH: {str(e)}")
         return jsonify({"status": "error", "message": str(e)})
-
 
 @app.route("/api/user", methods=["GET"])
 def get_user():
