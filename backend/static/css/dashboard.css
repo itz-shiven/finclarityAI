@@ -87,7 +87,7 @@ body {
     box-shadow: var(--shadow-sm);
     display: flex;
     flex-direction: column;
-    z-index: 100;
+    z-index: 2000; /* Higher than chat widget to prevent clipping settings */
 }
 
 .sidebar-header {
@@ -803,8 +803,8 @@ body {
 
 .chat-history-sidebar {
     width: 260px;
-    background: rgba(250, 243, 225, 0.5); /* subtle blend */
-    border-right: 1px solid rgba(0,0,0,0.05);
+    background: #f8f1e0; /* More distinct light background for history */
+    border-right: 1px solid rgba(0,0,0,0.08);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
@@ -1059,6 +1059,15 @@ body.dark-theme .recent-transactions-card {
     background: var(--bg-tertiary);
     border: 1px solid var(--border-light);
 }
+
+body.dark-theme .chat-history-sidebar {
+    background: #1a1a1a;
+    border-right: 1px solid rgba(255,255,255,0.1);
+}
+
+body.dark-theme .chat-widget-window {
+    background: rgba(18, 18, 18, 0.98);
+}
 .chat-widget-close {
     width: 36px;
     height: 36px;
@@ -1106,6 +1115,10 @@ body.dark-theme .recent-transactions-card {
 .history-item:hover {
     background: rgba(0,0,0,0.05);
     color: var(--text-primary);
+}
+
+body.dark-theme .history-item:hover {
+    background: rgba(255,255,255,0.05);
 }
 
 .chat-main-area {
