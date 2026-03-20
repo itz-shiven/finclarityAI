@@ -87,8 +87,9 @@ body {
     box-shadow: var(--shadow-sm);
     display: flex;
     flex-direction: column;
-    z-index: 2000; /* Higher than chat widget to prevent clipping settings */
+    z-index: 2000;
 }
+/* Higher than chat widget to prevent clipping settings */
 
 .sidebar-header {
     padding: 20px 16px;
@@ -170,6 +171,12 @@ body {
     border: 1px solid transparent;
 }
 
+.nav-item span {
+    white-space: nowrap;
+    overflow: hidden;
+    display: inline-block;
+}
+
 .nav-item:hover {
     background-color: var(--bg-tertiary);
     color: var(--text-primary);
@@ -209,7 +216,7 @@ body {
 }
 
 .search-item:hover {
-    background: rgba(0,0,0,0.05);
+    background: rgba(0, 0, 0, 0.05);
     color: var(--text-primary);
 }
 
@@ -227,6 +234,7 @@ body {
     align-items: center;
     gap: 8px;
     margin-bottom: 8px;
+    white-space: nowrap;
 }
 
 .profile-actions {
@@ -743,11 +751,13 @@ body {
     right: 0;
     bottom: 0;
     z-index: 1000;
-    pointer-events: none; /* Let clicks pass through widget container */
+    pointer-events: none;
+    /* Let clicks pass through widget container */
 }
 
-.chat-widget > * {
-    pointer-events: auto; /* Re-enable for children */
+.chat-widget>* {
+    pointer-events: auto;
+    /* Re-enable for children */
 }
 
 /* Toggle Button */
@@ -777,7 +787,8 @@ body {
 }
 
 .chat-widget-toggle.active i::before {
-    content: "\f00d"; /* Change to times/cross icon when active */
+    content: "\f00d";
+    /* Change to times/cross icon when active */
 }
 
 /* Chat Window */
@@ -803,8 +814,9 @@ body {
 
 .chat-history-sidebar {
     width: 260px;
-    background: #f8f1e0; /* More distinct light background for history */
-    border-right: 1px solid rgba(0,0,0,0.08);
+    background: #f8f1e0;
+    /* More distinct light background for history */
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
@@ -812,7 +824,7 @@ body {
 
 .history-header {
     padding: 16px 20px;
-    border-bottom: 1px solid rgba(0,0,0,0.05);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -821,7 +833,7 @@ body {
 .new-chat-btn-large {
     width: 100%;
     background: transparent;
-    border: 1px solid rgba(0,0,0,0.1);
+    border: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: 8px;
     padding: 10px 16px;
     display: flex;
@@ -836,7 +848,7 @@ body {
 }
 
 .new-chat-btn-large:hover {
-    background: rgba(0,0,0,0.05);
+    background: rgba(0, 0, 0, 0.05);
     transform: scale(1.02);
 }
 
@@ -866,11 +878,12 @@ body {
     position: absolute;
     bottom: calc(100% + 12px);
     left: -10px;
-    background: #1e1e1e; /* matching reference image */
+    background: #1e1e1e;
+    /* matching reference image */
     border-radius: 8px;
     padding: 8px 0;
     min-width: 220px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     display: none;
     flex-direction: column;
     z-index: 1000;
@@ -882,8 +895,15 @@ body {
 }
 
 @keyframes slideUpFade {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .dropdown-item {
@@ -905,13 +925,13 @@ body {
 }
 
 .dropdown-item:hover {
-    background: rgba(255,255,255,0.1);
+    background: rgba(255, 255, 255, 0.1);
     color: #ffffff;
 }
 
 .dropdown-divider {
     height: 1px;
-    background: rgba(255,255,255,0.1);
+    background: rgba(255, 255, 255, 0.1);
     margin: 8px 0;
 }
 
@@ -922,8 +942,11 @@ body {
 /* Modal Styles */
 .modal-overlay {
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.5);
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(5px);
     z-index: 9999;
     display: none;
@@ -933,8 +956,13 @@ body {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 .modal-overlay.show {
@@ -947,7 +975,7 @@ body {
     border-radius: 16px;
     width: 100%;
     max-width: 380px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
     text-align: center;
     transform: scale(0.95);
     transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -1036,8 +1064,8 @@ body.dark-theme {
     --text-secondary: #b0b0b0;
     --text-tertiary: #808080;
     --border-color: #333333;
-    --border-light: rgba(255,255,255,0.1);
-    --shadow-sm: 0 4px 6px rgba(0,0,0,0.5);
+    --border-light: rgba(255, 255, 255, 0.1);
+    --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.5);
     background-color: var(--bg-secondary);
 }
 
@@ -1062,12 +1090,13 @@ body.dark-theme .recent-transactions-card {
 
 body.dark-theme .chat-history-sidebar {
     background: #1a1a1a;
-    border-right: 1px solid rgba(255,255,255,0.1);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 body.dark-theme .chat-widget-window {
     background: rgba(18, 18, 18, 0.98);
 }
+
 .chat-widget-close {
     width: 36px;
     height: 36px;
@@ -1086,7 +1115,7 @@ body.dark-theme .chat-widget-window {
 }
 
 .chat-widget-close:hover {
-    background: rgba(0,0,0,0.05);
+    background: rgba(0, 0, 0, 0.05);
     color: var(--text-primary);
     transform: translateX(-4px);
 }
@@ -1113,12 +1142,12 @@ body.dark-theme .chat-widget-window {
 }
 
 .history-item:hover {
-    background: rgba(0,0,0,0.05);
+    background: rgba(0, 0, 0, 0.05);
     color: var(--text-primary);
 }
 
 body.dark-theme .history-item:hover {
-    background: rgba(255,255,255,0.05);
+    background: rgba(255, 255, 255, 0.05);
 }
 
 .chat-main-area {

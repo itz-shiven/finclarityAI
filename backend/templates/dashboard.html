@@ -8,38 +8,38 @@
 
     <!-- Fonts & Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
 
     <!-- CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
 </head>
 
 <body>
-<div class="dashboard-container">
+    <div class="dashboard-container">
 
-    <!-- Sidebar -->
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <div class="logo">
-                <span class="logo-icon">₿</span>
-                <span class="logo-text">Finclarity</span>
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon">₿</span>
+                    <span class="logo-text">Finclarity</span>
+                </div>
             </div>
-        </div>
 
-        <nav class="nav-menu">
-            <a href="{{ url_for('dashboard') }}" class="nav-item active">
-                <i class="fas fa-home"></i><span>Dashboard</span>
-            </a>
-            <a href="#" class="nav-item"><i class="fas fa-chart-line"></i><span>Financial Insights</span></a>
-            <a href="#" class="nav-item"><i class="fas fa-exchange-alt"></i><span>Transactions</span></a>
-            <a href="#" class="nav-item"><i class="fas fa-wallet"></i><span>Budgets</span></a>
-        </nav>
+            <nav class="nav-menu">
+                <a href="{{ url_for('dashboard') }}" class="nav-item active">
+                    <i class="fas fa-home"></i><span>Home</span>
+                </a>
+                <a href="#" class="nav-item"><i class="fas fa-balance-scale"></i><span>Compare</span></a>
+                <a href="#" class="nav-item"><i class="fas fa-history"></i><span>What Changed</span></a>
+            </nav>
 
             <div class="sidebar-footer">
                 <a href="#" class="nav-item search-item">
                     <i class="fas fa-search"></i> <span style="font-weight: 500;">Search</span>
                 </a>
-                
+
                 <div class="profile-section" style="margin-top: 16px;">
                     <div class="profile-name" style="margin-bottom: 8px;">
                         {% if username and ' ' in username %}
@@ -53,11 +53,12 @@
                         <button class="action-btn" title="Messages"><i class="fas fa-envelope"></i></button>
                         <button class="action-btn" title="Alerts"><i class="fas fa-bell"></i></button>
                         <div class="settings-container">
-                            <button class="action-btn" id="settingsBtn" title="Settings"><i class="fas fa-cog"></i></button>
+                            <button class="action-btn" id="settingsBtn" title="Settings"><i
+                                    class="fas fa-cog"></i></button>
                             <!-- Settings Dropdown -->
                             <div class="sidebar-dropdown" id="settingsMenu">
+                                <a href="#" class="dropdown-item"><i class="fas fa-user-circle"></i> Profile</a>
                                 <a href="#" class="dropdown-item" id="themeToggleBtn"><i class="fas fa-moon"></i> Theme Toggle</a>
-                                <a href="#" class="dropdown-item"><i class="fas fa-compress-alt"></i> Collapse</a>
                                 <div class="dropdown-divider"></div>
                                 <a href="#" class="dropdown-item text-danger" id="dropdownLogoutBtn"><i class="fas fa-sign-out-alt"></i> Log Out</a>
                             </div>
@@ -67,101 +68,104 @@
             </div>
         </aside>
 
-    <!-- Main -->
-    <div class="main-wrapper">
+        <!-- Main -->
+        <div class="main-wrapper">
 
-        <!-- Content -->
-        <main class="main-content">
+            <!-- Content -->
+            <main class="main-content">
 
-            <div class="dashboard-header-simple">
-                <h2>{{ username|title }}</h2>
-            </div>
-
-            <!-- Cards -->
-            <div class="cards-grid">
-                <div class="action-card"><i class="fas fa-plus-circle"></i><span>Add Transaction</span></div>
-                <div class="action-card"><i class="fas fa-lightbulb"></i><span>View Insights</span></div>
-                <div class="action-card"><i class="fas fa-chart-pie"></i><span>Track Budget</span></div>
-                <div class="action-card"><i class="fas fa-file-alt"></i><span>Reports</span></div>
-            </div>
-
-            <!-- Chat widget removed from here and placed as fixed overlay -->
-
-        </main>
-        
-        <!-- Floating Chat Widget -->
-        <div class="chat-widget" id="chatWidget">
-            <!-- Chat Toggle Button -->
-            <button class="chat-widget-toggle" id="chatToggleBtn">
-                <i class="fas fa-comment-dots"></i>
-            </button>
-
-            <!-- Chat Window -->
-            <div class="chat-widget-window" id="chatWindow">
-                
-                <!-- Chat History Sidebar -->
-                <div class="chat-history-sidebar">
-                    <div class="history-header">
-                        <button class="chat-widget-close" id="chatCloseBtn" title="Back to Dashboard">
-                            <i class="fas fa-arrow-left"></i>
-                        </button>
-                        <button class="new-chat-btn-large" id="newChatSidebarBtn">
-                            <i class="fas fa-plus"></i> New chat
-                        </button>
-                    </div>
-                    <div class="history-list">
-                        <!-- History items will be dynamically added here -->
-                    </div>
+                <div class="dashboard-header-simple">
+                    <h2>{{ username|title }}</h2>
                 </div>
 
-                <!-- Chat Main Area -->
-                <div class="chat-main-area">
-                    <div class="chat-widget-header">
-                        <div class="chat-widget-title">
-                            Finclarity AI <i class="fas fa-robot"></i>
+                <!-- Cards -->
+                <div class="cards-grid">
+                    <div class="action-card"><i class="fas fa-credit-card"></i><span>Cards</span></div>
+                    <div class="action-card"><i class="fas fa-hand-holding-usd"></i><span>Loans</span></div>
+                    <div class="action-card"><i class="fas fa-chart-line"></i><span>Stock Market</span></div>
+                    <div class="action-card"><i class="fas fa-chart-pie"></i><span>Investment</span></div>
+                    <div class="action-card"><i class="fas fa-shield-alt"></i><span>Insurance</span></div>
+                </div>
+
+                <!-- Chat widget removed from here and placed as fixed overlay -->
+
+            </main>
+
+            <!-- Floating Chat Widget -->
+            <div class="chat-widget" id="chatWidget">
+                <!-- Chat Toggle Button -->
+                <button class="chat-widget-toggle" id="chatToggleBtn">
+                    <i class="fas fa-comment-dots"></i>
+                </button>
+
+                <!-- Chat Window -->
+                <div class="chat-widget-window" id="chatWindow">
+
+                    <!-- Chat History Sidebar -->
+                    <div class="chat-history-sidebar">
+                        <div class="history-header">
+                            <button class="chat-widget-close" id="chatCloseBtn" title="Back to Dashboard">
+                                <i class="fas fa-arrow-left"></i>
+                            </button>
+                            <button class="new-chat-btn-large" id="newChatSidebarBtn">
+                                <i class="fas fa-plus"></i> New chat
+                            </button>
+                        </div>
+                        <div class="history-list">
+                            <!-- History items will be dynamically added here -->
                         </div>
                     </div>
 
-                    <div class="chat-widget-body">
-                        <div class="chat-container">
-                            <div class="new-chat-area" id="newChatArea">
-                                <p style="text-align: center; color: var(--text-secondary); margin-bottom: 12px; font-size: 14px;">Ask me anything about your finances</p>
-                                <div class="quick-prompts">
-                                    <button class="prompt-btn">💰 Budget Analysis</button>
-                                    <button class="prompt-btn">📊 Spending Trends</button>
-                                    <button class="prompt-btn">🎯 Financial Goals</button>
-                                    <button class="prompt-btn">💡 Money Tips</button>
-                                </div>
+                    <!-- Chat Main Area -->
+                    <div class="chat-main-area">
+                        <div class="chat-widget-header">
+                            <div class="chat-widget-title">
+                                Finclarity AI <i class="fas fa-robot"></i>
                             </div>
-                            <div class="chat-messages" id="chatMessages"></div>
                         </div>
-                    </div>
 
-                    <div class="chat-widget-footer">
-                        <div class="chat-input-wrapper">
-                            <input type="text" id="chatInput" placeholder="Ask something about your finances...">
-                            <button id="sendBtn"><i class="fas fa-paper-plane"></i></button>
+                        <div class="chat-widget-body">
+                            <div class="chat-container">
+                                <div class="new-chat-area" id="newChatArea">
+                                    <p
+                                        style="text-align: center; color: var(--text-secondary); margin-bottom: 12px; font-size: 14px;">
+                                        Ask me anything about your finances</p>
+                                    <div class="quick-prompts">
+                                        <button class="prompt-btn">💰 Budget Analysis</button>
+                                        <button class="prompt-btn">📊 Spending Trends</button>
+                                        <button class="prompt-btn">🎯 Financial Goals</button>
+                                        <button class="prompt-btn">💡 Money Tips</button>
+                                    </div>
+                                </div>
+                                <div class="chat-messages" id="chatMessages"></div>
+                            </div>
+                        </div>
+
+                        <div class="chat-widget-footer">
+                            <div class="chat-input-wrapper">
+                                <input type="text" id="chatInput" placeholder="Ask something about your finances...">
+                                <button id="sendBtn"><i class="fas fa-paper-plane"></i></button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+
         </div>
-
     </div>
-</div>
 
 
-<!-- 🔥 SUPABASE INIT (IMPORTANT) -->
-<script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+    <!-- 🔥 SUPABASE INIT (IMPORTANT) -->
+    <script type="module">
+        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-    const supabase = createClient(
-        "https://oooykmtjwolypmqkdxpk.supabase.co",
-        "YOUR_ANON_KEY"
-    );
+        const supabase = createClient(
+            "https://oooykmtjwolypmqkdxpk.supabase.co",
+            "YOUR_ANON_KEY"
+        );
 
-    window.supabase = supabase;
-</script>
+        window.supabase = supabase;
+    </script>
 
     <!-- Logout Confirm Modal -->
     <div class="modal-overlay" id="logoutModal">
@@ -177,17 +181,17 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest"></script>
-<!-- MAIN JS -->
-<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    <!-- MAIN JS -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 
 
-<!-- 🔥 SMALL SAFE UI SCRIPT ONLY -->
-<script>
-    function handleGuestUI() {
-        const area = document.getElementById("newChatArea");
+    <!-- 🔥 SMALL SAFE UI SCRIPT ONLY -->
+    <script>
+        function handleGuestUI() {
+            const area = document.getElementById("newChatArea");
 
-        if (window.currentUserData && window.currentUserData.isGuest && area) {
-            area.innerHTML = `
+            if (window.currentUserData && window.currentUserData.isGuest && area) {
+                area.innerHTML = `
                 <div style="text-align:center;padding:40px;">
                     <i class="fas fa-lock" style="font-size:48px;margin-bottom:20px;"></i>
                     <h2>Login Required</h2>
@@ -198,11 +202,12 @@
                     </button>
                 </div>
             `;
+            }
         }
-    }
 
-    setTimeout(handleGuestUI, 500);
-</script>
+        setTimeout(handleGuestUI, 500);
+    </script>
 
 </body>
+
 </html>

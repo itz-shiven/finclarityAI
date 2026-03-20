@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // Finally initialize dashboard
     initializeDashboard();
-    
+
     // Setup Settings and Logout
     setupSettingsAndLogout();
 });
@@ -291,18 +291,18 @@ function startNewChat() {
     const chatMessages = document.getElementById('chatMessages');
     if (chatMessages) {
         const firstUserMsg = chatMessages.querySelector('.chat-message.user .message-bubble');
-        
+
         if (firstUserMsg && firstUserMsg.textContent.trim()) {
             const title = firstUserMsg.textContent.trim();
             const shortTitle = title.length > 25 ? title.substring(0, 25) + "..." : title;
-            
+
             // Create new history item
             const historyList = document.querySelector('.history-list');
             if (historyList) {
                 const historyItem = document.createElement('div');
                 historyItem.className = 'history-item';
                 historyItem.innerHTML = `<i class="far fa-comment"></i> <span>${shortTitle}</span>`;
-                
+
                 // Insert at the top of the history list
                 historyList.insertBefore(historyItem, historyList.firstChild);
             }
@@ -393,14 +393,14 @@ function setupChatPanel() {
     // Quick Prompts
     const promptBtns = document.querySelectorAll('.prompt-btn');
     promptBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function () {
             const chatInput = document.getElementById('chatInput');
             if (chatInput) {
                 chatInput.value = this.textContent.trim();
                 const sendBtn = document.getElementById('sendBtn');
-                if(sendBtn) {
-                   sendBtn.disabled = false;
-                   sendBtn.click();
+                if (sendBtn) {
+                    sendBtn.disabled = false;
+                    sendBtn.click();
                 }
             }
         });
@@ -418,7 +418,7 @@ function setupSettingsAndLogout() {
     console.log("Setting up settings and logout listeners");
     const settingsBtn = document.getElementById('settingsBtn');
     const settingsMenu = document.getElementById('settingsMenu');
-    
+
     if (settingsBtn && settingsMenu) {
         settingsBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -438,14 +438,14 @@ function setupSettingsAndLogout() {
     const logoutModal = document.getElementById('logoutModal');
     const cancelLogoutBtn = document.getElementById('cancelLogoutBtn');
     const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
-    
+
     const themeToggleBtn = document.getElementById('themeToggleBtn');
     if (themeToggleBtn) {
         // Load saved theme
         if (localStorage.getItem('theme') === 'dark') {
             document.body.classList.add('dark-theme');
         }
-        
+
         themeToggleBtn.addEventListener('click', (e) => {
             e.preventDefault();
             document.body.classList.toggle('dark-theme');
@@ -458,7 +458,7 @@ function setupSettingsAndLogout() {
         dropdownLogoutBtn.addEventListener('click', (e) => {
             e.preventDefault();
             console.log("Logout triggered");
-            if(settingsMenu) settingsMenu.classList.remove('show');
+            if (settingsMenu) settingsMenu.classList.remove('show');
             logoutModal.classList.add('show');
         });
     }
@@ -482,11 +482,11 @@ function setupSettingsAndLogout() {
             } catch (e) {
                 console.error("Logout process error", e);
             }
-            
+
             // Final cleanup and redirect
             localStorage.removeItem('supabase.auth.token');
             sessionStorage.clear();
-            window.location.href = "/"; 
+            window.location.href = "/";
         });
     }
 }
