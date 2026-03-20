@@ -326,6 +326,102 @@ def chat():
 
 
 # -------------------------
+# PROFILE MANAGEMENT API
+# -------------------------
+
+@app.route("/update_profile", methods=["POST"])
+def update_profile():
+    if 'user_id' not in session and 'is_guest' not in session:
+        return jsonify({"status": "error", "message": "Not authenticated"}), 401
+
+    if session.get('is_guest'):
+        return jsonify({"status": "error", "message": "Guest accounts cannot update profile"})
+
+    try:
+        data = request.get_json()
+        new_name = data.get("name")
+        new_email = data.get("email")
+
+        # Update in Supabase
+        update_res = requests.patch(
+            f"{SUPABASE_URL}/rest/v1/users",
+            headers=HEADERS,
+            params={"id": f"eq.{session['user_id']}"},
+            json={
+                "name": new_name,
+                "email": new_email
+            }
+        )
+
+        if update_res.status_code in [200, 204]:
+            session['user_name'] = new_name
+            session['user_email'] = new_email
+            return jsonify({"status": "success"})
+        
+        return jsonify({"status": "error", "message": f"Update failed: {update_res.text}"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+
+@app.route("/change_password", methods=["POST"])
+def change_password():
+    if 'user_id' not in session and 'is_guest' not in session:
+        return jsonify({"status": "error", "message": "Not authenticated"}), 401
+
+    if session.get('is_guest'):
+        return jsonify({"status": "error", "message": "Guest accounts cannot change password"})
+
+    try:
+        data = request.get_json()
+        current_password = data.get("currentPassword")
+        new_password = data.get("newPassword")
+
+        # Fetch current user to verify password
+        fetch_res = requests.get(
+            f"{SUPABASE_URL}/rest/v1/users",
+            headers=HEADERS,
+            params={"id": f"eq.{session['user_id']}"}
+        )
+
+        users = fetch_res.json()
+        if not users:
+            return jsonify({"status": "error", "message": "User not found"})
+        
+        user = users[0]
+        stored_hash = user.get("password", "")
+        
+        # Verify current password (if stored password exists)
+        if stored_hash and not check_password_hash(stored_hash, current_password):
+            return jsonify({"status": "error", "message": "Incorrect current password"})
+
+        # Hash new password
+        hashed_password = generate_password_hash(new_password)
+
+        # Update in Supabase
+        update_res = requests.patch(
+            f"{SUPABASE_URL}/rest/v1/users",
+            headers=HEADERS,
+            params={"id": f"eq.{session['user_id']}"},
+            json={
+                "password": hashed_password
+            }
+        )
+
+        if update_res.status_code in [200, 204]:
+            return jsonify({"status": "success"})
+        
+        return jsonify({"status": "error", "message": f"Update failed: {update_res.text}"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+
+@app.route("/logout", methods=["GET", "POST"])
+def page_logout():
+    session.clear()
+    return redirect(url_for('login_page'))
+
+
+# -------------------------
 # RUN SERVER
 # -------------------------
 if __name__ == "__main__":
