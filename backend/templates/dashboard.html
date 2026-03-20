@@ -8,7 +8,7 @@
 
     <!-- Fonts & Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <!-- CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
@@ -35,39 +35,46 @@
             <a href="#" class="nav-item"><i class="fas fa-wallet"></i><span>Budgets</span></a>
         </nav>
 
-        <div class="user-profile">
-            <div class="user-avatar">{{ username[0]|upper }}</div>
-            <div class="user-info">
-                <p class="user-name">{{ username }}</p>
-                <p class="user-role">Finance Manager</p>
+            <div class="sidebar-footer">
+                <a href="#" class="nav-item search-item">
+                    <i class="fas fa-search"></i> <span style="font-weight: 500;">Search</span>
+                </a>
+                
+                <div class="profile-section" style="margin-top: 16px;">
+                    <div class="profile-name" style="margin-bottom: 8px;">
+                        {% if username and ' ' in username %}
+                        {{ username.split(' ')[0] | capitalize }}
+                        {% else %}
+                        {{ username | capitalize }}
+                        {% endif %}
+                    </div>
+                    <div class="profile-actions">
+                        <button class="action-btn" title="Friends"><i class="fas fa-user-friends"></i></button>
+                        <button class="action-btn" title="Messages"><i class="fas fa-envelope"></i></button>
+                        <button class="action-btn" title="Alerts"><i class="fas fa-bell"></i></button>
+                        <div class="settings-container">
+                            <button class="action-btn" id="settingsBtn" title="Settings"><i class="fas fa-cog"></i></button>
+                            <!-- Settings Dropdown -->
+                            <div class="sidebar-dropdown" id="settingsMenu">
+                                <a href="#" class="dropdown-item" id="themeToggleBtn"><i class="fas fa-moon"></i> Theme Toggle</a>
+                                <a href="#" class="dropdown-item"><i class="fas fa-compress-alt"></i> Collapse</a>
+                                <div class="dropdown-divider"></div>
+                                <a href="#" class="dropdown-item text-danger" id="dropdownLogoutBtn"><i class="fas fa-sign-out-alt"></i> Log Out</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-    </aside>
+        </aside>
 
     <!-- Main -->
     <div class="main-wrapper">
 
-        <!-- Header -->
-        <header class="top-header">
-            <input type="text" placeholder="Search...">
-            <div class="header-actions">
-                <button class="header-btn"><i class="fas fa-bell"></i></button>
-                <button class="header-btn" id="settingsBtn"><i class="fas fa-cog"></i></button>
-
-                <div class="settings-dropdown" id="settingsDropdown">
-                    <button id="logoutBtn" class="settings-option">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </button>
-                </div>
-            </div>
-        </header>
-
         <!-- Content -->
         <main class="main-content">
 
-            <div class="welcome-section">
-                <h1>Good day, {{ username }} 👋</h1>
-                <p class="welcome-subtitle">Here's your financial overview</p>
+            <div class="dashboard-header-simple">
+                <h2>{{ username|title }}</h2>
             </div>
 
             <!-- Cards -->
@@ -78,56 +85,68 @@
                 <div class="action-card"><i class="fas fa-file-alt"></i><span>Reports</span></div>
             </div>
 
-            <!-- Chat -->
-            <div class="chat-section">
-
-                <div class="chat-container">
-
-                    <!-- New Chat -->
-                    <div class="new-chat-area" id="newChatArea">
-                        <h2>Start New Conversation</h2>
-                        <p>Ask me anything about your finances</p>
-
-                        <div class="quick-prompts">
-                            <button class="prompt-btn">💰 Budget Analysis</button>
-                            <button class="prompt-btn">📊 Spending Trends</button>
-                            <button class="prompt-btn">🎯 Financial Goals</button>
-                            <button class="prompt-btn">💡 Money Tips</button>
-                        </div>
-                    </div>
-
-                    <div class="chat-divider"><span>or</span></div>
-
-                    <!-- Recent -->
-                    <div class="recent-chats">
-                        <h3>Recent Conversations</h3>
-                        <div class="chats-list">
-                            <div class="chat-item">
-                                <div class="chat-icon"><i class="fas fa-comment-dots"></i></div>
-                                <div class="chat-details">
-                                    <p class="chat-title">How to save more this month?</p>
-                                    <p class="chat-time">2 hours ago</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-
-                <!-- Input -->
-                <div class="chat-input-area">
-                    <div class="chat-input-wrapper">
-                        <input type="text" id="chatInput" placeholder="Ask something about your finances...">
-                        <button id="sendBtn"><i class="fas fa-paper-plane"></i></button>
-                    </div>
-                    <p class="chat-footer-text">
-                        Finclarity AI can help with budgets, investments, and financial planning
-                    </p>
-                </div>
-
-            </div>
+            <!-- Chat widget removed from here and placed as fixed overlay -->
 
         </main>
+        
+        <!-- Floating Chat Widget -->
+        <div class="chat-widget" id="chatWidget">
+            <!-- Chat Toggle Button -->
+            <button class="chat-widget-toggle" id="chatToggleBtn">
+                <i class="fas fa-comment-dots"></i>
+            </button>
+
+            <!-- Chat Window -->
+            <div class="chat-widget-window" id="chatWindow">
+                
+                <!-- Chat History Sidebar -->
+                <div class="chat-history-sidebar">
+                    <div class="history-header">
+                        <button class="chat-widget-close" id="chatCloseBtn" title="Back to Dashboard">
+                            <i class="fas fa-arrow-left"></i>
+                        </button>
+                        <button class="new-chat-btn-large" id="newChatSidebarBtn">
+                            <i class="fas fa-plus"></i> New chat
+                        </button>
+                    </div>
+                    <div class="history-list">
+                        <!-- History items will be dynamically added here -->
+                    </div>
+                </div>
+
+                <!-- Chat Main Area -->
+                <div class="chat-main-area">
+                    <div class="chat-widget-header">
+                        <div class="chat-widget-title">
+                            Finclarity AI <i class="fas fa-robot"></i>
+                        </div>
+                    </div>
+
+                    <div class="chat-widget-body">
+                        <div class="chat-container">
+                            <div class="new-chat-area" id="newChatArea">
+                                <p style="text-align: center; color: var(--text-secondary); margin-bottom: 12px; font-size: 14px;">Ask me anything about your finances</p>
+                                <div class="quick-prompts">
+                                    <button class="prompt-btn">💰 Budget Analysis</button>
+                                    <button class="prompt-btn">📊 Spending Trends</button>
+                                    <button class="prompt-btn">🎯 Financial Goals</button>
+                                    <button class="prompt-btn">💡 Money Tips</button>
+                                </div>
+                            </div>
+                            <div class="chat-messages" id="chatMessages"></div>
+                        </div>
+                    </div>
+
+                    <div class="chat-widget-footer">
+                        <div class="chat-input-wrapper">
+                            <input type="text" id="chatInput" placeholder="Ask something about your finances...">
+                            <button id="sendBtn"><i class="fas fa-paper-plane"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -144,7 +163,20 @@
     window.supabase = supabase;
 </script>
 
+    <!-- Logout Confirm Modal -->
+    <div class="modal-overlay" id="logoutModal">
+        <div class="confirm-modal">
+            <div class="modal-icon"><i class="fas fa-sign-out-alt"></i></div>
+            <h3>Log Out</h3>
+            <p>Are you sure you want to log out of your account?</p>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="cancelLogoutBtn">Cancel</button>
+                <button class="btn-danger" id="confirmLogoutBtn">Log Out</button>
+            </div>
+        </div>
+    </div>
 
+    <script src="https://unpkg.com/lucide@latest"></script>
 <!-- MAIN JS -->
 <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 
