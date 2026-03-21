@@ -405,6 +405,8 @@ padding:10px 14px;
 border-radius:12px;
 margin-bottom:10px;
 max-width:80%;
+border: none;
+box-shadow: none;
 }
 
 .user-message{

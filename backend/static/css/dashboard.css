@@ -1357,10 +1357,10 @@ body {
 }
 
 .message-bubble.ai {
-    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-    color: #ffffff !important;
+    background: transparent;
+    color: #000000;
     border-bottom-left-radius: 4px;
-    box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2);
+    border: none;
 }
 
 /* ============================================
