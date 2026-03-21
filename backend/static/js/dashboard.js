@@ -196,7 +196,8 @@ async function sendMessage() {
             credentials: 'include',
             body: JSON.stringify({ 
                 message: message,
-                history: currentConversation.slice(-30) 
+                history: currentConversation.slice(-30),
+                user_memory: JSON.parse(localStorage.getItem('finclarityMemory') || '[]')
             })
         });
 
@@ -212,7 +213,25 @@ async function sendMessage() {
         }
 
         const data = await response.json();
-        const reply = data?.reply || "No response from AI.";
+        let reply = data?.reply || "No response from AI.";
+        
+        // Extract permanent memory facts secretly
+        const memoryMatches = reply.match(/\[MEMORY:(.*?)\]/g);
+        if (memoryMatches) {
+            let memories = JSON.parse(localStorage.getItem('finclarityMemory') || '[]');
+            memoryMatches.forEach(match => {
+                const fact = match.replace('[MEMORY:', '').replace(']', '').trim();
+                if (!memories.includes(fact)) memories.push(fact);
+            });
+            localStorage.setItem('finclarityMemory', JSON.stringify(memories));
+            if (typeof syncUserDataToBackend === 'function') syncUserDataToBackend();
+            
+            // Strip the tags from the visual UI
+            reply = reply.replace(/\[MEMORY:(.*?)\]/g, '').trim();
+        }
+
+        if (reply === "") reply = "Okay, I'll remember that for the future!";
+
         appendMessage(reply, "ai");
         currentConversation.push({ role: "assistant", content: reply });
 
@@ -403,6 +422,7 @@ function loadLocalChats() {
 
 function saveLocalChats() {
     localStorage.setItem('finclarityChats', JSON.stringify(chatHistories));
+    if (typeof syncUserDataToBackend === 'function') syncUserDataToBackend();
 }
 
 function saveCurrentChat() {
@@ -515,10 +535,28 @@ async function loadUserData() {
         credentials: 'include'
     })
         .then(res => res.json())
-        .then(data => {
+        .then(async data => {
             if (data.status === 'success') {
                 window.currentUserData = data.user;
                 console.log("User data loaded:", window.currentUserData);
+
+                // Fetch persistent chat data
+                if (!window.currentUserData.isGuest) {
+                    try {
+                        const syncRes = await fetch('/api/get_userdata', { credentials: 'include' });
+                        const syncData = await syncRes.json();
+                        if (syncData.status === 'success' && syncData.data) {
+                            if (syncData.data.chats && syncData.data.chats.length > 0) {
+                                localStorage.setItem('finclarityChats', JSON.stringify(syncData.data.chats));
+                            }
+                            if (syncData.data.memory && syncData.data.memory.length > 0) {
+                                localStorage.setItem('finclarityMemory', JSON.stringify(syncData.data.memory));
+                            }
+                        }
+                    } catch (e) {
+                        console.error("Failed to load user data from backend", e);
+                    }
+                }
             }
         })
         .catch(err => {
@@ -530,6 +568,26 @@ async function loadUserData() {
                 console.log("User data loaded from localStorage:", window.currentUserData);
             }
         });
+}
+
+// ============================================
+// DATA SYNC HELPER
+// ============================================
+
+async function syncUserDataToBackend() {
+    if (!window.currentUserData || window.currentUserData.isGuest) return;
+    try {
+        const chats = JSON.parse(localStorage.getItem('finclarityChats') || '[]');
+        const memory = JSON.parse(localStorage.getItem('finclarityMemory') || '[]');
+        await fetch('/api/sync_userdata', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ chats, memory })
+        });
+    } catch (e) {
+        console.error("Failed to sync data to backend", e);
+    }
 }
 
 

@@ -1358,13 +1358,55 @@ body {
 
 .message-bubble.ai {
     background: transparent;
-    color: #000000;
+    color: var(--text-primary);
     border-bottom-left-radius: 4px;
     border: none;
+    line-height: 1.6;
+    font-size: 15px;
 }
 
 [data-theme="dark"] .message-bubble.ai {
-    color: var(--text-main, #ffffff);
+    color: var(--text-primary);
+}
+
+/* Markdown Support inside AI Bubbles */
+.message-bubble.ai p {
+    margin-bottom: 12px;
+}
+
+.message-bubble.ai p:last-child {
+    margin-bottom: 0;
+}
+
+.message-bubble.ai strong {
+    font-weight: 700;
+    color: var(--primary-600);
+    font-size: 1.05em; /* Slightly larger for emphasis */
+}
+
+.message-bubble.ai h1, 
+.message-bubble.ai h2, 
+.message-bubble.ai h3 {
+    margin: 16px 0 8px 0;
+    color: var(--primary-500);
+    font-weight: 700;
+}
+
+.message-bubble.ai h3 {
+    font-size: 18px;
+}
+
+.message-bubble.ai ul, 
+.message-bubble.ai ol {
+    margin: 8px 0 16px 20px;
+}
+
+.message-bubble.ai li {
+    margin-bottom: 8px;
+}
+
+.message-bubble.ai li:last-child {
+    margin-bottom: 0;
 }
 
 /* ============================================
