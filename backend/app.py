@@ -181,7 +181,6 @@ def login():
 def google_login():
     try:
         data = request.get_json()
-
         name = data.get("name")
         email = data.get("email")
 
@@ -189,20 +188,25 @@ def google_login():
             return jsonify({"status": "error", "message": "Email required"})
 
         # Check if user exists
+        print(f"DEBUG: Checking if {email} exists in Supabase...")
         response = requests.get(
             f"{SUPABASE_URL}/rest/v1/users",
             headers=HEADERS,
             params={"email": f"eq.{email}"}
         )
-
+        
+        # 🚨 NEW: Print exact Supabase error if the GET fails
         if response.status_code != 200:
-            return jsonify({"status": "error", "message": "Database error"})
+            print(f"🚨 SUPABASE GET ERROR: {response.text}")
+            return jsonify({"status": "error", "message": f"Database error: {response.text}"})
 
         users = response.json()
 
         if users:
+            print("DEBUG: User found! Logging them in.")
             user = users[0]
         else:
+            print("DEBUG: User not found. Attempting to create new user...")
             # Create new user
             insert_res = requests.post(
                 f"{SUPABASE_URL}/rest/v1/users",
@@ -214,8 +218,10 @@ def google_login():
                 }
             )
 
+            # 🚨 NEW: Print exact Supabase error if the POST fails
             if insert_res.status_code not in [200, 201]:
-                return jsonify({"status": "error", "message": "Insert failed"})
+                print(f"🚨 SUPABASE INSERT ERROR: {insert_res.text}")
+                return jsonify({"status": "error", "message": f"Insert failed: {insert_res.text}"})
 
             # Fetch again
             fetch_res = requests.get(
@@ -223,13 +229,13 @@ def google_login():
                 headers=HEADERS,
                 params={"email": f"eq.{email}"}
             )
-
             user = fetch_res.json()[0]
 
         # SET SESSION
         session['user_id'] = user.get('id')
         session['user_name'] = user.get('name')
         session['user_email'] = user.get('email')
+        print("DEBUG: Session successfully created!")
 
         return jsonify({
             "status": "success",
@@ -237,8 +243,8 @@ def google_login():
         })
 
     except Exception as e:
+        print(f"🚨 PYTHON CRASH: {str(e)}")
         return jsonify({"status": "error", "message": str(e)})
-
 
 @app.route("/api/user", methods=["GET"])
 def get_user():
@@ -317,6 +323,102 @@ def chat():
 
     except Exception as e:
         return jsonify({"reply": f"Error: {str(e)}"})
+
+
+# -------------------------
+# PROFILE MANAGEMENT API
+# -------------------------
+
+@app.route("/update_profile", methods=["POST"])
+def update_profile():
+    if 'user_id' not in session and 'is_guest' not in session:
+        return jsonify({"status": "error", "message": "Not authenticated"}), 401
+
+    if session.get('is_guest'):
+        return jsonify({"status": "error", "message": "Guest accounts cannot update profile"})
+
+    try:
+        data = request.get_json()
+        new_name = data.get("name")
+        new_email = data.get("email")
+
+        # Update in Supabase
+        update_res = requests.patch(
+            f"{SUPABASE_URL}/rest/v1/users",
+            headers=HEADERS,
+            params={"id": f"eq.{session['user_id']}"},
+            json={
+                "name": new_name,
+                "email": new_email
+            }
+        )
+
+        if update_res.status_code in [200, 204]:
+            session['user_name'] = new_name
+            session['user_email'] = new_email
+            return jsonify({"status": "success"})
+        
+        return jsonify({"status": "error", "message": f"Update failed: {update_res.text}"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+
+@app.route("/change_password", methods=["POST"])
+def change_password():
+    if 'user_id' not in session and 'is_guest' not in session:
+        return jsonify({"status": "error", "message": "Not authenticated"}), 401
+
+    if session.get('is_guest'):
+        return jsonify({"status": "error", "message": "Guest accounts cannot change password"})
+
+    try:
+        data = request.get_json()
+        current_password = data.get("currentPassword")
+        new_password = data.get("newPassword")
+
+        # Fetch current user to verify password
+        fetch_res = requests.get(
+            f"{SUPABASE_URL}/rest/v1/users",
+            headers=HEADERS,
+            params={"id": f"eq.{session['user_id']}"}
+        )
+
+        users = fetch_res.json()
+        if not users:
+            return jsonify({"status": "error", "message": "User not found"})
+        
+        user = users[0]
+        stored_hash = user.get("password", "")
+        
+        # Verify current password (if stored password exists)
+        if stored_hash and not check_password_hash(stored_hash, current_password):
+            return jsonify({"status": "error", "message": "Incorrect current password"})
+
+        # Hash new password
+        hashed_password = generate_password_hash(new_password)
+
+        # Update in Supabase
+        update_res = requests.patch(
+            f"{SUPABASE_URL}/rest/v1/users",
+            headers=HEADERS,
+            params={"id": f"eq.{session['user_id']}"},
+            json={
+                "password": hashed_password
+            }
+        )
+
+        if update_res.status_code in [200, 204]:
+            return jsonify({"status": "success"})
+        
+        return jsonify({"status": "error", "message": f"Update failed: {update_res.text}"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+
+@app.route("/logout", methods=["GET", "POST"])
+def page_logout():
+    session.clear()
+    return redirect(url_for('login_page'))
 
 
 # -------------------------

@@ -165,29 +165,41 @@ document.addEventListener("DOMContentLoaded", () => {
 HANDLE GOOGLE CALLBACK (FINAL FIX)
 --------------------------*/
 
+/* -------------------------
+HANDLE GOOGLE CALLBACK (FINAL FIX)
+--------------------------*/
+
+/* -------------------------
+HANDLE GOOGLE CALLBACK (THE EVENT LISTENER FIX)
+--------------------------*/
+
 window.addEventListener("load", async () => {
 
-    if (!window.supabase) {
-        console.log("Supabase not initialized yet, retrying...");
-        setTimeout(arguments.callee, 500);
-        return;
+    // 1. Wait for Supabase library to download
+    let attempts = 0;
+    while (!window.supabase && attempts < 10) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+        attempts++;
     }
 
-    try {
-        const { data: { session }, error } = await window.supabase.auth.getSession();
+    if (!window.supabase) {
+        console.error("Supabase failed to initialize.");
+        return; 
+    }
 
-        if (error) {
-            console.error("Session fetch error:", error);
-            return;
-        }
+    // 2. The Fix: Listen for the exact moment the session is fully created
+    window.supabase.auth.onAuthStateChange(async (event, session) => {
+        
+        console.log("Auth Event Triggered:", event); // This will help us debug!
 
-        if (session && session.user) {
-
+        // If the event says they just signed in, or an existing session was found
+        if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session && session.user) {
+            
             const user = session.user;
-
-            console.log("User logged in:", user);
+            console.log("Session captured! Handing off to Flask...");
 
             try {
+                // Hand the baton to Flask
                 const response = await fetch("/api/google-login", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -201,34 +213,25 @@ window.addEventListener("load", async () => {
                 const data = await response.json();
 
                 if (data.status === "success") {
-                    console.log("Backend session set successfully");
+                    console.log("Flask accepted the token!");
                     localStorage.setItem("currentUser", JSON.stringify({
                         name: user.user_metadata?.full_name || "User",
                         email: user.email,
                         isGuest: false
                     }));
 
-                    // Add a small delay to ensure session is fully set
-                    setTimeout(() => {
-                        window.location.href = "/dashboard";
-                    }, 300);
+                    window.location.href = "/dashboard";
                 } else {
-                    console.error("Backend login failed:", data);
-                    alert("Failed to set up account. Please try again.");
+                    console.error("Flask rejected the login:", data);
                 }
             } catch (err) {
                 console.error("Backend sync error:", err);
-                alert("Error syncing with backend. Please try again.");
             }
-        } else {
-            console.log("No active session");
+        } else if (!session) {
+            console.log("No active session in the URL or storage yet.");
         }
-    } catch (err) {
-        console.error("Supabase session error:", err);
-    }
-
+    });
 });
-
 
 /* -------------------------
 GUEST

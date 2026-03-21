@@ -3,6 +3,7 @@ FINCLARITY AI - Dashboard Interactivity (FINAL)
 ============================================ */
 
 document.addEventListener('DOMContentLoaded', async function () {
+    console.log("Dashboard DOM loaded");
 
     // 🔥 FIRST: check Supabase session
     await checkSupabaseAuth();
@@ -12,6 +13,15 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // Finally initialize dashboard
     initializeDashboard();
+
+    // Setup Settings and Logout
+    setupSettingsAndLogout();
+
+    // Setup Profile Modal
+    setupProfileModal();
+    
+    // Setup Navigation Stack
+    setupAdvancedNavigation();
 });
 
 
@@ -111,7 +121,6 @@ function initializeDashboard() {
     setupChatInput();
     setupActionCards();
     setupResponsive();
-    setupSettings();
 }
 
 
@@ -164,6 +173,11 @@ async function sendMessage() {
 
     appendMessage(message, "user");
 
+    const welcomeSubtitle = document.getElementById('welcomeSubtitle');
+    if (welcomeSubtitle && message) {
+        welcomeSubtitle.textContent = `Latest interaction: "${message}"`;
+    }
+
     chatInput.value = '';
     sendBtn.disabled = true;
 
@@ -201,16 +215,13 @@ async function sendMessage() {
 
 function appendMessage(text, sender) {
 
-    let chatBox = document.querySelector('.chat-messages');
+    let chatBox = document.getElementById('chatMessages');
+    if (!chatBox) return;
 
-    if (!chatBox) {
-        chatBox = document.createElement('div');
-        chatBox.className = 'chat-messages';
-
-        const mainContent = document.querySelector('.main-content');
-        if (!mainContent) return;
-
-        mainContent.appendChild(chatBox);
+    // Hide new chat area if it's visible when a message is added
+    let newChatArea = document.getElementById('newChatArea');
+    if (newChatArea && newChatArea.style.display !== 'none') {
+        newChatArea.style.display = 'none';
     }
 
     const messageDiv = document.createElement('div');
@@ -224,6 +235,10 @@ function appendMessage(text, sender) {
     chatBox.appendChild(messageDiv);
 
     chatBox.scrollTop = chatBox.scrollHeight;
+    
+    if (typeof saveCurrentChat === 'function') {
+        saveCurrentChat();
+    }
 }
 
 
@@ -238,13 +253,14 @@ function setupSettings() {
     const logoutBtn = document.getElementById('logoutBtn');
 
     if (settingsBtn && settingsDropdown) {
-        settingsBtn.addEventListener('click', function () {
-            settingsDropdown.classList.toggle('active');
+        settingsBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            settingsDropdown.classList.toggle('show');
         });
 
         document.addEventListener('click', function (e) {
-            if (!e.target.closest('.header-actions')) {
-                settingsDropdown.classList.remove('active');
+            if (!settingsBtn.contains(e.target) && !settingsDropdown.contains(e.target)) {
+                settingsDropdown.classList.remove('show');
             }
         });
     }
@@ -277,6 +293,105 @@ function setupSettings() {
     }
 }
 
+// ============================================
+// CHAT HISTORY MANAGEMENT
+// ============================================
+
+let chatHistories = [];
+let currentChatId = null;
+
+function saveCurrentChat() {
+    const chatMessages = document.getElementById('chatMessages');
+    if (!chatMessages) return;
+    
+    const firstUserMsg = chatMessages.querySelector('.chat-message.user .message-bubble');
+    if (!firstUserMsg) return;
+    
+    const title = firstUserMsg.textContent.trim();
+    const shortTitle = title.length > 25 ? title.substring(0, 25) + "..." : title;
+    
+    if (currentChatId) {
+        const chatData = chatHistories.find(c => c.id === currentChatId);
+        if (chatData) {
+            chatData.html = chatMessages.innerHTML;
+        }
+    } else {
+        currentChatId = Date.now().toString();
+        chatHistories.push({
+            id: currentChatId,
+            title: shortTitle,
+            html: chatMessages.innerHTML
+        });
+        
+        const historyList = document.querySelector('.history-list');
+        if (historyList) {
+            const historyItem = document.createElement('div');
+            historyItem.className = 'history-item';
+            historyItem.dataset.chatId = currentChatId;
+            historyItem.innerHTML = `<i class="far fa-comment"></i> <span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${shortTitle}</span>`;
+            
+            historyItem.addEventListener('click', () => loadChat(historyItem.dataset.chatId));
+            historyList.insertBefore(historyItem, historyList.firstChild);
+        }
+    }
+}
+
+function loadChat(chatId) {
+    saveCurrentChat();
+    
+    currentChatId = chatId;
+    const chatData = chatHistories.find(c => c.id === currentChatId);
+    if (!chatData) return;
+    
+    const chatMessages = document.getElementById('chatMessages');
+    const newChatArea = document.getElementById('newChatArea');
+    
+    if (chatMessages) {
+        chatMessages.innerHTML = chatData.html;
+    }
+    if (newChatArea) {
+        newChatArea.style.display = 'none';
+    }
+    
+    updateActiveHistoryItem();
+}
+
+function updateActiveHistoryItem() {
+    const items = document.querySelectorAll('.history-item');
+    items.forEach(item => {
+        if (item.dataset.chatId === currentChatId) {
+            item.classList.add('active');
+            item.style.backgroundColor = 'var(--bg-tertiary)';
+            item.style.color = 'var(--primary-600)';
+        } else {
+            item.classList.remove('active');
+            item.style.backgroundColor = '';
+            item.style.color = '';
+        }
+    });
+}
+
+function startNewChat() {
+    saveCurrentChat();
+    
+    currentChatId = null;
+    const chatMessages = document.getElementById('chatMessages');
+    if (chatMessages) {
+        chatMessages.innerHTML = '';
+    }
+    
+    const newChatArea = document.getElementById('newChatArea');
+    if (newChatArea) {
+        newChatArea.style.display = 'block';
+    }
+    
+    const welcomeSubtitle = document.getElementById('welcomeSubtitle');
+    if (welcomeSubtitle) {
+        welcomeSubtitle.textContent = "Here's your financial overview";
+    }
+    
+    updateActiveHistoryItem();
+}
 
 // ============================================
 // USER DATA
@@ -312,11 +427,539 @@ async function loadUserData() {
 
 function setupSidebarToggle() { }
 function setupNavigation() { }
-function setupChatPanel() { }
+function setupChatPanel() {
+    const chatToggleBtn = document.getElementById('chatToggleBtn');
+    const chatWindow = document.getElementById('chatWindow');
+    const chatCloseBtn = document.getElementById('chatCloseBtn');
+
+    if (chatToggleBtn && chatWindow) {
+        chatToggleBtn.addEventListener('click', () => {
+            const isOpen = chatWindow.classList.contains('open');
+            if (isOpen) {
+                chatWindow.classList.remove('open');
+                chatToggleBtn.classList.remove('active');
+            } else {
+                chatWindow.classList.add('open');
+                chatToggleBtn.classList.add('active');
+            }
+        });
+    }
+
+    if (chatCloseBtn && chatWindow) {
+        chatCloseBtn.addEventListener('click', () => {
+            chatWindow.classList.remove('open');
+            if (chatToggleBtn) chatToggleBtn.classList.remove('active');
+        });
+    }
+
+    // New Chat Button
+    const newChatSidebarBtn = document.getElementById('newChatSidebarBtn');
+    if (newChatSidebarBtn) {
+        newChatSidebarBtn.addEventListener('click', startNewChat);
+    }
+
+    // Quick Prompts
+    const promptBtns = document.querySelectorAll('.prompt-btn');
+    promptBtns.forEach(btn => {
+        btn.addEventListener('click', function () {
+            const chatInput = document.getElementById('chatInput');
+            if (chatInput) {
+                chatInput.value = this.textContent.trim();
+                const sendBtn = document.getElementById('sendBtn');
+                if (sendBtn) {
+                    sendBtn.disabled = false;
+                    sendBtn.click();
+                }
+            }
+        });
+    });
+}
 function setupActionCards() { }
 function setupResponsive() { }
 
 
 // ============================================
+// SETTINGS DROPDOWN & LOGOUT LOGIC
+// ============================================
 
-console.log('Finclarity AI Dashboard loaded successfully');
+function setupSettingsAndLogout() {
+    console.log("Setting up settings and logout listeners");
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsMenu = document.getElementById('settingsDropdown');
+
+    if (settingsBtn && settingsMenu) {
+        settingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            settingsMenu.classList.toggle('show');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!settingsBtn.contains(e.target) && !settingsMenu.contains(e.target)) {
+                settingsMenu.classList.remove('show');
+            }
+        });
+    } else {
+        console.warn("Settings elements not found!");
+    }
+
+    const dropdownLogoutBtn = document.getElementById('dropdownLogoutBtn');
+    const logoutModal = document.getElementById('logoutModal');
+    const cancelLogoutBtn = document.getElementById('cancelLogoutBtn');
+    const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
+
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    if (themeToggleBtn) {
+        // Load saved theme
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.classList.add('dark-theme');
+        }
+
+        themeToggleBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.body.classList.toggle('dark-theme');
+            const isDark = document.body.classList.contains('dark-theme');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        });
+    }
+
+    if (dropdownLogoutBtn && logoutModal) {
+        dropdownLogoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log("Logout triggered");
+            if (settingsMenu) settingsMenu.classList.remove('show');
+            logoutModal.classList.add('show');
+        });
+    }
+
+    if (cancelLogoutBtn && logoutModal) {
+        cancelLogoutBtn.addEventListener('click', () => {
+            logoutModal.classList.remove('show');
+        });
+    }
+
+    if (confirmLogoutBtn) {
+        confirmLogoutBtn.addEventListener('click', async () => {
+            console.log("Logout confirmed by user");
+            try {
+                // Supabase Logout (if active)
+                if (window.supabase) {
+                    await window.supabase.auth.signOut();
+                }
+                // Backend Logout
+                await fetch('/api/logout', { method: 'POST' });
+            } catch (e) {
+                console.error("Logout process error", e);
+            }
+
+            // Final cleanup and redirect
+            localStorage.removeItem('supabase.auth.token');
+            sessionStorage.clear();
+            window.location.href = "/";
+        });
+    }
+}
+
+// ============================================
+// PROFILE MODAL LOGIC (SaaS STYLE)
+// ============================================
+
+function setupProfileModal() {
+    const profileBtn = document.getElementById('profileBtn');
+    const profileModal = document.getElementById('profileModal');
+    const closeProfileBtn = document.getElementById('closeProfileBtn');
+    const body = document.body;
+
+    if (!profileModal) return;
+
+    // Open Modal
+    if (profileBtn) {
+        profileBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            
+            // Populate data
+            const user = window.currentUserData || {};
+            const name = user.name || "User";
+            const email = user.email || "";
+            
+            document.getElementById('displayUsername').textContent = name;
+            document.getElementById('displayEmail').textContent = email;
+            
+            document.getElementById('editUsername').value = name;
+            document.getElementById('editEmail').value = email;
+            
+            // Clear passwords
+            const pwFields = [document.getElementById('currentPassword'), document.getElementById('newPassword')];
+            pwFields.forEach(f => { if(f) f.value = ''; });
+            
+            // Set Avatar Initials
+            const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            document.getElementById('profileAvatar').textContent = initials || "?";
+            
+            // Hide Settings Dropdown
+            const settingsMenu = document.getElementById('settingsMenu');
+            if (settingsMenu) settingsMenu.classList.remove('show');
+
+            profileModal.classList.add('show');
+            body.style.overflow = 'hidden'; // Prevent scrolling
+        });
+    }
+
+    // Close Modal
+    const closeModal = () => {
+        profileModal.classList.remove('show');
+        body.style.overflow = '';
+    };
+
+    if (closeProfileBtn) {
+        closeProfileBtn.addEventListener('click', closeModal);
+    }
+
+    profileModal.addEventListener('click', (e) => {
+        if (e.target === profileModal) closeModal();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && profileModal.classList.contains('show')) closeModal();
+    });
+
+    // Handle Update Profile Form
+    const updateProfileForm = document.getElementById('updateProfileForm');
+    if (updateProfileForm) {
+        updateProfileForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('saveProfileBtn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Saving...';
+            btn.disabled = true;
+
+            const name = document.getElementById('editUsername').value;
+            const email = document.getElementById('editEmail').value;
+
+            try {
+                const res = await fetch('/update_profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ name, email })
+                });
+
+                const data = await res.json();
+                if (data.status === 'success') {
+                    // Update local details
+                    if(window.currentUserData) {
+                        window.currentUserData.name = name;
+                        window.currentUserData.email = email;
+                    }
+                    
+                    document.getElementById('displayUsername').textContent = name;
+                    document.getElementById('displayEmail').textContent = email;
+                    
+                    const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                    document.getElementById('profileAvatar').textContent = initials;
+                    
+                    // Update main screen username displays
+                    const headerNames = document.querySelectorAll('.dashboard-header-simple h2, .profile-name');
+                    headerNames.forEach(el => { el.textContent = name; });
+
+                    btn.textContent = 'Saved!';
+                    btn.style.background = '#4caf50';
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.style.background = '';
+                        btn.disabled = false;
+                    }, 2000);
+                } else {
+                    alert(data.message || 'Error updating profile');
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Connection error');
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        });
+    }
+
+    // Handle Change Password Form
+    const changePasswordForm = document.getElementById('changePasswordForm');
+    if (changePasswordForm) {
+        changePasswordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('changePasswordBtn');
+            const originalText = btn.textContent;
+            btn.textContent = 'Updating...';
+            btn.disabled = true;
+
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+
+            try {
+                const res = await fetch('/change_password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ currentPassword, newPassword })
+                });
+
+                const data = await res.json();
+                if (data.status === 'success') {
+                    btn.textContent = 'Password Changed';
+                    btn.style.borderColor = '#4caf50';
+                    btn.style.color = '#4caf50';
+                    changePasswordForm.reset();
+                    
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.style.borderColor = '';
+                        btn.style.color = '';
+                        btn.disabled = false;
+                    }, 2500);
+                } else {
+                    alert(data.message || 'Error changing password');
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Connection error');
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        });
+    }
+
+    // Modal Logout Button matches standard logout
+    const profileLogoutBtn = document.getElementById('profileLogoutBtn');
+    if (profileLogoutBtn) {
+        profileLogoutBtn.addEventListener('click', async () => {
+            profileLogoutBtn.textContent = 'Logging out...';
+            profileLogoutBtn.disabled = true;
+            try {
+                if (window.supabase) await window.supabase.auth.signOut();
+                await fetch('/api/logout', { method: 'POST' });
+                localStorage.removeItem('supabase.auth.token');
+                sessionStorage.clear();
+                window.location.href = "/";
+            } catch (error) {
+                console.error('Logout error:', error);
+                window.location.href = "/";
+            }
+        });
+    }
+}
+
+// ============================================
+// STACK-BASED DEEP NAVIGATION LOGIC
+// ============================================
+
+let navStack = [];
+
+const providersData = {
+    'default': [
+        { name: 'HDFC', icon: 'fas fa-building' }, { name: 'SBI', icon: 'fas fa-building' }, { name: 'AXIS', icon: 'fas fa-building' }, { name: 'UBI', icon: 'fas fa-building' },
+        { name: 'PNB', icon: 'fas fa-building' }, { name: 'BOB', icon: 'fas fa-building' }, { name: 'YES BANK', icon: 'fas fa-building' }, { name: 'CENTRAL BANK', icon: 'fas fa-building' },
+        { name: 'CANARA', icon: 'fas fa-building' }, { name: 'IDFC', icon: 'fas fa-building' }
+    ],
+    'Stock Market': [
+        { name: 'Zerodha', icon: 'fas fa-chart-line' }, { name: 'Groww', icon: 'fas fa-chart-line' }, { name: 'Upstox', icon: 'fas fa-chart-line' }, 
+        { name: 'Angel One', icon: 'fas fa-chart-line' }, { name: 'ICICI Direct', icon: 'fas fa-chart-line' }, { name: 'HDFC Sec', icon: 'fas fa-chart-line' }
+    ],
+    'Crypto': [
+        { name: 'CoinDCX', icon: 'fab fa-bitcoin' }, { name: 'WazirX', icon: 'fab fa-bitcoin' }, { name: 'ZebPay', icon: 'fab fa-bitcoin' }, 
+        { name: 'Binance', icon: 'fab fa-bitcoin' }, { name: 'CoinSwitch', icon: 'fab fa-bitcoin' }, { name: 'Coinbase', icon: 'fab fa-bitcoin' }
+    ],
+    'Investment': [
+        { name: 'Zerodha Coin', icon: 'fas fa-leaf' }, { name: 'Groww', icon: 'fas fa-leaf' }, { name: 'ET Money', icon: 'fas fa-leaf' }, 
+        { name: 'Kuvera', icon: 'fas fa-leaf' }, { name: 'SBI Mutual Fund', icon: 'fas fa-leaf' }, { name: 'HDFC AMC', icon: 'fas fa-leaf' }
+    ],
+    'Insurance': [
+        { name: 'LIC India', icon: 'fas fa-shield-alt' }, { name: 'HDFC Life', icon: 'fas fa-shield-alt' }, { name: 'SBI Life', icon: 'fas fa-shield-alt' }, 
+        { name: 'ICICI Lombard', icon: 'fas fa-shield-alt' }, { name: 'Star Health', icon: 'fas fa-shield-alt' }, { name: 'Bajaj Allianz', icon: 'fas fa-shield-alt' }
+    ]
+};
+
+function setupAdvancedNavigation() {
+    const mainView = document.getElementById('mainView');
+    if (!mainView) return;
+    
+    // Initialize standard view transitions explicitly
+    document.querySelectorAll('#mainView, .sub-view-grid, #featureDisplayView').forEach(v => {
+        v.style.transition = 'opacity 0.25s ease-in-out, transform 0.25s ease-in-out';
+    });
+    
+    // Set base stack
+    navStack = [{ id: 'mainView', title: 'Home' }];
+    
+    // Level 1: Category Cards click listeners (Main grid)
+    document.querySelectorAll('.category-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const targetId = card.getAttribute('data-target');
+            const targetTitle = card.getAttribute('data-title');
+            navigateTo(targetId, targetTitle);
+        });
+    });
+    
+    // Level 2: Sub-view specific action cards click listeners
+    // Filtering out the provider Selection view and only grabbing categories
+    document.querySelectorAll('.sub-view-grid .action-card').forEach(card => {
+        // Skip provider cards just in case they are generated later
+        if (card.classList.contains('provider-card')) return;
+        
+        card.addEventListener('click', () => {
+             const featureTitle = card.querySelector('span').textContent;
+             openProviderSelection(featureTitle);
+        });
+    });
+}
+
+function navigateTo(viewId, title) {
+    const currentViewId = navStack.length > 0 ? navStack[navStack.length - 1].id : null;
+    
+    // Push new state onto stack
+    navStack.push({ id: viewId, title: title });
+    
+    renderBreadcrumb();
+    
+    // Animate out current and animate in new
+    if (currentViewId && currentViewId !== viewId) {
+        hideView(currentViewId, () => showTargetView(viewId));
+    } else {
+        showTargetView(viewId);
+    }
+}
+
+function navigateBackTo(index) {
+    if (index >= navStack.length - 1) return;
+    
+    const currentViewId = navStack[navStack.length - 1].id;
+    const targetViewId = navStack[index].id;
+    
+    // Pop stack
+    navStack = navStack.slice(0, index + 1);
+    
+    renderBreadcrumb();
+    
+    if (currentViewId !== targetViewId) {
+        hideView(currentViewId, () => showTargetView(targetViewId));
+    }
+}
+
+function hideView(viewId, callback) {
+    const view = document.getElementById(viewId);
+    if (!view) {
+        if(callback) callback();
+        return;
+    }
+    
+    view.style.opacity = 0;
+    view.style.transform = 'translateY(-10px)';
+    
+    setTimeout(() => {
+        view.classList.add('hidden');
+        if (callback) callback();
+    }, 250);
+}
+
+function showTargetView(viewId) {
+    const targetView = document.getElementById(viewId);
+    if (!targetView) return;
+    
+    targetView.classList.remove('hidden');
+    targetView.style.opacity = 0;
+    targetView.style.transform = 'translateY(10px)';
+    
+    void targetView.offsetWidth; // Force Reflow
+    
+    targetView.style.opacity = 1;
+    targetView.style.transform = 'translateY(0)';
+}
+
+function renderBreadcrumb() {
+    const dashboardHeaderTitle = document.getElementById('dashboardHeaderTitle');
+    if (!dashboardHeaderTitle) return;
+    
+    if (navStack.length <= 1) {
+        const user = window.currentUserData;
+        dashboardHeaderTitle.textContent = user && user.name ? user.name : "Home";
+        return;
+    }
+    
+    let html = '';
+    for (let i = 0; i < navStack.length; i++) {
+        const item = navStack[i];
+        if (i === navStack.length - 1) {
+            html += `<span style="color:var(--text-primary); font-weight:600;">${item.title}</span>`;
+        } else {
+            const separator = i === 0 ? '<i class="fas fa-arrow-left" style="margin-right:4px;"></i>' : '';
+            html += `<a href="#" class="nav-crumb" data-index="${i}" style="color:var(--text-secondary); text-decoration:none; transition: color 0.2s;">${separator}${item.title}</a> <span style="margin: 0 10px; color:var(--text-tertiary);"><i class="fas fa-angle-right" style="font-size:12px;"></i></span> `;
+        }
+    }
+    
+    dashboardHeaderTitle.innerHTML = html;
+    
+    // Bind click events on the newly generated crumb links
+    document.querySelectorAll('.nav-crumb').forEach(el => {
+        el.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetIndex = parseInt(el.getAttribute('data-index'));
+            navigateBackTo(targetIndex);
+        });
+    });
+}
+
+function openProviderSelection(featureTitle) {
+    const providerGrid = document.getElementById('providerGrid');
+    const subtitle = document.getElementById('providerSelectionSubtitle');
+    if (!providerGrid || !subtitle) return;
+    
+    // Determine which category we came from to show contextual providers
+    let mainCategory = 'default';
+    if (navStack.length >= 2) {
+        mainCategory = navStack[1].title;
+    }
+    
+    // Fallback to default banks if category doesn't have a specific list
+    const listToUse = providersData[mainCategory] || providersData['default'];
+    
+    // Adjust wording based on category
+    let providerTypeTerm = "Provider";
+    if (mainCategory === 'Stock Market') providerTypeTerm = "Broker";
+    if (mainCategory === 'Crypto') providerTypeTerm = "Exchange/Wallet";
+    if (mainCategory === 'Insurance') providerTypeTerm = "Insurer";
+    
+    subtitle.textContent = `Select a ${providerTypeTerm} for ${featureTitle}`;
+    providerGrid.innerHTML = '';
+    
+    listToUse.forEach(provider => {
+        const card = document.createElement('div');
+        card.className = 'action-card provider-card';
+        card.innerHTML = `<i class="${provider.icon}"></i><span>${provider.name}</span>`;
+        
+        card.addEventListener('click', () => {
+            openFeatureDisplay(provider.name, featureTitle);
+        });
+        
+        providerGrid.appendChild(card);
+    });
+    
+    navigateTo('providerSelectionView', featureTitle);
+}
+
+function openFeatureDisplay(providerName, featureTitle) {
+    const featureTitleEl = document.getElementById('featureTitle');
+    const featureIconEl = document.getElementById('featureProviderIcon');
+    
+    if (featureTitleEl && featureIconEl) {
+        featureTitleEl.textContent = `${providerName} - ${featureTitle}`;
+        featureIconEl.textContent = providerName.charAt(0);
+        
+        const colors = ['#4B1E6D', '#1976D2', '#388E3C', '#E64A19', '#0097A7', '#F57C00'];
+        featureIconEl.style.background = colors[providerName.length % colors.length];
+    }
+    
+    navigateTo('featureDisplayView', providerName);
+}
+
+console.log('Finclarity AI Dashboard main logic initialized');

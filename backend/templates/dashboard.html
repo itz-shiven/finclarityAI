@@ -8,154 +8,365 @@
 
     <!-- Fonts & Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
 
     <!-- CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
 </head>
 
 <body>
-<div class="dashboard-container">
+    <div class="dashboard-container">
 
-    <!-- Sidebar -->
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <div class="logo">
-                <span class="logo-icon">₿</span>
-                <span class="logo-text">Finclarity</span>
-            </div>
-        </div>
-
-        <nav class="nav-menu">
-            <a href="{{ url_for('dashboard') }}" class="nav-item active">
-                <i class="fas fa-home"></i><span>Dashboard</span>
-            </a>
-            <a href="#" class="nav-item"><i class="fas fa-chart-line"></i><span>Financial Insights</span></a>
-            <a href="#" class="nav-item"><i class="fas fa-exchange-alt"></i><span>Transactions</span></a>
-            <a href="#" class="nav-item"><i class="fas fa-wallet"></i><span>Budgets</span></a>
-        </nav>
-
-        <div class="user-profile">
-            <div class="user-avatar">{{ username[0]|upper }}</div>
-            <div class="user-info">
-                <p class="user-name">{{ username }}</p>
-                <p class="user-role">Finance Manager</p>
-            </div>
-        </div>
-    </aside>
-
-    <!-- Main -->
-    <div class="main-wrapper">
-
-        <!-- Header -->
-        <header class="top-header">
-            <input type="text" placeholder="Search...">
-            <div class="header-actions">
-                <button class="header-btn"><i class="fas fa-bell"></i></button>
-                <button class="header-btn" id="settingsBtn"><i class="fas fa-cog"></i></button>
-
-                <div class="settings-dropdown" id="settingsDropdown">
-                    <button id="logoutBtn" class="settings-option">
-                        <i class="fas fa-sign-out-alt"></i> Logout
-                    </button>
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <span class="logo-icon">₿</span>
+                    <span class="logo-text">Finclarity</span>
                 </div>
             </div>
-        </header>
 
-        <!-- Content -->
-        <main class="main-content">
+            <nav class="nav-menu">
+                <a href="{{ url_for('dashboard') }}" class="nav-item active">
+                    <i class="fas fa-home"></i><span>Home</span>
+                </a>
+                <a href="#" class="nav-item"><i class="fas fa-balance-scale"></i><span>Compare</span></a>
+                <a href="#" class="nav-item"><i class="fas fa-history"></i><span>What Changed</span></a>
+            </nav>
 
-            <div class="welcome-section">
-                <h1>Good day, {{ username }} 👋</h1>
-                <p class="welcome-subtitle">Here's your financial overview</p>
-            </div>
-
-            <!-- Cards -->
-            <div class="cards-grid">
-                <div class="action-card"><i class="fas fa-plus-circle"></i><span>Add Transaction</span></div>
-                <div class="action-card"><i class="fas fa-lightbulb"></i><span>View Insights</span></div>
-                <div class="action-card"><i class="fas fa-chart-pie"></i><span>Track Budget</span></div>
-                <div class="action-card"><i class="fas fa-file-alt"></i><span>Reports</span></div>
-            </div>
-
-            <!-- Chat -->
-            <div class="chat-section">
-
-                <div class="chat-container">
-
-                    <!-- New Chat -->
-                    <div class="new-chat-area" id="newChatArea">
-                        <h2>Start New Conversation</h2>
-                        <p>Ask me anything about your finances</p>
-
-                        <div class="quick-prompts">
-                            <button class="prompt-btn">💰 Budget Analysis</button>
-                            <button class="prompt-btn">📊 Spending Trends</button>
-                            <button class="prompt-btn">🎯 Financial Goals</button>
-                            <button class="prompt-btn">💡 Money Tips</button>
-                        </div>
+            <div class="sidebar-footer">
+                <a href="#" class="nav-item search-item">
+                    <i class="fas fa-search"></i> <span style="font-weight: 500;">Search</span>
+                </a>
+                <div class="profile-section" style="margin-top: 16px; display: flex; flex-direction: row; align-items: center; justify-content: space-between; padding: 12px; background: rgba(0, 0, 0, 0.05); border-radius: 12px;">
+                    <div class="profile-name" style="margin-bottom: 0; font-weight: 600; font-size: 15px; color: var(--text-primary);">
+                        {% if username and ' ' in username %}
+                        {{ username.split(' ')[0] | capitalize }}
+                        {% else %}
+                        {{ username | capitalize }}
+                        {% endif %}
                     </div>
-
-                    <div class="chat-divider"><span>or</span></div>
-
-                    <!-- Recent -->
-                    <div class="recent-chats">
-                        <h3>Recent Conversations</h3>
-                        <div class="chats-list">
-                            <div class="chat-item">
-                                <div class="chat-icon"><i class="fas fa-comment-dots"></i></div>
-                                <div class="chat-details">
-                                    <p class="chat-title">How to save more this month?</p>
-                                    <p class="chat-time">2 hours ago</p>
-                                </div>
+                    <div class="profile-actions" style="margin: 0; padding: 0;">
+                        <div class="settings-container" style="position: relative;">
+                            <button class="beautiful-settings-btn" id="settingsBtn" title="Settings">
+                                <i class="fas fa-cog"></i>
+                            </button>
+                            <!-- Settings Dropdown -->
+                            <div class="sidebar-dropdown" id="settingsDropdown" style="bottom: 120%; top: auto; right: 0;">
+                                <a href="#" class="dropdown-item" id="profileBtn"><i class="fas fa-user-circle"></i> Profile</a>
+                                <a href="#" class="dropdown-item" id="themeToggleBtn"><i class="fas fa-moon"></i> Theme Toggle</a>
+                                <div class="dropdown-divider"></div>
+                                <a href="#" class="dropdown-item text-danger" id="dropdownLogoutBtn"><i class="fas fa-sign-out-alt"></i> Log Out</a>
                             </div>
                         </div>
                     </div>
+                </div>  </div>
+        </aside>
 
+        <!-- Main -->
+        <div class="main-wrapper">
+
+            <!-- Content -->
+            <main class="main-content">
+
+                <div class="dashboard-header-simple">
+                    <h2 id="dashboardHeaderTitle">{{ username|title }}</h2>
                 </div>
 
-                <!-- Input -->
-                <div class="chat-input-area">
-                    <div class="chat-input-wrapper">
-                        <input type="text" id="chatInput" placeholder="Ask something about your finances...">
-                        <button id="sendBtn"><i class="fas fa-paper-plane"></i></button>
+                <!-- Main View: Home Categories -->
+                <div id="mainView">
+                    <div class="cards-grid">
+                        <div class="action-card category-card" data-target="cardsSubView" data-title="Cards"><i class="fas fa-credit-card"></i><span>Cards</span></div>
+                        <div class="action-card category-card" data-target="loansSubView" data-title="Loans"><i class="fas fa-hand-holding-usd"></i><span>Loans</span></div>
+                        <div class="action-card category-card" data-target="stocksSubView" data-title="Stock Market"><i class="fas fa-chart-line"></i><span>Stock Market</span></div>
+                        <div class="action-card category-card" data-target="investSubView" data-title="Investment"><i class="fas fa-chart-pie"></i><span>Investment</span></div>
+                        <div class="action-card category-card" data-target="insureSubView" data-title="Insurance"><i class="fas fa-shield-alt"></i><span>Insurance</span></div>
+                        <div class="action-card category-card" data-target="mortgageSubView" data-title="Mortgages"><i class="fas fa-house-user"></i><span>Mortgages</span></div>
+                        <div class="action-card category-card" data-target="cryptoSubView" data-title="Crypto"><i class="fab fa-bitcoin"></i><span>Crypto</span></div>
+                        <div class="action-card category-card" data-target="savingsSubView" data-title="Savings"><i class="fas fa-piggy-bank"></i><span>Savings</span></div>
                     </div>
-                    <p class="chat-footer-text">
-                        Finclarity AI can help with budgets, investments, and financial planning
-                    </p>
                 </div>
 
+                <!-- Sub View Containers -->
+                <!-- Cards -->
+                <div id="cardsSubView" class="hidden sub-view-grid">
+                    <div class="cards-grid">
+                        <div class="action-card"><i class="fas fa-credit-card"></i><span>Debit Cards</span></div>
+                        <div class="action-card"><i class="fas fa-credit-card"></i><span>Credit Cards</span></div>
+                        <div class="action-card"><i class="fas fa-laptop-code"></i><span>Virtual Cards</span></div>
+                        <div class="action-card"><i class="fas fa-id-card"></i><span>Prepaid Cards</span></div>
+                    </div>
+                </div>
+
+                <!-- Loans -->
+                <div id="loansSubView" class="hidden sub-view-grid">
+                    <div class="cards-grid">
+                        <div class="action-card"><i class="fas fa-user-tag"></i><span>Personal Loan</span></div>
+                        <div class="action-card"><i class="fas fa-car"></i><span>Auto Loan</span></div>
+                        <div class="action-card"><i class="fas fa-home"></i><span>Home Equity</span></div>
+                        <div class="action-card"><i class="fas fa-graduation-cap"></i><span>Student Loan</span></div>
+                    </div>
+                </div>
+
+                <!-- Stock Market -->
+                <div id="stocksSubView" class="hidden sub-view-grid">
+                    <div class="cards-grid">
+                        <div class="action-card"><i class="fas fa-briefcase"></i><span>Portfolios</span></div>
+                        <div class="action-card"><i class="fas fa-eye"></i><span>Watchlist</span></div>
+                        <div class="action-card"><i class="fas fa-arrow-trend-up"></i><span>Top Gainers</span></div>
+                        <div class="action-card"><i class="fas fa-rocket"></i><span>IPOs</span></div>
+                    </div>
+                </div>
+
+                <!-- Investment -->
+                <div id="investSubView" class="hidden sub-view-grid">
+                    <div class="cards-grid">
+                        <div class="action-card"><i class="fas fa-hand-holding-heart"></i><span>Mutual Funds</span></div>
+                        <div class="action-card"><i class="fas fa-file-contract"></i><span>Bonds</span></div>
+                        <div class="action-card"><i class="fas fa-building"></i><span>Real Estate</span></div>
+                        <div class="action-card"><i class="fas fa-chart-area"></i><span>ETFs</span></div>
+                    </div>
+                </div>
+
+                <!-- Insurance -->
+                <div id="insureSubView" class="hidden sub-view-grid">
+                    <div class="cards-grid">
+                        <div class="action-card"><i class="fas fa-heartbeat"></i><span>Health</span></div>
+                        <div class="action-card"><i class="fas fa-user-shield"></i><span>Life</span></div>
+                        <div class="action-card"><i class="fas fa-car-crash"></i><span>Auto</span></div>
+                        <div class="action-card"><i class="fas fa-house-damage"></i><span>Home</span></div>
+                    </div>
+                </div>
+
+                <!-- Mortgages -->
+                <div id="mortgageSubView" class="hidden sub-view-grid">
+                    <div class="cards-grid">
+                        <div class="action-card"><i class="fas fa-sync-alt"></i><span>Refinance</span></div>
+                        <div class="action-card"><i class="fas fa-key"></i><span>New Purchase</span></div>
+                        <div class="action-card"><i class="fas fa-calculator"></i><span>Calculators</span></div>
+                        <div class="action-card"><i class="fas fa-percentage"></i><span>Rates</span></div>
+                    </div>
+                </div>
+
+                <!-- Crypto -->
+                <div id="cryptoSubView" class="hidden sub-view-grid">
+                    <div class="cards-grid">
+                        <div class="action-card"><i class="fas fa-wallet"></i><span>Wallets</span></div>
+                        <div class="action-card"><i class="fas fa-exchange-alt"></i><span>Exchange</span></div>
+                        <div class="action-card"><i class="fas fa-coins"></i><span>Staking</span></div>
+                        <div class="action-card"><i class="fas fa-images"></i><span>NFTs</span></div>
+                    </div>
+                </div>
+
+                <!-- Savings -->
+                <div id="savingsSubView" class="hidden sub-view-grid">
+                    <div class="cards-grid">
+                        <div class="action-card"><i class="fas fa-level-up-alt"></i><span>High-Yield</span></div>
+                        <div class="action-card"><i class="fas fa-certificate"></i><span>CDs</span></div>
+                        <div class="action-card"><i class="fas fa-plus-square"></i><span>Emergency</span></div>
+                        <div class="action-card"><i class="fas fa-bullseye"></i><span>Goals</span></div>
+                    </div>
+                </div>
+
+                <!-- Provider Selection View -->
+                <div id="providerSelectionView" class="hidden sub-view-grid">
+                    <h3 id="providerSelectionSubtitle" style="margin-bottom: 20px; color: var(--text-secondary); font-size: 16px; font-weight: 500;">Select Provider</h3>
+                    <div class="cards-grid" id="providerGrid">
+                        <!-- Populated dynamically via JS -->
+                    </div>
+                </div>
+
+                <!-- Feature Display View -->
+                <div id="featureDisplayView" class="hidden">
+                    <div class="feature-card" style="background: var(--bg-tertiary, #fff); padding: 24px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+                        <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
+                            <div class="avatar-circle" id="featureProviderIcon" style="width: 50px; height: 50px; background: var(--primary-600); color: white; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 20px; font-weight: bold; flex-shrink: 0;">
+                            </div>
+                            <h3 id="featureTitle" style="margin: 0; font-size: 20px;">Feature Name</h3>
+                        </div>
+                        <div class="feature-content" id="featureContent" style="color: var(--text-secondary); line-height: 1.6; padding: 16px; background: rgba(0,0,0,0.02); border-radius: 8px;">
+                            <p style="display: flex; align-items: center; gap: 10px; font-weight: 500; font-size: 15px;"><i class="fas fa-spinner fa-spin" style="color: var(--primary-600);"></i> Extracting provider data...</p>
+                            <p style="margin-top: 16px; font-size: 14px; opacity: 0.8; font-style: italic;">Currently displaying structural layout. The content for this provider will be dynamically populated by Firecrawler LLM.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat widget removed from here and placed as fixed overlay -->
+
+            </main>
+
+            <!-- Floating Chat Widget -->
+            <div class="chat-widget" id="chatWidget">
+                <!-- Chat Toggle Button -->
+                <button class="chat-widget-toggle" id="chatToggleBtn">
+                    <i class="fas fa-comment-dots"></i>
+                </button>
+
+                <!-- Chat Window -->
+                <div class="chat-widget-window" id="chatWindow">
+
+                    <!-- Chat History Sidebar -->
+                    <div class="chat-history-sidebar">
+                        <div class="history-header">
+                            <button class="chat-widget-close" id="chatCloseBtn" title="Back to Dashboard">
+                                <i class="fas fa-arrow-left"></i>
+                            </button>
+                            <button class="new-chat-btn-large" id="newChatSidebarBtn">
+                                <i class="fas fa-plus"></i> New chat
+                            </button>
+                        </div>
+                        <div class="history-list">
+                            <!-- History items will be dynamically added here -->
+                        </div>
+                    </div>
+
+                    <!-- Chat Main Area -->
+                    <div class="chat-main-area">
+                        <div class="chat-widget-header">
+                            <div class="chat-widget-title">
+                                Finclarity AI <i class="fas fa-robot"></i>
+                            </div>
+                        </div>
+
+                        <div class="chat-widget-body">
+                            <div class="chat-container">
+                                <div class="new-chat-area" id="newChatArea">
+                                    <p
+                                        style="text-align: center; color: var(--text-secondary); margin-bottom: 12px; font-size: 14px;">
+                                        Ask me anything about your finances</p>
+                                    <div class="quick-prompts">
+                                        <button class="prompt-btn">💰 Budget Analysis</button>
+                                        <button class="prompt-btn">📊 Spending Trends</button>
+                                        <button class="prompt-btn">🎯 Financial Goals</button>
+                                        <button class="prompt-btn">💡 Money Tips</button>
+                                    </div>
+                                </div>
+                                <div class="chat-messages" id="chatMessages"></div>
+                            </div>
+                        </div>
+
+                        <div class="chat-widget-footer">
+                            <div class="chat-input-wrapper">
+                                <input type="text" id="chatInput" placeholder="Ask something about your finances...">
+                                <button id="sendBtn"><i class="fas fa-paper-plane"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-        </main>
+        </div>
     </div>
-</div>
 
 
-<!-- 🔥 SUPABASE INIT (IMPORTANT) -->
-<script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+    <!-- 🔥 SUPABASE INIT (IMPORTANT) -->
+    <script type="module">
+        import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-    const supabase = createClient(
-        "https://oooykmtjwolypmqkdxpk.supabase.co",
-        "YOUR_ANON_KEY"
-    );
+        const supabase = createClient(
+            "https://oooykmtjwolypmqkdxpk.supabase.co",
+            "YOUR_ANON_KEY"
+        );
 
-    window.supabase = supabase;
-</script>
+        window.supabase = supabase;
+    </script>
+
+    <!-- Profile Settings Modal -->
+    <div class="modal-overlay" id="profileModal">
+        <div class="profile-modal-card">
+            <!-- Header -->
+            <div class="modal-header">
+                <h3>Profile Settings</h3>
+                <button class="close-modal-btn" id="closeProfileBtn"><i class="fas fa-times"></i></button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Profile Section -->
+                <div class="profile-info-section">
+                    <div class="avatar-circle" id="profileAvatar">
+                        ?
+                    </div>
+                    <div class="profile-details">
+                        <h4 id="displayUsername">Loading...</h4>
+                        <p id="displayEmail">loading@...</p>
+                    </div>
+                </div>
+
+                <!-- Account Info Section -->
+                <div class="settings-section">
+                    <h5>Account Info</h5>
+                    <form id="updateProfileForm">
+                        <div class="input-group">
+                            <label>Username</label>
+                            <input type="text" id="editUsername" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Email</label>
+                            <input type="email" id="editEmail" required>
+                        </div>
+                        <button type="submit" class="btn-primary" id="saveProfileBtn">Save Changes</button>
+                    </form>
+                </div>
+
+                <!-- Security Section -->
+                <div class="settings-section">
+                    <h5>Security</h5>
+                    <form id="changePasswordForm">
+                        <div class="input-group">
+                            <label>Current Password</label>
+                            <input type="password" id="currentPassword" required>
+                        </div>
+                        <div class="input-group">
+                            <label>New Password</label>
+                            <input type="password" id="newPassword" required>
+                        </div>
+                        <button type="submit" class="btn-outline" id="changePasswordBtn">Change Password</button>
+                    </form>
+                </div>
+
+                <!-- Subscription Section -->
+                <div class="settings-section subscription-section">
+                    <div class="subscription-details">
+                        <span class="plan-badge">Free Plan</span>
+                        <span class="usage-text">23/100 predictions used</span>
+                    </div>
+                    <button type="button" class="btn-upgrade">Upgrade to Pro</button>
+                </div>
+            </div>
+
+            <!-- Footer / Logout -->
+            <div class="modal-footer">
+                <button class="btn-danger-outline" id="profileLogoutBtn"><i class="fas fa-sign-out-alt"></i> Log Out</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Logout Confirm Modal -->
+    <div class="modal-overlay" id="logoutModal">
+        <div class="confirm-modal">
+            <div class="modal-icon"><i class="fas fa-sign-out-alt"></i></div>
+            <h3>Log Out</h3>
+            <p>Are you sure you want to log out of your account?</p>
+            <div class="modal-actions">
+                <button class="btn-cancel" id="cancelLogoutBtn">Cancel</button>
+                <button class="btn-danger" id="confirmLogoutBtn">Log Out</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- MAIN JS -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 
 
-<!-- MAIN JS -->
-<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    <!-- 🔥 SMALL SAFE UI SCRIPT ONLY -->
+    <script>
+        function handleGuestUI() {
+            const area = document.getElementById("newChatArea");
 
-
-<!-- 🔥 SMALL SAFE UI SCRIPT ONLY -->
-<script>
-    function handleGuestUI() {
-        const area = document.getElementById("newChatArea");
-
-        if (window.currentUserData && window.currentUserData.isGuest && area) {
-            area.innerHTML = `
+            if (window.currentUserData && window.currentUserData.isGuest && area) {
+                area.innerHTML = `
                 <div style="text-align:center;padding:40px;">
                     <i class="fas fa-lock" style="font-size:48px;margin-bottom:20px;"></i>
                     <h2>Login Required</h2>
@@ -166,11 +377,12 @@
                     </button>
                 </div>
             `;
+            }
         }
-    }
 
-    setTimeout(handleGuestUI, 500);
-</script>
+        setTimeout(handleGuestUI, 500);
+    </script>
 
 </body>
+
 </html>
