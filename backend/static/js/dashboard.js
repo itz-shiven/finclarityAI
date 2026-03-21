@@ -197,7 +197,7 @@ async function sendMessage() {
             body: JSON.stringify({ 
                 message: message,
                 history: currentConversation.slice(-30),
-                user_memory: JSON.parse(localStorage.getItem('finclarityMemory') || '[]')
+                user_memory: JSON.parse(localStorage.getItem(getUserKey('finclarityMemory')) || '[]')
             })
         });
 
@@ -218,12 +218,12 @@ async function sendMessage() {
         // Extract permanent memory facts secretly
         const memoryMatches = reply.match(/\[MEMORY:(.*?)\]/g);
         if (memoryMatches) {
-            let memories = JSON.parse(localStorage.getItem('finclarityMemory') || '[]');
+            let memories = JSON.parse(localStorage.getItem(getUserKey('finclarityMemory')) || '[]');
             memoryMatches.forEach(match => {
                 const fact = match.replace('[MEMORY:', '').replace(']', '').trim();
                 if (!memories.includes(fact)) memories.push(fact);
             });
-            localStorage.setItem('finclarityMemory', JSON.stringify(memories));
+            localStorage.setItem(getUserKey('finclarityMemory'), JSON.stringify(memories));
             if (typeof syncUserDataToBackend === 'function') syncUserDataToBackend();
             
             // Strip the tags from the visual UI
@@ -371,7 +371,16 @@ function setupSettings() {
                     credentials: 'include'
                 });
 
+                // Clear ALL user related data
+                const user = window.currentUserData;
+                if (user && user.email) {
+                    localStorage.removeItem(`finclarityChats_${user.email}`);
+                    localStorage.removeItem(`finclarityMemory_${user.email}`);
+                }
+                localStorage.removeItem('finclarityChats');
+                localStorage.removeItem('finclarityMemory');
                 localStorage.removeItem('currentUser');
+                
                 Object.keys(localStorage).forEach(key => {
                     if (key.startsWith('sb-')) {
                         localStorage.removeItem(key);
@@ -396,9 +405,20 @@ let chatHistories = [];
 let currentChatId = null;
 let currentConversation = [];
 
+function getUserKey(baseKey) {
+    const user = window.currentUserData;
+    if (user && user.email) {
+        return `${baseKey}_${user.email}`;
+    }
+    if (user && user.isGuest) {
+        return `${baseKey}_guest`;
+    }
+    return baseKey; 
+}
+
 function loadLocalChats() {
     try {
-        const stored = localStorage.getItem('finclarityChats');
+        const stored = localStorage.getItem(getUserKey('finclarityChats'));
         if (stored) {
             chatHistories = JSON.parse(stored);
             const historyList = document.querySelector('.history-list');
@@ -414,6 +434,11 @@ function loadLocalChats() {
                     historyList.appendChild(historyItem);
                 });
             }
+        } else {
+            // No chats for this user, clear the list
+            chatHistories = [];
+            const historyList = document.querySelector('.history-list');
+            if (historyList) historyList.innerHTML = '';
         }
     } catch (e) {
         console.error("Local chats load error:", e);
@@ -421,7 +446,7 @@ function loadLocalChats() {
 }
 
 function saveLocalChats() {
-    localStorage.setItem('finclarityChats', JSON.stringify(chatHistories));
+    localStorage.setItem(getUserKey('finclarityChats'), JSON.stringify(chatHistories));
     if (typeof syncUserDataToBackend === 'function') syncUserDataToBackend();
 }
 
@@ -546,12 +571,15 @@ async function loadUserData() {
                         const syncRes = await fetch('/api/get_userdata', { credentials: 'include' });
                         const syncData = await syncRes.json();
                         if (syncData.status === 'success' && syncData.data) {
-                            if (syncData.data.chats && syncData.data.chats.length > 0) {
-                                localStorage.setItem('finclarityChats', JSON.stringify(syncData.data.chats));
-                            }
-                            if (syncData.data.memory && syncData.data.memory.length > 0) {
-                                localStorage.setItem('finclarityMemory', JSON.stringify(syncData.data.memory));
-                            }
+                            // Always sync with backend data if available. Overwrite local if we have fresh data.
+                            const chats = syncData.data.chats || [];
+                            const memory = syncData.data.memory || [];
+                            
+                            localStorage.setItem(getUserKey('finclarityChats'), JSON.stringify(chats));
+                            localStorage.setItem(getUserKey('finclarityMemory'), JSON.stringify(memory));
+                            
+                            // Re-load chats into the local state
+                            if (typeof loadLocalChats === 'function') loadLocalChats();
                         }
                     } catch (e) {
                         console.error("Failed to load user data from backend", e);
@@ -577,8 +605,8 @@ async function loadUserData() {
 async function syncUserDataToBackend() {
     if (!window.currentUserData || window.currentUserData.isGuest) return;
     try {
-        const chats = JSON.parse(localStorage.getItem('finclarityChats') || '[]');
-        const memory = JSON.parse(localStorage.getItem('finclarityMemory') || '[]');
+        const chats = JSON.parse(localStorage.getItem(getUserKey('finclarityChats')) || '[]');
+        const memory = JSON.parse(localStorage.getItem(getUserKey('finclarityMemory')) || '[]');
         await fetch('/api/sync_userdata', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -712,7 +740,15 @@ function setupSettingsAndLogout() {
             }
 
             // Final cleanup and redirect
+            const user = window.currentUserData;
+            if (user && user.email) {
+                localStorage.removeItem(`finclarityChats_${user.email}`);
+                localStorage.removeItem(`finclarityMemory_${user.email}`);
+            }
+            localStorage.removeItem('finclarityChats');
+            localStorage.removeItem('finclarityMemory');
             localStorage.removeItem('currentUser');
+            
             Object.keys(localStorage).forEach(key => {
                 if (key.startsWith('sb-')) {
                     localStorage.removeItem(key);
@@ -904,7 +940,17 @@ function setupProfileModal() {
             try {
                 if (window.supabase) await window.supabase.auth.signOut();
                 await fetch('/api/logout', { method: 'POST' });
+                
+                // Clear ALL user related data
+                const user = window.currentUserData;
+                if (user && user.email) {
+                    localStorage.removeItem(`finclarityChats_${user.email}`);
+                    localStorage.removeItem(`finclarityMemory_${user.email}`);
+                }
+                localStorage.removeItem('finclarityChats');
+                localStorage.removeItem('finclarityMemory');
                 localStorage.removeItem('currentUser');
+                
                 Object.keys(localStorage).forEach(key => {
                     if (key.startsWith('sb-')) {
                         localStorage.removeItem(key);

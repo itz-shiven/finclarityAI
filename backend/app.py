@@ -297,17 +297,22 @@ def get_userdata():
         return jsonify({"status": "error", "message": "Not authenticated"}), 401
         
     user_id = session['user_id']
-    file_path = os.path.join(USER_DATA_DIR, f"{user_id}.json")
     
-    if os.path.exists(file_path):
-        try:
-            with open(file_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            return jsonify({"status": "success", "data": data})
-        except Exception as e:
-            return jsonify({"status": "error", "message": str(e)})
-            
-    return jsonify({"status": "success", "data": {"chats": [], "memory": []}})
+    try:
+        response = requests.get(
+            f"{SUPABASE_URL}/rest/v1/user_data",
+            headers=HEADERS,
+            params={"user_id": f"eq.{user_id}"}
+        )
+        
+        if response.status_code == 200:
+            rows = response.json()
+            if rows:
+                return jsonify({"status": "success", "data": rows[0]})
+        
+        return jsonify({"status": "success", "data": {"chats": [], "memory": []}})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
 
 @app.route("/api/sync_userdata", methods=["POST"])
 def sync_userdata():
@@ -315,16 +320,31 @@ def sync_userdata():
         return jsonify({"status": "error", "message": "Not authenticated"}), 401
         
     user_id = session['user_id']
-    file_path = os.path.join(USER_DATA_DIR, f"{user_id}.json")
     
     try:
         data = request.get_json()
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump({
-                "chats": data.get("chats", []),
-                "memory": data.get("memory", [])
-            }, f, ensure_ascii=False, indent=2)
-        return jsonify({"status": "success"})
+        payload = {
+            "user_id": user_id,
+            "chats": data.get("chats", []),
+            "memory": data.get("memory", []),
+            "updated_at": "now()"
+        }
+        
+        # Upsert using PostgREST resolution=merge-duplicates
+        upsert_headers = HEADERS.copy()
+        upsert_headers["Prefer"] = "resolution=merge-duplicates"
+        
+        response = requests.post(
+            f"{SUPABASE_URL}/rest/v1/user_data",
+            headers=upsert_headers,
+            json=payload
+        )
+        
+        if response.status_code in [200, 201, 204]:
+            return jsonify({"status": "success"})
+        else:
+            return jsonify({"status": "error", "message": f"DB Error: {response.text}"})
+            
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
 
