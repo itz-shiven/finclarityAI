@@ -99,32 +99,74 @@ document.addEventListener("DOMContentLoaded", () => {
 
         /* BOT THINKING */
 
-        setTimeout(() => {
+        const botThinking = document.createElement("div");
+        botThinking.className = "bot-message";
+        botThinking.innerText = "AI is thinking... 🤖";
 
-            const botThinking = document.createElement("div");
-            botThinking.className = "bot-message";
-            botThinking.innerText = "AI is thinking... 🤖";
+        messages.appendChild(botThinking);
 
-            messages.appendChild(botThinking);
-
-            messages.scrollTop = messages.scrollHeight;
-
-        }, 500);
+        messages.scrollTop = messages.scrollHeight;
 
 
-        /* BOT REPLY */
+        /* BUILD CONVERSATION HISTORY */
+        const history = [];
+        const messageElements = messages.querySelectorAll(".user-message, .bot-message");
+        
+        for (let i = 0; i < messageElements.length - 2; i++) {
+            const element = messageElements[i];
+            if (element.classList.contains("user-message")) {
+                history.push({
+                    role: "user",
+                    content: element.innerText
+                });
+            } else if (element.classList.contains("bot-message")) {
+                history.push({
+                    role: "assistant",
+                    content: element.innerText
+                });
+            }
+        }
 
-        setTimeout(() => {
+        /* GET USER MEMORY */
+        let userData = [];
+        try {
+            const savedData = localStorage.getItem("userMemory");
+            userData = savedData ? JSON.parse(savedData) : [];
+        } catch (e) {
+            userData = [];
+        }
 
+
+        /* CALL BACKEND API */
+        fetch("/chat", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                message: text,
+                history: history,
+                user_memory: userData
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Remove thinking message
+            botThinking.remove();
+            
+            // Add AI reply
             const botReply = document.createElement("div");
             botReply.className = "bot-message";
-            botReply.innerText = "AI response placeholder 🤖";
+            botReply.innerText = data.reply || "Sorry, I encountered an error.";
 
             messages.appendChild(botReply);
 
             messages.scrollTop = messages.scrollHeight;
-
-        }, 1200);
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            botThinking.innerText = "Error connecting to server. Please try again.";
+        });
 
     }
 
