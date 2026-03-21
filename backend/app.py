@@ -4,9 +4,16 @@ from flask import Flask, request, jsonify, render_template, session, redirect, u
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
-
+from openai import OpenAI
+from sentence_transformers import SentenceTransformer
 load_dotenv()
 
+client = OpenAI(
+    api_key=os.getenv("OPENROUTER_API_KEY"),
+    base_url="https://openrouter.ai/api/v1"
+)
+
+embed_model = SentenceTransformer("all-MiniLM-L6-v2")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(
@@ -307,9 +314,8 @@ def logout():
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
-        # Check if user is logged in (not guest)
         if 'is_guest' in session or 'user_id' not in session:
-            return jsonify({"status": "error", "message": "Please login to use the chatbot"}), 401
+            return jsonify({"status": "error", "message": "Please login"}), 401
 
         data = request.get_json()
         message = data.get("message")
@@ -317,14 +323,76 @@ def chat():
         if not message:
             return jsonify({"reply": "Empty message"})
 
-        return jsonify({
-            "reply": f"AI: You said '{message}'"
-        })
+        # =========================
+        # 🔥 STEP 1: EMBEDDING
+        # =========================
+        query_embedding = embed_model.encode(message).tolist()
+
+        # =========================
+        # 🔥 STEP 2: SUPABASE VECTOR SEARCH
+        # =========================
+        res = requests.post(
+            f"{SUPABASE_URL}/rest/v1/rpc/match_documents",
+            headers=HEADERS,
+            json={
+                "query_embedding": query_embedding,
+                "match_count": 4
+            }
+        )
+
+        docs = res.json()
+
+        if not docs:
+            return jsonify({
+                "reply": "I couldn't find anything in your financial data."
+            })
+
+        # =========================
+        # 🔥 STEP 3: CONTEXT
+        # =========================
+        context = "\n\n".join([
+    f"{doc['content']}\nSource: {doc.get('url', 'N/A')}"
+    for doc in docs
+])
+
+        # =========================
+        # 🔥 STEP 4: DYNAMIC PROMPT
+        # =========================
+        system_prompt = """
+You are Finclarity AI - a dynamic financial assistant.
+
+GUIDELINES:
+- PRIMARY: Answer from the provided context when available
+- SECONDARY: Use your knowledge to enhance or clarify the answer
+- ADAPTIVE: Adjust tone and depth based on user complexity
+- If context unavailable: Provide helpful financial guidance with disclaimer
+- Keep answers clear, relevant, and actionable
+- Use examples when helpful
+- Acknowledge uncertainty naturally
+"""
+
+        # =========================
+        # 🔥 STEP 5: LLM
+        # =========================
+        ai_res = client.chat.completions.create(
+            model="meta-llama/llama-3-8b-instruct",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {
+                    "role": "user",
+                    "content": f"Context:\n{context}\n\nQuestion:\n{message}"
+                }
+            ]
+        )
+
+        reply = ai_res.choices[0].message.content
+
+        return jsonify({"reply": reply})
 
     except Exception as e:
-        return jsonify({"reply": f"Error: {str(e)}"})
-
-
+        import traceback
+        traceback.print_exc()
+        return jsonify({"reply": "Server error"})
 # -------------------------
 # PROFILE MANAGEMENT API
 # -------------------------
