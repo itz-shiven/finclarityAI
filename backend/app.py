@@ -8,6 +8,16 @@ from openai import OpenAI
 from sentence_transformers import SentenceTransformer
 load_dotenv()
 
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise Exception("Supabase env variables missing")
+
+if not OPENAI_API_KEY:
+    raise Exception("OpenAI API key missing")
+
 client = OpenAI(
     api_key=os.getenv("OPENROUTER_API_KEY"),
     base_url="https://openrouter.ai/api/v1"
