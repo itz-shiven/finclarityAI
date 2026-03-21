@@ -1363,6 +1363,10 @@ body {
     border: none;
 }
 
+[data-theme="dark"] .message-bubble.ai {
+    color: var(--text-main, #ffffff);
+}
+
 /* ============================================
    GUEST PROMPT STYLES
    ============================================ */
@@ -2159,6 +2163,50 @@ input:focus-visible {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
 }
 
+/* ============================================
+   CHAT TYPING INDICATOR (LOADER)
+   ============================================ */
 
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 2px 4px;
+}
+
+.typing-indicator .dot {
+    width: 6px;
+    height: 6px;
+    background-color: var(--text-tertiary);
+    border-radius: 50%;
+    animation: typing 1.4s infinite ease-in-out both;
+}
+
+.typing-indicator .dot:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.typing-indicator .dot:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+.loading-bubble {
+    padding: 12px 16px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+}
+
+@keyframes typing {
+    0%, 80%, 100% { 
+        transform: scale(0);
+        opacity: 0.5;
+    }
+    40% { 
+        transform: scale(1);
+        opacity: 1;
+    }
+}
 
 

@@ -319,6 +319,7 @@ def chat():
 
         data = request.get_json()
         message = data.get("message")
+        history = data.get("history", [])
 
         if not message:
             return jsonify({"reply": "Empty message"})
@@ -362,6 +363,15 @@ def chat():
 You are Finclarity AI — a smart financial assistant for Indian users.
 
 Your goal: Give clear, practical, and easy-to-understand financial guidance.
+
+━━━━━━━━━━━━━━━━━━━
+OUT OF DOMAIN & CONFUSION HANDLING (STRICT)
+━━━━━━━━━━━━━━━━━━━
+- If the user's input is a random string (e.g., "asdf"), a joke, or completely unrelated to banking, finance, or the provided context:
+- IMMEDIATELY STOP.
+- Reply with exactly 1-2 short sentences politely refusing to answer.
+- Example: "I apologize, but I am specifically designed to assist with financial queries. Could you please clarify your banking or finance question?"
+- Do NOT generate random text, do NOT apologize profusely, and do NOT attempt to answer the non-financial question.
 
 ━━━━━━━━━━━━━━━━━━━
 INTENT DETECTION
@@ -571,15 +581,20 @@ Before sending response:
         # =========================
         # 🔥 STEP 5: LLM
         # =========================
+        messages = [{"role": "system", "content": system_prompt}]
+        
+        for msg in history[:-1]:
+            messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
+            
+        messages.append({
+            "role": "user",
+            "content": f"Context:\n{context}\n\nQuestion:\n{message}"
+        })
+
         ai_res = client.chat.completions.create(
             model="meta-llama/llama-3-8b-instruct",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {
-                    "role": "user",
-                    "content": f"Context:\n{context}\n\nQuestion:\n{message}"
-                }
-            ]
+            messages=messages,
+            temperature=0.3
         )
 
         reply = ai_res.choices[0].message.content

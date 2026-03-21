@@ -181,13 +181,23 @@ async function sendMessage() {
     chatInput.value = '';
     sendBtn.disabled = true;
 
+    const loaderId = appendLoader();
+
     try {
+        // Maintain local history state
+        currentConversation.push({ role: "user", content: message });
+
         const response = await fetch('/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ message })
+            body: JSON.stringify({ 
+                message: message,
+                history: currentConversation.slice(-6) 
+            })
         });
+
+        removeLoader(loaderId);
 
         if (!response.ok) {
             if (response.status === 401) {
@@ -201,8 +211,10 @@ async function sendMessage() {
         const data = await response.json();
         const reply = data?.reply || "No response from AI.";
         appendMessage(reply, "ai");
+        currentConversation.push({ role: "assistant", content: reply });
 
     } catch (error) {
+        removeLoader(loaderId);
         console.error("Chat error:", error);
         appendMessage("Something went wrong. Try again.", "ai");
     }
@@ -229,7 +241,11 @@ function appendMessage(text, sender) {
 
     const bubble = document.createElement('div');
     bubble.className = `message-bubble ${sender}`;
-    bubble.textContent = text;
+    if (sender === 'ai' && window.marked) {
+        bubble.innerHTML = marked.parse(text);
+    } else {
+        bubble.textContent = text;
+    }
 
     messageDiv.appendChild(bubble);
     chatBox.appendChild(messageDiv);
@@ -238,6 +254,34 @@ function appendMessage(text, sender) {
 
     if (typeof saveCurrentChat === 'function') {
         saveCurrentChat();
+    }
+}
+
+function appendLoader() {
+    let chatBox = document.getElementById('chatMessages');
+    if (!chatBox) return null;
+
+    const loaderId = 'loader-' + Date.now();
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message ai loader-msg`;
+    messageDiv.id = loaderId;
+
+    const bubble = document.createElement('div');
+    bubble.className = `message-bubble ai loading-bubble`;
+    bubble.innerHTML = `<div class="typing-indicator"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`;
+
+    messageDiv.appendChild(bubble);
+    chatBox.appendChild(messageDiv);
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    return loaderId;
+}
+
+function removeLoader(loaderId) {
+    if (!loaderId) return;
+    const loaderEl = document.getElementById(loaderId);
+    if (loaderEl) {
+        loaderEl.remove();
     }
 }
 
@@ -282,6 +326,11 @@ function setupSettings() {
                 });
 
                 localStorage.removeItem('currentUser');
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('sb-')) {
+                        localStorage.removeItem(key);
+                    }
+                });
 
                 window.location.href = '/login';
 
@@ -299,6 +348,7 @@ function setupSettings() {
 
 let chatHistories = [];
 let currentChatId = null;
+let currentConversation = [];
 
 function saveCurrentChat() {
     const chatMessages = document.getElementById('chatMessages');
@@ -314,13 +364,15 @@ function saveCurrentChat() {
         const chatData = chatHistories.find(c => c.id === currentChatId);
         if (chatData) {
             chatData.html = chatMessages.innerHTML;
+            chatData.messages = [...currentConversation];
         }
     } else {
         currentChatId = Date.now().toString();
         chatHistories.push({
             id: currentChatId,
             title: shortTitle,
-            html: chatMessages.innerHTML
+            html: chatMessages.innerHTML,
+            messages: [...currentConversation]
         });
 
         const historyList = document.querySelector('.history-list');
@@ -342,6 +394,8 @@ function loadChat(chatId) {
     currentChatId = chatId;
     const chatData = chatHistories.find(c => c.id === currentChatId);
     if (!chatData) return;
+    
+    currentConversation = [...(chatData.messages || [])];
 
     const chatMessages = document.getElementById('chatMessages');
     const newChatArea = document.getElementById('newChatArea');
@@ -375,6 +429,7 @@ function startNewChat() {
     saveCurrentChat();
 
     currentChatId = null;
+    currentConversation = [];
     const chatMessages = document.getElementById('chatMessages');
     if (chatMessages) {
         chatMessages.innerHTML = '';
@@ -542,9 +597,14 @@ function setupSettingsAndLogout() {
             }
 
             // Final cleanup and redirect
-            localStorage.removeItem('supabase.auth.token');
+            localStorage.removeItem('currentUser');
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('sb-')) {
+                    localStorage.removeItem(key);
+                }
+            });
             sessionStorage.clear();
-            window.location.href = "/";
+            window.location.href = "/login";
         });
     }
 }
@@ -729,9 +789,14 @@ function setupProfileModal() {
             try {
                 if (window.supabase) await window.supabase.auth.signOut();
                 await fetch('/api/logout', { method: 'POST' });
-                localStorage.removeItem('supabase.auth.token');
+                localStorage.removeItem('currentUser');
+                Object.keys(localStorage).forEach(key => {
+                    if (key.startsWith('sb-')) {
+                        localStorage.removeItem(key);
+                    }
+                });
                 sessionStorage.clear();
-                window.location.href = "/";
+                window.location.href = "/login";
             } catch (error) {
                 console.error('Logout error:', error);
                 window.location.href = "/";
