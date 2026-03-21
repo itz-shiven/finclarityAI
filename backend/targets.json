@@ -1,0 +1,14 @@
+[
+  {
+    "provider_name": "SBI Card",
+    "service_name": "SimplyCLICK Credit Card",
+    "product_url": "https://www.sbicard.com/en/personal/credit-cards/simplyclick-sbi-card.html",
+    "terms_url": "https://www.sbicard.com/en/most-important-terms-and-conditions.page"
+  },
+  {
+    "provider_name": "ICICI Bank",
+    "service_name": "Coral Credit Card",
+    "product_url": "https://www.icici.bank.in/personal-banking/cards/credit-card/coral-credit-card",
+    "terms_url": "https://www.icici.bank.in/personal-banking/loans/smart-loan/most-important-terms-and-conditions"
+  }
+]
