@@ -509,17 +509,7 @@ function setupSettingsAndLogout() {
 
     const themeToggleBtn = document.getElementById('themeToggleBtn');
     if (themeToggleBtn) {
-        // Load saved theme
-        if (localStorage.getItem('theme') === 'dark') {
-            document.body.classList.add('dark-theme');
-        }
-
-        themeToggleBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            document.body.classList.toggle('dark-theme');
-            const isDark = document.body.classList.contains('dark-theme');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-        });
+        // Theme logic is now handled by theme-toggle.js
     }
 
     if (dropdownLogoutBtn && logoutModal) {
