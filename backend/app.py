@@ -1,4 +1,5 @@
 import os
+import json
 import requests
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for
 from flask_cors import CORS
@@ -6,6 +7,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 from openai import OpenAI
 from sentence_transformers import SentenceTransformer
+from functools import lru_cache
 load_dotenv()
 
 client = OpenAI(
@@ -15,6 +17,13 @@ client = OpenAI(
 
 embed_model = SentenceTransformer("all-MiniLM-L6-v2")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+USER_DATA_DIR = os.path.join(BASE_DIR, "user_data")
+os.makedirs(USER_DATA_DIR, exist_ok=True)
+
+@lru_cache(maxsize=2000)
+def get_cached_embedding(text):
+    """Caches sentence embeddings to prevent CPU thread blocking on repeat queries."""
+    return embed_model.encode(text).tolist()
 
 app = Flask(
     __name__,
@@ -279,6 +288,47 @@ def get_user():
     return jsonify({"status": "error", "message": "Not logged in"}), 401
 
 # -------------------------
+# USER DATA SYNC API
+# -------------------------
+
+@app.route("/api/get_userdata", methods=["GET"])
+def get_userdata():
+    if 'user_id' not in session:
+        return jsonify({"status": "error", "message": "Not authenticated"}), 401
+        
+    user_id = session['user_id']
+    file_path = os.path.join(USER_DATA_DIR, f"{user_id}.json")
+    
+    if os.path.exists(file_path):
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return jsonify({"status": "success", "data": data})
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)})
+            
+    return jsonify({"status": "success", "data": {"chats": [], "memory": []}})
+
+@app.route("/api/sync_userdata", methods=["POST"])
+def sync_userdata():
+    if 'user_id' not in session:
+        return jsonify({"status": "error", "message": "Not authenticated"}), 401
+        
+    user_id = session['user_id']
+    file_path = os.path.join(USER_DATA_DIR, f"{user_id}.json")
+    
+    try:
+        data = request.get_json()
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump({
+                "chats": data.get("chats", []),
+                "memory": data.get("memory", [])
+            }, f, ensure_ascii=False, indent=2)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+# -------------------------
 # GUEST LOGIN API
 # -------------------------
 
@@ -320,28 +370,32 @@ def chat():
         data = request.get_json()
         message = data.get("message")
         history = data.get("history", [])
+        user_memory = data.get("user_memory", [])
 
         if not message:
             return jsonify({"reply": "Empty message"})
 
         # =========================
-        # 🔥 STEP 1: EMBEDDING
+        # 🔥 STEP 1: CACHED EMBEDDING
         # =========================
-        query_embedding = embed_model.encode(message).tolist()
+        query_embedding = get_cached_embedding(message)
 
         # =========================
-        # 🔥 STEP 2: SUPABASE VECTOR SEARCH
+        # 🔥 STEP 2: SUPABASE VECTOR OVER-FETCH & RERANK
         # =========================
         res = requests.post(
             f"{SUPABASE_URL}/rest/v1/rpc/match_documents",
             headers=HEADERS,
             json={
                 "query_embedding": query_embedding,
-                "match_count": 4
+                "match_count": 8  # Fetch more to cast a wider net
             }
         )
 
-        docs = res.json()
+        raw_docs = res.json()
+        
+        # Filter purely relevant context and shrink to absolute top 3 for LLM token speed
+        docs = sorted([d for d in raw_docs if d.get('similarity', 1) > 0.70], key=lambda x: x.get('similarity', 0), reverse=True)[:3]
 
         if not docs:
             return jsonify({
@@ -349,12 +403,17 @@ def chat():
             })
 
         # =========================
-        # 🔥 STEP 3: CONTEXT
+        # 🔥 STEP 3: CONTEXT & MEMORY INJECTION
         # =========================
-        context = "\n\n".join([
-    f"{doc['content']}\nSource: {doc.get('url', 'N/A')}"
-    for doc in docs
-])
+        rag_context = "\n\n".join([
+            f"{doc['content']}\nSource: {doc.get('url', 'N/A')}"
+            for doc in docs
+        ])
+        
+        memory_str = "\n".join(f"- {m}" for m in user_memory)
+        memory_block = f"USER PROFILE MEMORY (Facts you learned in past sessions):\n{memory_str}\n\n" if memory_str else ""
+        
+        context = memory_block + rag_context
 
         # =========================
         # 🔥 STEP 4: DYNAMIC PROMPT
@@ -472,75 +531,33 @@ CONTEXT & MEMORY USAGE (LONG & SHORT-TERM MEMORY)
 - Always provide a highly personalized experience based on what you already know about the user from the chat history.
 
 ━━━━━━━━━━━━━━━━━━━
-VISUAL SPACING RULE (VERY IMPORTANT):
+STATE-OF-THE-ART PERMANENT FACT EXTRACTION
 ━━━━━━━━━━━━━━━━━━━
-- Each section MUST have a blank line before and after
-- Each bullet point MUST be on a new line
-- Add line breaks between sections (no clustering)
-- NEVER put multiple bullets in same line
-- Keep content visually spaced and easy to scan
-
-GOOD FORMAT:
-
-Definition:
-- Line 1
-
-- Line 2
-
-Key Points:
-- Point 1
-
-- Point 2
-
-- Point 3
-
-BAD FORMAT (NEVER DO THIS):
-- Point 1 • Point 2 • Point 3 (inline)
-- Paragraph mixing bullets
+- If the user reveals a persistent, important personal fact about themselves (e.g., their salary, their city, their financial goals, their age, their debts), you MUST save it to your permanent memory vault.
+- To save a fact to memory, include this exact tag anywhere in your response: [MEMORY: <fact>]
+- Example: [MEMORY: User earns 50k INR per month]
+- Example: [MEMORY: User is looking to buy a house in 2 years in Mumbai]
+- Example: [MEMORY: User has an active SBI credit card]
+- The system will secretly extract these tags and feed them to you in all future conversations so you NEVER forget who they are!
 
 ━━━━━━━━━━━━━━━━━━━
-READABILITY RULE:
+VISUAL SPACING & MARKDOWN (STRICT)
 ━━━━━━━━━━━━━━━━━━━
-- Output should feel "open" and breathable
-- Avoid dense text blocks
-- Each idea = separate line
+- NEVER write long paragraphs. Max 1-2 lines per block.
+- **BOLD IMPORTANT WORDS**: Use Markdown bold (`**text**`) for numbers, dates, terms, and key advice.
+- **USE HEADERS**: Use `###` for sub-sections to make them stand out.
+- Each section MUST have a blank line before and after.
+- Each bullet point MUST be on a new line.
+- Response should be scannable in 5 seconds.
 
 ━━━━━━━━━━━━━━━━━━━
-CONTEXT AWARENESS
+SELF-CORRECTION & READABILITY:
 ━━━━━━━━━━━━━━━━━━━
-- If beginner → simplify more
-- If advanced → add depth
-- If comparison → use structured/bullets
-- Adapt tone accordingly
-
-━━━━━━━━━━━━━━━━━━━
-SMART ASSISTANT BEHAVIOR
-━━━━━━━━━━━━━━━━━━━
-- If question lacks context → ask 1 short clarifying question
-- For financial advice (loans, investing, savings):
-  - Ask about goals / budget / timeline if needed
-- Do NOT assume user situation
-
-━━━━━━━━━━━━━━━━━━━
-STYLE RULES
-━━━━━━━━━━━━━━━━━━━
-- Conversational tone
-- Use "you/your"
-- Light Hinglish allowed (bilkul, simple hai, etc.)
-- NO slang (no "bro", "yaar")
-- Max 1 emoji per response
-
-━━━━━━━━━━━━━━━━━━━
-STRICTLY AVOID
-━━━━━━━━━━━━━━━━━━━
-- Long paragraphs
-- Over-explaining simple things
-- Robotic tone
-- Generic filler text
-- Fake intros like "Hello from Finclarity AI"
-
-━━━━━━━━━━━━━━━━━━━
-FINAL SELF-CHECK (MANDATORY)
+Before sending response:
+- "Is the most important info bolded?"
+- "Are there headers to guide the eye?"
+- "Is there plenty of white space?"
+- "Did I use bullets?"
 ━━━━━━━━━━━━━━━━━━━
 Before responding, ensure:
 - Is response length matching question complexity?
