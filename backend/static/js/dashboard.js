@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     // Setup Profile Modal
     setupProfileModal();
-    
+
     // Setup Navigation Stack
     setupAdvancedNavigation();
 });
@@ -235,7 +235,7 @@ function appendMessage(text, sender) {
     chatBox.appendChild(messageDiv);
 
     chatBox.scrollTop = chatBox.scrollHeight;
-    
+
     if (typeof saveCurrentChat === 'function') {
         saveCurrentChat();
     }
@@ -303,13 +303,13 @@ let currentChatId = null;
 function saveCurrentChat() {
     const chatMessages = document.getElementById('chatMessages');
     if (!chatMessages) return;
-    
+
     const firstUserMsg = chatMessages.querySelector('.chat-message.user .message-bubble');
     if (!firstUserMsg) return;
-    
+
     const title = firstUserMsg.textContent.trim();
     const shortTitle = title.length > 25 ? title.substring(0, 25) + "..." : title;
-    
+
     if (currentChatId) {
         const chatData = chatHistories.find(c => c.id === currentChatId);
         if (chatData) {
@@ -322,14 +322,14 @@ function saveCurrentChat() {
             title: shortTitle,
             html: chatMessages.innerHTML
         });
-        
+
         const historyList = document.querySelector('.history-list');
         if (historyList) {
             const historyItem = document.createElement('div');
             historyItem.className = 'history-item';
             historyItem.dataset.chatId = currentChatId;
             historyItem.innerHTML = `<i class="far fa-comment"></i> <span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${shortTitle}</span>`;
-            
+
             historyItem.addEventListener('click', () => loadChat(historyItem.dataset.chatId));
             historyList.insertBefore(historyItem, historyList.firstChild);
         }
@@ -338,21 +338,21 @@ function saveCurrentChat() {
 
 function loadChat(chatId) {
     saveCurrentChat();
-    
+
     currentChatId = chatId;
     const chatData = chatHistories.find(c => c.id === currentChatId);
     if (!chatData) return;
-    
+
     const chatMessages = document.getElementById('chatMessages');
     const newChatArea = document.getElementById('newChatArea');
-    
+
     if (chatMessages) {
         chatMessages.innerHTML = chatData.html;
     }
     if (newChatArea) {
         newChatArea.style.display = 'none';
     }
-    
+
     updateActiveHistoryItem();
 }
 
@@ -373,23 +373,23 @@ function updateActiveHistoryItem() {
 
 function startNewChat() {
     saveCurrentChat();
-    
+
     currentChatId = null;
     const chatMessages = document.getElementById('chatMessages');
     if (chatMessages) {
         chatMessages.innerHTML = '';
     }
-    
+
     const newChatArea = document.getElementById('newChatArea');
     if (newChatArea) {
         newChatArea.style.display = 'block';
     }
-    
+
     const welcomeSubtitle = document.getElementById('welcomeSubtitle');
     if (welcomeSubtitle) {
         welcomeSubtitle.textContent = "Here's your financial overview";
     }
-    
+
     updateActiveHistoryItem();
 }
 
@@ -509,17 +509,7 @@ function setupSettingsAndLogout() {
 
     const themeToggleBtn = document.getElementById('themeToggleBtn');
     if (themeToggleBtn) {
-        // Load saved theme
-        if (localStorage.getItem('theme') === 'dark') {
-            document.body.classList.add('dark-theme');
-        }
-
-        themeToggleBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            document.body.classList.toggle('dark-theme');
-            const isDark = document.body.classList.contains('dark-theme');
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-        });
+        // Theme logic is now handled by theme-toggle.js
     }
 
     if (dropdownLogoutBtn && logoutModal) {
@@ -575,26 +565,26 @@ function setupProfileModal() {
     if (profileBtn) {
         profileBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            
+
             // Populate data
             const user = window.currentUserData || {};
             const name = user.name || "User";
             const email = user.email || "";
-            
+
             document.getElementById('displayUsername').textContent = name;
             document.getElementById('displayEmail').textContent = email;
-            
+
             document.getElementById('editUsername').value = name;
             document.getElementById('editEmail').value = email;
-            
+
             // Clear passwords
             const pwFields = [document.getElementById('currentPassword'), document.getElementById('newPassword')];
-            pwFields.forEach(f => { if(f) f.value = ''; });
-            
+            pwFields.forEach(f => { if (f) f.value = ''; });
+
             // Set Avatar Initials
             const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
             document.getElementById('profileAvatar').textContent = initials || "?";
-            
+
             // Hide Settings Dropdown
             const settingsMenu = document.getElementById('settingsMenu');
             if (settingsMenu) settingsMenu.classList.remove('show');
@@ -646,17 +636,17 @@ function setupProfileModal() {
                 const data = await res.json();
                 if (data.status === 'success') {
                     // Update local details
-                    if(window.currentUserData) {
+                    if (window.currentUserData) {
                         window.currentUserData.name = name;
                         window.currentUserData.email = email;
                     }
-                    
+
                     document.getElementById('displayUsername').textContent = name;
                     document.getElementById('displayEmail').textContent = email;
-                    
+
                     const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
                     document.getElementById('profileAvatar').textContent = initials;
-                    
+
                     // Update main screen username displays
                     const headerNames = document.querySelectorAll('.dashboard-header-simple h2, .profile-name');
                     headerNames.forEach(el => { el.textContent = name; });
@@ -709,7 +699,7 @@ function setupProfileModal() {
                     btn.style.borderColor = '#4caf50';
                     btn.style.color = '#4caf50';
                     changePasswordForm.reset();
-                    
+
                     setTimeout(() => {
                         btn.textContent = originalText;
                         btn.style.borderColor = '';
@@ -763,19 +753,19 @@ const providersData = {
         { name: 'CANARA', icon: 'fas fa-building' }, { name: 'IDFC', icon: 'fas fa-building' }
     ],
     'Stock Market': [
-        { name: 'Zerodha', icon: 'fas fa-chart-line' }, { name: 'Groww', icon: 'fas fa-chart-line' }, { name: 'Upstox', icon: 'fas fa-chart-line' }, 
+        { name: 'Zerodha', icon: 'fas fa-chart-line' }, { name: 'Groww', icon: 'fas fa-chart-line' }, { name: 'Upstox', icon: 'fas fa-chart-line' },
         { name: 'Angel One', icon: 'fas fa-chart-line' }, { name: 'ICICI Direct', icon: 'fas fa-chart-line' }, { name: 'HDFC Sec', icon: 'fas fa-chart-line' }
     ],
     'Crypto': [
-        { name: 'CoinDCX', icon: 'fab fa-bitcoin' }, { name: 'WazirX', icon: 'fab fa-bitcoin' }, { name: 'ZebPay', icon: 'fab fa-bitcoin' }, 
+        { name: 'CoinDCX', icon: 'fab fa-bitcoin' }, { name: 'WazirX', icon: 'fab fa-bitcoin' }, { name: 'ZebPay', icon: 'fab fa-bitcoin' },
         { name: 'Binance', icon: 'fab fa-bitcoin' }, { name: 'CoinSwitch', icon: 'fab fa-bitcoin' }, { name: 'Coinbase', icon: 'fab fa-bitcoin' }
     ],
     'Investment': [
-        { name: 'Zerodha Coin', icon: 'fas fa-leaf' }, { name: 'Groww', icon: 'fas fa-leaf' }, { name: 'ET Money', icon: 'fas fa-leaf' }, 
+        { name: 'Zerodha Coin', icon: 'fas fa-leaf' }, { name: 'Groww', icon: 'fas fa-leaf' }, { name: 'ET Money', icon: 'fas fa-leaf' },
         { name: 'Kuvera', icon: 'fas fa-leaf' }, { name: 'SBI Mutual Fund', icon: 'fas fa-leaf' }, { name: 'HDFC AMC', icon: 'fas fa-leaf' }
     ],
     'Insurance': [
-        { name: 'LIC India', icon: 'fas fa-shield-alt' }, { name: 'HDFC Life', icon: 'fas fa-shield-alt' }, { name: 'SBI Life', icon: 'fas fa-shield-alt' }, 
+        { name: 'LIC India', icon: 'fas fa-shield-alt' }, { name: 'HDFC Life', icon: 'fas fa-shield-alt' }, { name: 'SBI Life', icon: 'fas fa-shield-alt' },
         { name: 'ICICI Lombard', icon: 'fas fa-shield-alt' }, { name: 'Star Health', icon: 'fas fa-shield-alt' }, { name: 'Bajaj Allianz', icon: 'fas fa-shield-alt' }
     ]
 };
@@ -783,15 +773,15 @@ const providersData = {
 function setupAdvancedNavigation() {
     const mainView = document.getElementById('mainView');
     if (!mainView) return;
-    
+
     // Initialize standard view transitions explicitly
     document.querySelectorAll('#mainView, .sub-view-grid, #featureDisplayView').forEach(v => {
         v.style.transition = 'opacity 0.25s ease-in-out, transform 0.25s ease-in-out';
     });
-    
+
     // Set base stack
     navStack = [{ id: 'mainView', title: 'Home' }];
-    
+
     // Level 1: Category Cards click listeners (Main grid)
     document.querySelectorAll('.category-card').forEach(card => {
         card.addEventListener('click', () => {
@@ -800,28 +790,28 @@ function setupAdvancedNavigation() {
             navigateTo(targetId, targetTitle);
         });
     });
-    
+
     // Level 2: Sub-view specific action cards click listeners
     // Filtering out the provider Selection view and only grabbing categories
     document.querySelectorAll('.sub-view-grid .action-card').forEach(card => {
         // Skip provider cards just in case they are generated later
         if (card.classList.contains('provider-card')) return;
-        
+
         card.addEventListener('click', () => {
-             const featureTitle = card.querySelector('span').textContent;
-             openProviderSelection(featureTitle);
+            const featureTitle = card.querySelector('span').textContent;
+            openProviderSelection(featureTitle);
         });
     });
 }
 
 function navigateTo(viewId, title) {
     const currentViewId = navStack.length > 0 ? navStack[navStack.length - 1].id : null;
-    
+
     // Push new state onto stack
     navStack.push({ id: viewId, title: title });
-    
+
     renderBreadcrumb();
-    
+
     // Animate out current and animate in new
     if (currentViewId && currentViewId !== viewId) {
         hideView(currentViewId, () => showTargetView(viewId));
@@ -832,15 +822,15 @@ function navigateTo(viewId, title) {
 
 function navigateBackTo(index) {
     if (index >= navStack.length - 1) return;
-    
+
     const currentViewId = navStack[navStack.length - 1].id;
     const targetViewId = navStack[index].id;
-    
+
     // Pop stack
     navStack = navStack.slice(0, index + 1);
-    
+
     renderBreadcrumb();
-    
+
     if (currentViewId !== targetViewId) {
         hideView(currentViewId, () => showTargetView(targetViewId));
     }
@@ -849,13 +839,13 @@ function navigateBackTo(index) {
 function hideView(viewId, callback) {
     const view = document.getElementById(viewId);
     if (!view) {
-        if(callback) callback();
+        if (callback) callback();
         return;
     }
-    
+
     view.style.opacity = 0;
     view.style.transform = 'translateY(-10px)';
-    
+
     setTimeout(() => {
         view.classList.add('hidden');
         if (callback) callback();
@@ -865,13 +855,13 @@ function hideView(viewId, callback) {
 function showTargetView(viewId) {
     const targetView = document.getElementById(viewId);
     if (!targetView) return;
-    
+
     targetView.classList.remove('hidden');
     targetView.style.opacity = 0;
     targetView.style.transform = 'translateY(10px)';
-    
+
     void targetView.offsetWidth; // Force Reflow
-    
+
     targetView.style.opacity = 1;
     targetView.style.transform = 'translateY(0)';
 }
@@ -879,13 +869,13 @@ function showTargetView(viewId) {
 function renderBreadcrumb() {
     const dashboardHeaderTitle = document.getElementById('dashboardHeaderTitle');
     if (!dashboardHeaderTitle) return;
-    
+
     if (navStack.length <= 1) {
         const user = window.currentUserData;
         dashboardHeaderTitle.textContent = user && user.name ? user.name : "Home";
         return;
     }
-    
+
     let html = '';
     for (let i = 0; i < navStack.length; i++) {
         const item = navStack[i];
@@ -896,9 +886,9 @@ function renderBreadcrumb() {
             html += `<a href="#" class="nav-crumb" data-index="${i}" style="color:var(--text-secondary); text-decoration:none; transition: color 0.2s;">${separator}${item.title}</a> <span style="margin: 0 10px; color:var(--text-tertiary);"><i class="fas fa-angle-right" style="font-size:12px;"></i></span> `;
         }
     }
-    
+
     dashboardHeaderTitle.innerHTML = html;
-    
+
     // Bind click events on the newly generated crumb links
     document.querySelectorAll('.nav-crumb').forEach(el => {
         el.addEventListener('click', (e) => {
@@ -913,52 +903,52 @@ function openProviderSelection(featureTitle) {
     const providerGrid = document.getElementById('providerGrid');
     const subtitle = document.getElementById('providerSelectionSubtitle');
     if (!providerGrid || !subtitle) return;
-    
+
     // Determine which category we came from to show contextual providers
     let mainCategory = 'default';
     if (navStack.length >= 2) {
         mainCategory = navStack[1].title;
     }
-    
+
     // Fallback to default banks if category doesn't have a specific list
     const listToUse = providersData[mainCategory] || providersData['default'];
-    
+
     // Adjust wording based on category
     let providerTypeTerm = "Provider";
     if (mainCategory === 'Stock Market') providerTypeTerm = "Broker";
     if (mainCategory === 'Crypto') providerTypeTerm = "Exchange/Wallet";
     if (mainCategory === 'Insurance') providerTypeTerm = "Insurer";
-    
+
     subtitle.textContent = `Select a ${providerTypeTerm} for ${featureTitle}`;
     providerGrid.innerHTML = '';
-    
+
     listToUse.forEach(provider => {
         const card = document.createElement('div');
         card.className = 'action-card provider-card';
         card.innerHTML = `<i class="${provider.icon}"></i><span>${provider.name}</span>`;
-        
+
         card.addEventListener('click', () => {
             openFeatureDisplay(provider.name, featureTitle);
         });
-        
+
         providerGrid.appendChild(card);
     });
-    
+
     navigateTo('providerSelectionView', featureTitle);
 }
 
 function openFeatureDisplay(providerName, featureTitle) {
     const featureTitleEl = document.getElementById('featureTitle');
     const featureIconEl = document.getElementById('featureProviderIcon');
-    
+
     if (featureTitleEl && featureIconEl) {
         featureTitleEl.textContent = `${providerName} - ${featureTitle}`;
         featureIconEl.textContent = providerName.charAt(0);
-        
+
         const colors = ['#4B1E6D', '#1976D2', '#388E3C', '#E64A19', '#0097A7', '#F57C00'];
         featureIconEl.style.background = colors[providerName.length % colors.length];
     }
-    
+
     navigateTo('featureDisplayView', providerName);
 }
 

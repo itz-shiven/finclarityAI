@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+    <script src="{{ url_for('static', filename='js/theme-toggle.js') }}"></script>
 </head>
 
 <body>
@@ -106,6 +107,8 @@
 <div style="position:absolute;top:30px;left:40px;font-size:32px;font-weight:700;">
     FinClarity AI
 </div>
+
+<a href="#" class="theme-toggle" style="position: absolute; top: 30px; right: 40px; font-size: 24px; color: var(--text-main);"><i class="fas fa-moon"></i></a>
 
 
 <!-- 🔥 SUPABASE INIT (FINAL FIXED) -->
