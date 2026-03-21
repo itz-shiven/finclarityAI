@@ -11,6 +11,9 @@ document.addEventListener('DOMContentLoaded', async function () {
     // Then load normal data (wait for it to complete)
     await loadUserData();
 
+    // Load persistent offline chats
+    if (typeof loadLocalChats === 'function') loadLocalChats();
+
     // Finally initialize dashboard
     initializeDashboard();
 
@@ -193,7 +196,7 @@ async function sendMessage() {
             credentials: 'include',
             body: JSON.stringify({ 
                 message: message,
-                history: currentConversation.slice(-6) 
+                history: currentConversation.slice(-30) 
             })
         });
 
@@ -241,8 +244,32 @@ function appendMessage(text, sender) {
 
     const bubble = document.createElement('div');
     bubble.className = `message-bubble ${sender}`;
+    
     if (sender === 'ai' && window.marked) {
-        bubble.innerHTML = marked.parse(text);
+        let i = 0;
+        const speed = 15; // smooth speed
+        bubble.innerHTML = '';
+        
+        messageDiv.appendChild(bubble);
+        chatBox.appendChild(messageDiv);
+
+        function typeWriter() {
+            if (i < text.length) {
+                i += 2; // letters per tick
+                if (i > text.length) i = text.length;
+                
+                bubble.innerHTML = marked.parse(text.substring(0, i));
+                chatBox.scrollTop = chatBox.scrollHeight;
+                
+                setTimeout(typeWriter, speed);
+            } else {
+                if (typeof saveCurrentChat === 'function') {
+                    saveCurrentChat();
+                }
+            }
+        }
+        typeWriter();
+        return; // Halt normal appending below
     } else {
         bubble.textContent = text;
     }
@@ -350,6 +377,34 @@ let chatHistories = [];
 let currentChatId = null;
 let currentConversation = [];
 
+function loadLocalChats() {
+    try {
+        const stored = localStorage.getItem('finclarityChats');
+        if (stored) {
+            chatHistories = JSON.parse(stored);
+            const historyList = document.querySelector('.history-list');
+            if (historyList) {
+                historyList.innerHTML = '';
+                // Append in reverse order if they were pushed, or normal. We insertBefore normally.
+                chatHistories.forEach(chat => {
+                    const historyItem = document.createElement('div');
+                    historyItem.className = 'history-item';
+                    historyItem.dataset.chatId = chat.id;
+                    historyItem.innerHTML = `<i class="far fa-comment"></i> <span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${chat.title}</span>`;
+                    historyItem.addEventListener('click', () => loadChat(chat.id));
+                    historyList.appendChild(historyItem);
+                });
+            }
+        }
+    } catch (e) {
+        console.error("Local chats load error:", e);
+    }
+}
+
+function saveLocalChats() {
+    localStorage.setItem('finclarityChats', JSON.stringify(chatHistories));
+}
+
 function saveCurrentChat() {
     const chatMessages = document.getElementById('chatMessages');
     if (!chatMessages) return;
@@ -386,6 +441,8 @@ function saveCurrentChat() {
             historyList.insertBefore(historyItem, historyList.firstChild);
         }
     }
+    
+    saveLocalChats();
 }
 
 function loadChat(chatId) {
