@@ -10,8 +10,20 @@ from sentence_transformers import SentenceTransformer
 from functools import lru_cache
 load_dotenv()
 
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise Exception("Supabase env variables missing")
+
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+
+if not OPENROUTER_API_KEY:
+    raise Exception("OpenRouter API key missing")
+
 client = OpenAI(
-    api_key=os.getenv("OPENROUTER_API_KEY"),
+    api_key=OPENROUTER_API_KEY,
     base_url="https://openrouter.ai/api/v1"
 )
 
@@ -414,21 +426,20 @@ def chat():
 
         raw_docs = res.json()
         
-        # Filter purely relevant context and shrink to absolute top 3 for LLM token speed
-        docs = sorted([d for d in raw_docs if d.get('similarity', 1) > 0.70], key=lambda x: x.get('similarity', 0), reverse=True)[:3]
-
-        if not docs:
-            return jsonify({
-                "reply": "I couldn't find anything in your financial data."
-            })
+        # Filter relevant context with adaptive threshold
+        docs = sorted([d for d in raw_docs if d.get('similarity', 1) > 0.60], key=lambda x: x.get('similarity', 0), reverse=True)[:3]
 
         # =========================
         # 🔥 STEP 3: CONTEXT & MEMORY INJECTION
         # =========================
-        rag_context = "\n\n".join([
-            f"{doc['content']}\nSource: {doc.get('url', 'N/A')}"
-            for doc in docs
-        ])
+        if docs:
+            rag_context = "\n\n".join([
+                f"{doc['content']}\nSource: {doc.get('url', 'N/A')}"
+                for doc in docs
+            ])
+        else:
+            # Fallback when no financial data found
+            rag_context = "No specific financial documents found. Provide general financial guidance based on your knowledge."
         
         memory_str = "\n".join(f"- {m}" for m in user_memory)
         memory_block = f"USER PROFILE MEMORY (Facts you learned in past sessions):\n{memory_str}\n\n" if memory_str else ""
@@ -500,10 +511,6 @@ IF COMPLEX QUESTION:
 - Add clear headers
 
 Structure:
-
-🔍 TL;DR:
-- 2–3 key points
-- One-line verdict
 
 ━━━━━━━━━━━━━━━━━━━
 ⚠️ Risks / Concerns
