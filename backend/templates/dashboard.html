@@ -2,6 +2,8 @@
 <html lang="en">
 
 <head>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finclarity - AI Finance Assistant</title>
@@ -26,14 +28,22 @@
                     <span class="logo-icon">₿</span>
                     <span class="logo-text">Finclarity</span>
                 </div>
+                <button class="sidebar-toggle-btn" id="sidebarCollapseBtn" title="Collapse Sidebar">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
             </div>
 
             <nav class="nav-menu">
-                <a href="{{ url_for('dashboard') }}" class="nav-item active">
+                <a href="{{ url_for('dashboard') }}" class="nav-item active" id="navHome">
                     <i class="fas fa-home"></i><span>Home</span>
                 </a>
-                <a href="#" class="nav-item"><i class="fas fa-balance-scale"></i><span>Compare</span></a>
-                <a href="#" class="nav-item"><i class="fas fa-history"></i><span>What Changed</span></a>
+                <a href="#" class="nav-item" id="navCompare"><i class="fas fa-balance-scale"></i><span>Compare</span></a>
+                <a href="#" class="nav-item" id="navWhatChanged"><i class="fas fa-history"></i><span>What Changed</span></a>
+                <div class="nav-divider"></div>
+                <a href="#" class="nav-item" id="navPortfolio"><i class="fas fa-chart-pie"></i><span>Portfolio</span></a>
+                <a href="#" class="nav-item" id="navBudget"><i class="fas fa-wallet"></i><span>Budget</span></a>
+                <a href="#" class="nav-item" id="navInsights"><i class="fas fa-lightbulb"></i><span>Insights</span></a>
+                <a href="#" class="nav-item" id="navCalculators"><i class="fas fa-calculator"></i><span>Calculators</span></a>
             </nav>
 
             <div class="sidebar-footer">
@@ -193,6 +203,28 @@
                     </div>
                 </div>
 
+                <!-- Compare View -->
+                <div id="compareView" class="hidden">
+                    <div class="compare-header">
+                        <h3>Smart Comparison</h3>
+                        <p>Analyze and compare the best financial options tailored for you.</p>
+                    </div>
+                    <div class="compare-grid" id="compareGrid">
+                        <!-- Populated dynamically via JS -->
+                    </div>
+                </div>
+
+                <!-- What Changed View -->
+                <div id="whatChangedView" class="hidden">
+                    <div class="changed-header">
+                        <h3>What's Changed?</h3>
+                        <p>Track updates and modifications in the financial landscape.</p>
+                    </div>
+                    <div class="timeline-container" id="timelineContainer">
+                        <!-- Populated dynamically via JS -->
+                    </div>
+                </div>
+
                 <!-- Chat widget removed from here and placed as fixed overlay -->
 
             </main>
@@ -267,7 +299,7 @@
 
         const supabase = createClient(
             "https://oooykmtjwolypmqkdxpk.supabase.co",
-            "YOUR_ANON_KEY"
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vb3lrbXRqd29seXBtcWtkeHBrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NDIwOTgsImV4cCI6MjA4OTQxODA5OH0.nGZc9qYn4lnqYMLfrWyl6nUuomgncJR1WjlPvyBLnQg"
         );
 
         window.supabase = supabase;
@@ -314,9 +346,9 @@
                 <div class="settings-section">
                     <h5>Security</h5>
                     <form id="changePasswordForm">
-                        <div class="input-group">
+                        <div class="input-group" id="currentPasswordGroup" style="display: none;">
                             <label>Current Password</label>
-                            <input type="password" id="currentPassword" required>
+                            <input type="password" id="currentPassword">
                         </div>
                         <div class="input-group">
                             <label>New Password</label>
@@ -357,6 +389,7 @@
     </div>
 
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <!-- MAIN JS -->
     <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 

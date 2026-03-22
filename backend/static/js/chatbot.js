@@ -8,11 +8,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const input = document.getElementById("chat-input");
     const messages = document.getElementById("chat-messages");
 
-
-    /* =========================
-    CHAT OPEN / CLOSE
-    ========================= */
-
     if (toggle) {
         toggle.addEventListener("click", () => {
 
@@ -27,30 +22,15 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-
-    /* =========================
-    CLOSE CHAT
-    ========================= */
-
     if (closeBtn) {
         closeBtn.addEventListener("click", () => {
             chatWindow.classList.remove("active");
         });
     }
 
-
-    /* =========================
-    SEND BUTTON
-    ========================= */
-
     if (sendBtn) {
         sendBtn.addEventListener("click", sendMessage);
     }
-
-
-    /* =========================
-    ENTER KEY SEND
-    ========================= */
 
     if (input) {
         input.addEventListener("keypress", function (e) {
@@ -63,14 +43,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-
-    /* =========================
-    SEND MESSAGE FUNCTION
-    ========================= */
-
     function sendMessage() {
 
-        // ✅ Check if guest user trying to send message
         if (window.currentUserData && window.currentUserData.isGuest) {
             alert("Please sign in to use the AI Assistant");
             window.location.href = '/login';
@@ -83,9 +57,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (text === "") return;
 
-
-        /* USER MESSAGE */
-
         const userMsg = document.createElement("div");
         userMsg.className = "user-message";
         userMsg.innerText = text;
@@ -96,42 +67,72 @@ document.addEventListener("DOMContentLoaded", () => {
 
         messages.scrollTop = messages.scrollHeight;
 
+        const botThinking = document.createElement("div");
+        botThinking.className = "bot-message";
+        botThinking.innerText = "AI is thinking... 🤖";
 
-        /* BOT THINKING */
+        messages.appendChild(botThinking);
 
-        setTimeout(() => {
-
-            const botThinking = document.createElement("div");
-            botThinking.className = "bot-message";
-            botThinking.innerText = "AI is thinking... 🤖";
-
-            messages.appendChild(botThinking);
-
-            messages.scrollTop = messages.scrollHeight;
-
-        }, 500);
+        messages.scrollTop = messages.scrollHeight;
 
 
-        /* BOT REPLY */
+        /* BUILD CONVERSATION HISTORY */
+        const history = [];
+        const messageElements = messages.querySelectorAll(".user-message, .bot-message");
+        
+        for (let i = 0; i < messageElements.length - 2; i++) {
+            const element = messageElements[i];
+            if (element.classList.contains("user-message")) {
+                history.push({
+                    role: "user",
+                    content: element.innerText
+                });
+            } else if (element.classList.contains("bot-message")) {
+                history.push({
+                    role: "assistant",
+                    content: element.innerText
+                });
+            }
+        }
 
-        setTimeout(() => {
+        /* GET USER MEMORY */
+        let userData = [];
+        try {
+            const savedData = localStorage.getItem("userMemory");
+            userData = savedData ? JSON.parse(savedData) : [];
+        } catch (e) {
+            userData = [];
+        }
 
+        fetch("/chat", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                message: text,
+                history: history,
+                user_memory: userData
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            botThinking.remove();
+            
             const botReply = document.createElement("div");
             botReply.className = "bot-message";
-            botReply.innerText = "AI response placeholder 🤖";
+            botReply.innerText = data.reply || "Sorry, I encountered an error.";
 
             messages.appendChild(botReply);
 
             messages.scrollTop = messages.scrollHeight;
-
-        }, 1200);
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            botThinking.innerText = "Error connecting to server. Please try again.";
+        });
 
     }
-
-
-    /* =========================
-    SCROLL PROGRESS BAR
-    ========================= */
 
     window.addEventListener("scroll", () => {
 
@@ -150,11 +151,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
     });
-
-
-    /* =========================
-    SVG SCROLL LINE ANIMATION
-    ========================= */
 
     const path = document.getElementById("line");
 

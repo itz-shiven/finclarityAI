@@ -43,7 +43,7 @@
 
                     <!-- <button class="primary-btn">Get Started</button> -->
 
-                    <button class="secondary-btn" onclick="window.location.href='{{ url_for('login_page') }}'">
+                    <button class="secondary-btn" onclick="window.location.href=`{{ url_for('login_page') }}`">
                         Get Started
                     </button>
                 </div>
@@ -214,40 +214,7 @@ C1380 780 1480 580 1700 675.329
 
 
 
-        <div class="chatbot">
 
-            <div class="chat-toggle" id="chat-toggle">
-                💬
-            </div>
-
-            <div class="chat-window" id="chat-window">
-
-                <div class="chat-header">
-                    AI Assistant
-                    <span id="close-chat">✕</span>
-                </div>
-
-                <div class="chat-messages" id="chat-messages">
-
-                    <div class="bot-message">
-                        Hello 👋
-                        How can I help you today?
-                    </div>
-
-                </div>
-
-                <div class="chat-input">
-
-                    <input id="chat-input" placeholder="Send a message..." />
-
-                    <button id="send-btn">➤</button>
-
-                </div>
-
-            </div>
-
-        </div>
-        <script src="{{ url_for('static', filename='js/chatbot.js') }}"></script>
         <script src="https://unpkg.com/simplebar@latest/dist/simplebar.min.js"></script>
     </div>
     <script>
