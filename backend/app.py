@@ -15,7 +15,6 @@ load_dotenv(override=True)
 # -------------------------
 # SUPABASE SETUP (Cleaned up imports)
 # -------------------------
-print(f"[DEBUG] Current Working Directory: {os.getcwd()}")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") # 🔥 SECURE BACKEND KEY
@@ -26,13 +25,6 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 # Use Service Role Key if available for administrative tasks (bypasses RLS)
 backend_key = SUPABASE_SERVICE_ROLE_KEY or SUPABASE_KEY
-if SUPABASE_SERVICE_ROLE_KEY:
-    # Safely print first few chars
-    print(f"[INFO] SUCCESS: Service Role Key loaded ({SUPABASE_SERVICE_ROLE_KEY[:10]}...)")
-else:
-    print("[WARNING] Service Role Key NOT FOUND in environment! Using Anon Key.")
-
-print(f"[INFO] Initializing Supabase Client with {'Service Role' if SUPABASE_SERVICE_ROLE_KEY else 'Anon'} Key...")
 supabase: Client = create_client(SUPABASE_URL, backend_key)
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
