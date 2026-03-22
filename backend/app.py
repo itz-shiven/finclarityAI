@@ -43,20 +43,13 @@ app = Flask(
     static_folder=os.path.join(BASE_DIR, "static")
 )
 
-# -------------------------
-# SESSION CONFIG
-# -------------------------
 app.secret_key = os.getenv("SECRET_KEY", "change-this-in-production")
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SECURE'] = False  # True in production
-# Allow cross-site redirects from OAuth
+app.config['SESSION_COOKIE_SECURE'] = False
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 CORS(app, supports_credentials=True)
 
-# -------------------------
-# SUPABASE CONFIG
-# -------------------------
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
@@ -69,17 +62,11 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
-# -------------------------
-# ROUTES
-# -------------------------
-
-# 🔥 FIXED FOR UPTIMEROBOT (HEAD SUPPORT)
-
 
 @app.route("/", methods=["GET", "HEAD"])
 def home():
     if request.method == "HEAD":
-        return "", 200  # fast response for uptime robot
+        return "", 200
     return render_template("index.html")
 
 
@@ -98,10 +85,6 @@ def dashboard():
         "dashboard.html",
         username=username
     )
-
-# -------------------------
-# SIGNUP API
-# -------------------------
 
 
 @app.route("/api/signup", methods=["POST"])
@@ -150,10 +133,6 @@ def signup():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
 
-# -------------------------
-# LOGIN API
-# -------------------------
-
 
 @app.route("/api/login", methods=["POST"])
 def login():
@@ -197,13 +176,6 @@ def login():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
 
-# -------------------------
-# CURRENT USER API
-# -------------------------
-# -------------------------
-# GOOGLE LOGIN API
-# -------------------------
-
 
 @app.route("/api/google-login", methods=["POST"])
 def google_login():
@@ -215,27 +187,20 @@ def google_login():
         if not email:
             return jsonify({"status": "error", "message": "Email required"})
 
-        # Check if user exists
-        print(f"DEBUG: Checking if {email} exists in Supabase...")
         response = requests.get(
             f"{SUPABASE_URL}/rest/v1/users",
             headers=HEADERS,
             params={"email": f"eq.{email}"}
         )
         
-        # 🚨 NEW: Print exact Supabase error if the GET fails
         if response.status_code != 200:
-            print(f"🚨 SUPABASE GET ERROR: {response.text}")
             return jsonify({"status": "error", "message": f"Database error: {response.text}"})
 
         users = response.json()
 
         if users:
-            print("DEBUG: User found! Logging them in.")
             user = users[0]
         else:
-            print("DEBUG: User not found. Attempting to create new user...")
-            # Create new user
             insert_res = requests.post(
                 f"{SUPABASE_URL}/rest/v1/users",
                 headers=HEADERS,
@@ -246,12 +211,9 @@ def google_login():
                 }
             )
 
-            # 🚨 NEW: Print exact Supabase error if the POST fails
             if insert_res.status_code not in [200, 201]:
-                print(f"🚨 SUPABASE INSERT ERROR: {insert_res.text}")
                 return jsonify({"status": "error", "message": f"Insert failed: {insert_res.text}"})
 
-            # Fetch again
             fetch_res = requests.get(
                 f"{SUPABASE_URL}/rest/v1/users",
                 headers=HEADERS,
@@ -259,11 +221,9 @@ def google_login():
             )
             user = fetch_res.json()[0]
 
-        # SET SESSION
         session['user_id'] = user.get('id')
         session['user_name'] = user.get('name')
         session['user_email'] = user.get('email')
-        print("DEBUG: Session successfully created!")
 
         return jsonify({
             "status": "success",
@@ -271,7 +231,6 @@ def google_login():
         })
 
     except Exception as e:
-        print(f"🚨 PYTHON CRASH: {str(e)}")
         return jsonify({"status": "error", "message": str(e)})
 
 @app.route("/api/user", methods=["GET"])
@@ -299,9 +258,6 @@ def get_user():
 
     return jsonify({"status": "error", "message": "Not logged in"}), 401
 
-# -------------------------
-# USER DATA SYNC API
-# -------------------------
 
 @app.route("/api/get_userdata", methods=["GET"])
 def get_userdata():
@@ -360,10 +316,6 @@ def sync_userdata():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
 
-# -------------------------
-# GUEST LOGIN API
-# -------------------------
-
 
 @app.route("/api/guest-login", methods=["POST"])
 def guest_login():
@@ -378,19 +330,12 @@ def guest_login():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
 
-# -------------------------
-# LOGOUT API
-# -------------------------
 
 
 @app.route("/api/logout", methods=["POST"])
 def logout():
     session.clear()
     return jsonify({"status": "success"})
-
-# -------------------------
-# CHAT API
-# -------------------------
 
 
 @app.route("/chat", methods=["POST"])
@@ -407,26 +352,19 @@ def chat():
         if not message:
             return jsonify({"reply": "Empty message"})
 
-        # =========================
-        # 🔥 STEP 1: CACHED EMBEDDING
-        # =========================
         query_embedding = get_cached_embedding(message)
 
-        # =========================
-        # 🔥 STEP 2: SUPABASE VECTOR OVER-FETCH & RERANK
-        # =========================
         res = requests.post(
             f"{SUPABASE_URL}/rest/v1/rpc/match_documents",
             headers=HEADERS,
             json={
                 "query_embedding": query_embedding,
-                "match_count": 8  # Fetch more to cast a wider net
+                "match_count": 8
             }
         )
 
         raw_docs = res.json()
         
-        # Filter relevant context with adaptive threshold
         docs = sorted([d for d in raw_docs if d.get('similarity', 1) > 0.60], key=lambda x: x.get('similarity', 0), reverse=True)[:3]
 
         # =========================

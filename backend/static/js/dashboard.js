@@ -1,41 +1,20 @@
-/* ============================================
-FINCLARITY AI - Dashboard Interactivity (FINAL)
-============================================ */
-
 document.addEventListener('DOMContentLoaded', async function () {
-    console.log("Dashboard DOM loaded");
 
-    // 🔥 FIRST: check Supabase session
     await checkSupabaseAuth();
-
-    // Then load normal data (wait for it to complete)
     await loadUserData();
 
-    // Load persistent offline chats
     if (typeof loadLocalChats === 'function') loadLocalChats();
 
-    // Finally initialize dashboard
     initializeDashboard();
-
-    // Setup Settings and Logout
     setupSettingsAndLogout();
-
-    // Setup Profile Modal
     setupProfileModal();
-
-    // Setup Navigation Stack
     setupAdvancedNavigation();
 });
 
 
-// ============================================
-// 🔥 CHECK SUPABASE AUTH (IMPORTANT)
-// ============================================
-
 async function checkSupabaseAuth() {
 
     if (!window.supabase) {
-        console.log("Supabase not loaded, checking backend session only");
         await checkBackendSession();
         return;
     }
@@ -53,9 +32,6 @@ async function checkSupabaseAuth() {
 
             const user = session.user;
 
-            console.log("Supabase user detected:", user);
-
-            // Sync with backend
             try {
                 const res = await fetch("/api/google-login", {
                     method: "POST",
@@ -78,8 +54,6 @@ async function checkSupabaseAuth() {
             }
 
         } else {
-            // No Supabase session → check backend auth
-            console.log("No Supabase session, checking backend");
             await checkBackendSession();
         }
 
@@ -96,14 +70,12 @@ async function checkBackendSession() {
         });
 
         if (!res.ok) {
-            console.log("No backend session, redirecting to login");
             window.location.href = '/login';
             return;
         }
 
         const data = await res.json();
         if (data.status !== 'success') {
-            console.log("Backend session invalid, redirecting to login");
             window.location.href = '/login';
         }
     } catch (err) {
@@ -112,10 +84,6 @@ async function checkBackendSession() {
     }
 }
 
-
-// ============================================
-// INIT DASHBOARD
-// ============================================
 
 function initializeDashboard() {
     setupSidebarToggle();
@@ -126,10 +94,6 @@ function initializeDashboard() {
     setupResponsive();
 }
 
-
-// ============================================
-// CHAT INPUT
-// ============================================
 
 function setupChatInput() {
     const chatInput = document.getElementById('chatInput');
@@ -243,16 +207,11 @@ async function sendMessage() {
 }
 
 
-// ============================================
-// MESSAGE UI
-// ============================================
-
 function appendMessage(text, sender) {
 
     let chatBox = document.getElementById('chatMessages');
     if (!chatBox) return;
 
-    // Hide new chat area if it's visible when a message is added
     let newChatArea = document.getElementById('newChatArea');
     if (newChatArea && newChatArea.style.display !== 'none') {
         newChatArea.style.display = 'none';
@@ -261,24 +220,28 @@ function appendMessage(text, sender) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `chat-message ${sender}`;
 
+    const bubbleWrapper = document.createElement('div');
+    bubbleWrapper.className = `bubble-wrapper ${sender}`;
+
     const bubble = document.createElement('div');
     bubble.className = `message-bubble ${sender}`;
     
     if (sender === 'ai' && window.marked) {
         let i = 0;
-        const speed = 15; // smooth speed
+        const speed = 15;
         bubble.innerHTML = '';
         
-        messageDiv.appendChild(bubble);
+        bubbleWrapper.appendChild(bubble);
+        messageDiv.appendChild(bubbleWrapper);
         chatBox.appendChild(messageDiv);
 
         function typeWriter() {
             if (i < text.length) {
-                i += 2; // letters per tick
+                i += 2;
                 if (i > text.length) i = text.length;
                 
                 bubble.innerHTML = marked.parse(text.substring(0, i));
-                chatBox.scrollTop = chatBox.scrollHeight;
+                // scrollToBottom() removed to keep screen static during AI typing as per user request
                 
                 setTimeout(typeWriter, speed);
             } else {
@@ -288,19 +251,124 @@ function appendMessage(text, sender) {
             }
         }
         typeWriter();
-        return; // Halt normal appending below
     } else {
         bubble.textContent = text;
+        bubbleWrapper.appendChild(bubble);
+
+        if (sender === 'user') {
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'message-actions';
+            
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'message-action-btn';
+            copyBtn.innerHTML = '<i class="far fa-copy"></i>';
+            copyBtn.title = 'Copy';
+            copyBtn.onclick = () => {
+                navigator.clipboard.writeText(text);
+                copyBtn.innerHTML = '<i class="fas fa-check"></i>';
+                setTimeout(() => { copyBtn.innerHTML = '<i class="far fa-copy"></i>'; }, 2000);
+            };
+
+            const editBtn = document.createElement('button');
+            editBtn.className = 'message-action-btn';
+            editBtn.innerHTML = '<i class="fas fa-pencil-alt"></i>';
+            editBtn.title = 'Edit';
+            editBtn.onclick = () => {
+                showInlineEdit(messageDiv, bubble, text);
+            };
+
+            actionsDiv.appendChild(copyBtn);
+            actionsDiv.appendChild(editBtn);
+            bubbleWrapper.appendChild(actionsDiv);
+        }
+
+        messageDiv.appendChild(bubbleWrapper);
+        chatBox.appendChild(messageDiv);
+        
+        // Store index for future editing
+        messageDiv.dataset.index = currentConversation.length - 1;
+        scrollToBottom();
     }
-
-    messageDiv.appendChild(bubble);
-    chatBox.appendChild(messageDiv);
-
-    chatBox.scrollTop = chatBox.scrollHeight;
 
     if (typeof saveCurrentChat === 'function') {
         saveCurrentChat();
     }
+}
+
+// ============================================
+// INLINE EDIT FUNCTIONALITY
+// ============================================
+
+function showInlineEdit(messageDiv, bubble, originalText) {
+    // Add editing class to hide everything else via CSS
+    messageDiv.classList.add('editing');
+    
+    // Hide original bubble and actions explicitly too
+    const wrapper = messageDiv.querySelector('.bubble-wrapper');
+    const actions = messageDiv.querySelector('.message-actions');
+    if (bubble) bubble.style.display = 'none';
+    if (actions) actions.style.display = 'none';
+
+    // Create edit container
+    const editContainer = document.createElement('div');
+    editContainer.className = 'inline-edit-container';
+
+    const textarea = document.createElement('textarea');
+    textarea.className = 'inline-edit-textarea';
+    textarea.value = originalText;
+    
+    const footer = document.createElement('div');
+    footer.className = 'inline-edit-footer';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'inline-edit-btn cancel';
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.onclick = () => {
+        editContainer.remove();
+        if (bubble) bubble.style.display = 'block';
+        if (actions) actions.style.display = 'flex';
+        messageDiv.classList.remove('editing');
+    };
+
+    const sendBtn = document.createElement('button');
+    sendBtn.className = 'inline-edit-btn send';
+    sendBtn.textContent = 'Send';
+    sendBtn.onclick = async () => {
+        const newText = textarea.value.trim();
+        if (!newText || newText === originalText) {
+            cancelBtn.click();
+            return;
+        }
+
+        // 1. Restore the original bubble (non-destructive UI)
+        editContainer.remove();
+        bubble.textContent = originalText; // Revert to original text!
+        bubble.style.display = 'block';
+        if (actions) actions.style.display = 'flex';
+        messageDiv.classList.remove('editing');
+
+        // 2. Trigger sendMessage as a NEW prompt at the end
+        const chatInput = document.getElementById('chatInput');
+        if (chatInput) {
+            chatInput.value = newText;
+            sendMessage();
+        }
+    };
+
+    footer.appendChild(cancelBtn);
+    footer.appendChild(sendBtn);
+    editContainer.appendChild(textarea);
+    editContainer.appendChild(footer);
+    wrapper.appendChild(editContainer);
+
+    textarea.focus();
+    // Auto-resize textarea
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+    textarea.addEventListener('input', () => {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+    });
 }
 
 function appendLoader() {
@@ -318,7 +386,7 @@ function appendLoader() {
 
     messageDiv.appendChild(bubble);
     chatBox.appendChild(messageDiv);
-    chatBox.scrollTop = chatBox.scrollHeight;
+    scrollToBottom();
 
     return loaderId;
 }
@@ -331,9 +399,13 @@ function removeLoader(loaderId) {
     }
 }
 
-
-// ============================================
-// SETTINGS & LOGOUT (FIXED)
+function scrollToBottom() {
+    const chatContainer = document.querySelector('.chat-container');
+    if (chatContainer) {
+        // With scroll-behavior: smooth in CSS, this will animate automatically
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+}
 // ============================================
 
 function setupSettings() {
@@ -421,21 +493,56 @@ function loadLocalChats() {
         const stored = localStorage.getItem(getUserKey('finclarityChats'));
         if (stored) {
             chatHistories = JSON.parse(stored);
+            
+            // Sort: Pinned first, then by ID (timestamp) descending
+            chatHistories.sort((a, b) => {
+                if (a.isPinned && !b.isPinned) return -1;
+                if (!a.isPinned && b.isPinned) return 1;
+                return b.id - a.id;
+            });
+
             const historyList = document.querySelector('.history-list');
             if (historyList) {
                 historyList.innerHTML = '';
-                // Append in reverse order if they were pushed, or normal. We insertBefore normally.
                 chatHistories.forEach(chat => {
                     const historyItem = document.createElement('div');
                     historyItem.className = 'history-item';
+                    if (chat.id === currentChatId) historyItem.classList.add('active');
                     historyItem.dataset.chatId = chat.id;
-                    historyItem.innerHTML = `<i class="far fa-comment"></i> <span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${chat.title}</span>`;
-                    historyItem.addEventListener('click', () => loadChat(chat.id));
+                    
+                    historyItem.innerHTML = `
+                        <i class="fas ${chat.isPinned ? 'fa-thumbtack' : 'fa-comment'}" style="${chat.isPinned ? 'color: var(--primary-600); transform: rotate(45deg);' : ''}"></i>
+                        <span class="history-item-title">${chat.title}</span>
+                        <div class="history-item-actions">
+                            <button class="history-more-btn" onclick="toggleHistoryMenu(event, '${chat.id}')">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            <div class="history-dropdown" id="dropdown-${chat.id}">
+                                <div class="history-dropdown-item" onclick="handlePinChat(event, '${chat.id}')">
+                                    <i class="fas fa-thumbtack"></i> ${chat.isPinned ? 'Unpin' : 'Pin'}
+                                </div>
+                                <div class="history-dropdown-item" onclick="handleRenameChat(event, '${chat.id}')">
+                                    <i class="fas fa-edit"></i> Rename
+                                </div>
+                                <div class="history-dropdown-item danger" onclick="handleDeleteChat(event, '${chat.id}')">
+                                    <i class="fas fa-trash-alt"></i> Delete
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    historyItem.addEventListener('click', (e) => {
+                        // If we are currently renaming, don't trigger chat loading
+                        if (historyItem.classList.contains('renaming')) return;
+                        
+                        if (!e.target.closest('.history-item-actions')) {
+                            loadChat(chat.id);
+                        }
+                    });
                     historyList.appendChild(historyItem);
                 });
             }
         } else {
-            // No chats for this user, clear the list
             chatHistories = [];
             const historyList = document.querySelector('.history-list');
             if (historyList) historyList.innerHTML = '';
@@ -465,6 +572,8 @@ function saveCurrentChat() {
         if (chatData) {
             chatData.html = chatMessages.innerHTML;
             chatData.messages = [...currentConversation];
+            // Don't auto-update title if it's already set (to preserve renames)
+            if (!chatData.title) chatData.title = shortTitle;
         }
     } else {
         currentChatId = Date.now().toString();
@@ -472,22 +581,14 @@ function saveCurrentChat() {
             id: currentChatId,
             title: shortTitle,
             html: chatMessages.innerHTML,
-            messages: [...currentConversation]
+            messages: [...currentConversation],
+            isPinned: false
         });
-
-        const historyList = document.querySelector('.history-list');
-        if (historyList) {
-            const historyItem = document.createElement('div');
-            historyItem.className = 'history-item';
-            historyItem.dataset.chatId = currentChatId;
-            historyItem.innerHTML = `<i class="far fa-comment"></i> <span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${shortTitle}</span>`;
-
-            historyItem.addEventListener('click', () => loadChat(historyItem.dataset.chatId));
-            historyList.insertBefore(historyItem, historyList.firstChild);
-        }
     }
     
     saveLocalChats();
+    // Refresh the whole list to maintain sort order or update titles
+    loadLocalChats();
 }
 
 function loadChat(chatId) {
@@ -517,15 +618,116 @@ function updateActiveHistoryItem() {
     items.forEach(item => {
         if (item.dataset.chatId === currentChatId) {
             item.classList.add('active');
-            item.style.backgroundColor = 'var(--bg-tertiary)';
-            item.style.color = 'var(--primary-600)';
         } else {
             item.classList.remove('active');
-            item.style.backgroundColor = '';
-            item.style.color = '';
         }
     });
 }
+
+function toggleHistoryMenu(event, chatId) {
+    event.stopPropagation();
+    const dropdown = document.getElementById(`dropdown-${chatId}`);
+    
+    // Close all other dropdowns
+    document.querySelectorAll('.history-dropdown').forEach(d => {
+        if (d.id !== `dropdown-${chatId}`) d.classList.remove('show');
+    });
+    
+    if (dropdown) dropdown.classList.toggle('show');
+}
+
+function handlePinChat(event, chatId) {
+    event.stopPropagation();
+    const chat = chatHistories.find(c => c.id === chatId);
+    if (chat) {
+        chat.isPinned = !chat.isPinned;
+        saveLocalChats();
+        loadLocalChats();
+    }
+}
+
+function handleRenameChat(event, chatId) {
+    event.stopPropagation();
+    const historyItem = document.querySelector(`.history-item[data-chat-id="${chatId}"]`);
+    if (!historyItem) return;
+
+    const titleSpan = historyItem.querySelector('.history-item-title');
+    const originalTitle = titleSpan.textContent;
+    
+    // Hide actions and title, show input
+    historyItem.classList.add('renaming');
+    
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'history-rename-input';
+    input.value = originalTitle;
+    
+    const actions = document.createElement('div');
+    actions.className = 'history-rename-controls';
+    actions.innerHTML = `
+        <button class="rename-confirm-btn"><i class="fas fa-check"></i></button>
+        <button class="rename-cancel-btn"><i class="fas fa-times"></i></button>
+    `;
+    
+    const oldContent = historyItem.innerHTML;
+    // We only replace the title area part conceptually, but for simplicity we swap children
+    historyItem.innerHTML = '';
+    historyItem.appendChild(input);
+    historyItem.appendChild(actions);
+    
+    input.focus();
+    input.select();
+    
+    const saveRename = () => {
+        const newTitle = input.value.trim();
+        if (newTitle && newTitle !== originalTitle) {
+            const chat = chatHistories.find(c => c.id === chatId);
+            if (chat) {
+                chat.title = newTitle;
+                saveLocalChats();
+            }
+        }
+        loadLocalChats();
+    };
+    
+    const cancelRename = () => {
+        loadLocalChats();
+    };
+    
+    input.onkeydown = (e) => {
+        if (e.key === 'Enter') saveRename();
+        if (e.key === 'Escape') cancelRename();
+    };
+    
+    actions.querySelector('.rename-confirm-btn').onclick = (e) => {
+        e.stopPropagation();
+        saveRename();
+    };
+    actions.querySelector('.rename-cancel-btn').onclick = (e) => {
+        e.stopPropagation();
+        cancelRename();
+    };
+}
+
+function handleDeleteChat(event, chatId) {
+    event.stopPropagation();
+    if (confirm("Are you sure you want to delete this chat?")) {
+        chatHistories = chatHistories.filter(c => c.id !== chatId);
+        if (currentChatId === chatId) {
+            currentChatId = null;
+            currentConversation = [];
+            document.getElementById('chatMessages').innerHTML = '';
+            document.getElementById('newChatArea').style.display = 'flex';
+        }
+        saveLocalChats();
+        loadLocalChats();
+    }
+}
+
+// Global listener to close history dropdowns
+document.addEventListener('click', function() {
+    document.querySelectorAll('.history-dropdown').forEach(d => d.classList.remove('show'));
+});
 
 function startNewChat() {
     saveCurrentChat();
