@@ -1157,16 +1157,148 @@ body {
     font-size: 13px;
     color: var(--text-secondary);
     transition: background 0.2s, color 0.2s;
+    position: relative; /* For dropdown positioning */
 }
 
-.history-item:hover {
-    background: var(--border-light);
+.history-item.active {
+    background: var(--bg-tertiary) !important;
+    color: var(--primary-600) !important;
+}
+
+.history-item-title {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.history-item-actions {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.history-item:hover .history-item-actions {
+    opacity: 1;
+}
+
+.history-more-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: color 0.2s;
+}
+
+.history-more-btn:hover {
+    color: var(--primary-600);
+    background: rgba(102, 126, 234, 0.1);
+}
+
+.history-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    min-width: 140px;
+    display: none;
+    overflow: hidden;
+}
+
+.history-dropdown.show {
+    display: block;
+}
+
+.history-dropdown-item {
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
     color: var(--text-primary);
+    cursor: pointer;
+}
+
+.history-dropdown-item:hover {
+    background: var(--bg-secondary);
+    color: var(--primary-600);
+}
+
+.history-dropdown-item.danger {
+    color: #ef4444;
+}
+
+.history-dropdown-item.danger:hover {
+    background: #fef2f2;
+}
+
+[data-theme="dark"] .history-dropdown {
+    background: var(--bg-tertiary);
 }
 
 [data-theme="dark"] .history-item:hover {
     background: rgba(255, 255, 255, 0.05);
 }
+
+/* Inline Rename Styles */
+.history-item.renaming {
+    padding: 6px 8px !important;
+    background: var(--bg-primary) !important;
+    border: 1px solid var(--primary-600) !important;
+    height: auto !important;
+    min-height: 40px;
+}
+
+[data-theme="dark"] .history-item.renaming {
+    background: var(--bg-tertiary) !important;
+}
+
+.history-rename-input {
+    flex: 1;
+    background: transparent;
+    border: none !important;
+    color: var(--text-primary);
+    font-size: 13px;
+    padding: 4px 8px;
+    outline: none !important;
+    box-shadow: none !important;
+    width: 0; /* Let flex-grow handle it */
+}
+
+.history-rename-controls {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.rename-confirm-btn, .rename-cancel-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 6px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.rename-confirm-btn {
+    color: #10b981; /* Green */
+}
+
+.rename-cancel-btn {
+    color: #ef4444; /* Red */
+}
+
+.rename-confirm-btn:hover { background: rgba(16, 185, 129, 0.1); }
+.rename-cancel-btn:hover { background: rgba(239, 68, 68, 0.1); }
 
 .chat-main-area {
     flex: 1;
@@ -1230,6 +1362,7 @@ body {
     padding: 16px;
     display: flex;
     flex-direction: column;
+    scroll-behavior: smooth;
 }
 
 /* Chat Input Footer */
@@ -1330,7 +1463,7 @@ body {
 
 .chat-message {
     display: flex;
-    max-width: 75%;
+    max-width: 85%;
 }
 
 .chat-message.user {
@@ -1341,28 +1474,210 @@ body {
     align-self: flex-start;
 }
 
+.bubble-wrapper {
+    display: flex;
+    flex-direction: column;
+    max-width: 100%;
+}
+
+.bubble-wrapper.user {
+    align-items: flex-end;
+}
+
 .message-bubble {
-    padding: 10px 14px;
-    border-radius: 16px;
-    font-size: 14px;
-    line-height: 1.4;
+    padding: 12px 18px;
+    border-radius: 20px;
+    font-size: 14.5px;
+    line-height: 1.5;
     word-break: break-word;
+    box-shadow: var(--shadow-xs);
 }
 
 .message-bubble.user {
-    background: var(--bg-tertiary);
+    background: rgba(102, 126, 234, 0.12); /* Subtle theme-matched blue */
     color: var(--text-primary);
     border-bottom-right-radius: 4px;
-    border: 1px solid var(--border-light);
+    border: 1px solid rgba(102, 126, 234, 0.1);
+    font-weight: 400;
 }
 
-.message-bubble.ai {
+[data-theme="dark"] .message-bubble.user {
+    background: rgba(102, 126, 234, 0.15); /* Slightly more prominent in dark mode */
+    color: #ffffff;
+    border: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.message-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 6px;
+    padding: 0 4px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.chat-message:hover .message-actions {
+    opacity: 1;
+}
+
+.message-action-btn {
     background: transparent;
-    color: var(--text-primary);
-    border-bottom-left-radius: 4px;
     border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    border-radius: 4px;
+}
+
+.message-action-btn:hover {
+    color: var(--primary-600);
+    background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .message-action-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* ============================================
+   INLINE EDIT STYLES
+   ============================================ */
+
+.chat-message.editing .message-bubble.user,
+.chat-message.editing .message-actions {
+    display: none !important;
+}
+
+.chat-message.editing .bubble-wrapper {
+    width: 100%;
+    align-items: stretch !important;
+}
+
+.inline-edit-container {
+    background: #323232; /* Darker chunky gray from screenshot */
+    border: none !important;
+    border-radius: 28px; /* Extra rounded */
+    padding: 24px;
+    width: 100%;
+    max-width: 100% !important;
+    min-height: 150px; /* Chunky height */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    margin: 12px 0;
+    transition: all 0.3s ease;
+    outline: none !important;
+}
+
+[data-theme="dark"] .inline-edit-container {
+    background: #323232;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.inline-edit-textarea {
+    background: transparent;
+    border: none !important;
+    color: #ffffff;
+    font-size: 16px;
     line-height: 1.6;
-    font-size: 15px;
+    resize: none;
+    outline: none !important;
+    font-family: inherit;
+    width: 100%;
+    flex: 1; /* Occupies top space */
+    margin-bottom: 20px;
+    box-shadow: none !important;
+}
+
+[data-theme="dark"] .inline-edit-textarea {
+    color: #ffffff;
+}
+
+.inline-edit-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    align-items: center;
+}
+
+.inline-edit-btn {
+    padding: 10px 24px;
+    border-radius: 30px; /* Fully rounded buttons */
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.inline-edit-btn.cancel {
+    background: #444;
+    color: #ffffff;
+}
+
+.inline-edit-btn.send {
+    background: #ffffff;
+    color: #000000;
+}
+
+.inline-edit-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.inline-edit-btn {
+    padding: 8px 20px;
+    border-radius: 25px; /* Pill shape */
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.inline-edit-btn.cancel {
+    background: #e0e0e0;
+    color: #666;
+}
+
+[data-theme="dark"] .inline-edit-btn.cancel {
+    background: #444;
+    color: #bbb;
+}
+
+.inline-edit-btn.cancel:hover {
+    background: #d0d0d0;
+    color: #333;
+}
+
+[data-theme="dark"] .inline-edit-btn.cancel:hover {
+    background: #555;
+    color: #fff;
+}
+
+.inline-edit-btn.send {
+    background: #000000;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .inline-edit-btn.send {
+    background: #ffffff;
+    color: #000000;
+}
+
+.inline-edit-btn.send:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.bubble-wrapper.user .inline-edit-container {
+    align-self: flex-end;
 }
 
 [data-theme="dark"] .message-bubble.ai {

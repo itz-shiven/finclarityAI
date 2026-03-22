@@ -92,23 +92,38 @@
           "role": "assistant"
         },
         {
-          "role": "user",
-          "content": "what is lockin period"
+          "content": "what is lockin period",
+          "role": "user"
         },
         {
-          "role": "assistant",
-          "content": "**Definition:**\nA lock-in period is a term used in financial contracts, particularly in banking and insurance, where a customer is bound to a specific agreement or product for a specified period, usually with penalties for early termination.\n\n**Key Points:**\n\n• A lock-in period is not explicitly stated in the customer's agreement, but the bank can change terms at its discretion.\n• This lack of transparency and flexibility can lead to unexpected consequences for the customer.\n• Customers should be aware of the potential risks and carefully review the terms and conditions before signing any agreement.\n\n**Actionable Advice:**\n- Always review the terms and conditions carefully before signing any agreement.\n- Be aware of the potential risks and consequences of not meeting the agreement's terms.\n- Consider seeking professional advice or consulting with a financial expert before making any decisions.\n\n**Risks / Concerns:**\n- Unexpected changes to the agreement's terms\n- Penalties for early termination\n- Potential financial and reputational risks for the customer"
+          "content": "**Definition:**\nA lock-in period is a term used in financial contracts, particularly in banking and insurance, where a customer is bound to a specific agreement or product for a specified period, usually with penalties for early termination.\n\n**Key Points:**\n\n• A lock-in period is not explicitly stated in the customer's agreement, but the bank can change terms at its discretion.\n• This lack of transparency and flexibility can lead to unexpected consequences for the customer.\n• Customers should be aware of the potential risks and carefully review the terms and conditions before signing any agreement.\n\n**Actionable Advice:**\n- Always review the terms and conditions carefully before signing any agreement.\n- Be aware of the potential risks and consequences of not meeting the agreement's terms.\n- Consider seeking professional advice or consulting with a financial expert before making any decisions.\n\n**Risks / Concerns:**\n- Unexpected changes to the agreement's terms\n- Penalties for early termination\n- Potential financial and reputational risks for the customer",
+          "role": "assistant"
         },
         {
-          "role": "user",
-          "content": "what is lockin period"
+          "content": "what is lockin period",
+          "role": "user"
         },
         {
-          "role": "assistant",
-          "content": "**Definition:**\nA lock-in period is a term used in financial contracts, particularly in banking and insurance, where a customer is bound to a specific agreement or product for a specified period, usually with penalties for early termination.\n\n**Key Points:**\n\n• No explicit lock-in period is stated in the agreement.\n• The bank reserves the right to change terms at its discretion.\n• This lack of transparency and flexibility can lead to unexpected consequences for the customer.\n\n**Actionable Advice:**\n- Review the terms and conditions carefully before signing any agreement.\n- Be aware of the potential risks and consequences of not meeting the agreement's terms.\n- Consider seeking professional advice or consulting with a financial expert before making any decisions.\n\n**Risks / Concerns:**\n- Unexpected changes to the agreement's terms\n- Penalties for early termination\n- Potential financial and reputational risks for the customer"
+          "content": "**Definition:**\nA lock-in period is a term used in financial contracts, particularly in banking and insurance, where a customer is bound to a specific agreement or product for a specified period, usually with penalties for early termination.\n\n**Key Points:**\n\n• No explicit lock-in period is stated in the agreement.\n• The bank reserves the right to change terms at its discretion.\n• This lack of transparency and flexibility can lead to unexpected consequences for the customer.\n\n**Actionable Advice:**\n- Review the terms and conditions carefully before signing any agreement.\n- Be aware of the potential risks and consequences of not meeting the agreement's terms.\n- Consider seeking professional advice or consulting with a financial expert before making any decisions.\n\n**Risks / Concerns:**\n- Unexpected changes to the agreement's terms\n- Penalties for early termination\n- Potential financial and reputational risks for the customer",
+          "role": "assistant"
         }
       ],
       "title": "💰 Budget Analysis"
+    },
+    {
+      "id": "1774111455773",
+      "title": "hello",
+      "html": "<div class=\"chat-message user\"><div class=\"message-bubble user\">hello</div></div><div class=\"chat-message ai\"><div class=\"message-bubble ai\"><p>Hi! 👋 How can I help you today?</p>\n</div></div>",
+      "messages": [
+        {
+          "role": "user",
+          "content": "hello"
+        },
+        {
+          "role": "assistant",
+          "content": "Hi! 👋 How can I help you today?"
+        }
+      ]
     }
   ],
   "memory": []

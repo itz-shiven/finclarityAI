@@ -8,11 +8,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const input = document.getElementById("chat-input");
     const messages = document.getElementById("chat-messages");
 
-
-    /* =========================
-    CHAT OPEN / CLOSE
-    ========================= */
-
     if (toggle) {
         toggle.addEventListener("click", () => {
 
@@ -27,30 +22,15 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-
-    /* =========================
-    CLOSE CHAT
-    ========================= */
-
     if (closeBtn) {
         closeBtn.addEventListener("click", () => {
             chatWindow.classList.remove("active");
         });
     }
 
-
-    /* =========================
-    SEND BUTTON
-    ========================= */
-
     if (sendBtn) {
         sendBtn.addEventListener("click", sendMessage);
     }
-
-
-    /* =========================
-    ENTER KEY SEND
-    ========================= */
 
     if (input) {
         input.addEventListener("keypress", function (e) {
@@ -63,14 +43,8 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-
-    /* =========================
-    SEND MESSAGE FUNCTION
-    ========================= */
-
     function sendMessage() {
 
-        // ✅ Check if guest user trying to send message
         if (window.currentUserData && window.currentUserData.isGuest) {
             alert("Please sign in to use the AI Assistant");
             window.location.href = '/login';
@@ -83,9 +57,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (text === "") return;
 
-
-        /* USER MESSAGE */
-
         const userMsg = document.createElement("div");
         userMsg.className = "user-message";
         userMsg.innerText = text;
@@ -95,9 +66,6 @@ document.addEventListener("DOMContentLoaded", () => {
         input.value = "";
 
         messages.scrollTop = messages.scrollHeight;
-
-
-        /* BOT THINKING */
 
         const botThinking = document.createElement("div");
         botThinking.className = "bot-message";
@@ -136,8 +104,6 @@ document.addEventListener("DOMContentLoaded", () => {
             userData = [];
         }
 
-
-        /* CALL BACKEND API */
         fetch("/chat", {
             method: "POST",
             headers: {
@@ -151,10 +117,8 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .then(response => response.json())
         .then(data => {
-            // Remove thinking message
             botThinking.remove();
             
-            // Add AI reply
             const botReply = document.createElement("div");
             botReply.className = "bot-message";
             botReply.innerText = data.reply || "Sorry, I encountered an error.";
@@ -169,11 +133,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
     }
-
-
-    /* =========================
-    SCROLL PROGRESS BAR
-    ========================= */
 
     window.addEventListener("scroll", () => {
 
@@ -192,11 +151,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
     });
-
-
-    /* =========================
-    SVG SCROLL LINE ANIMATION
-    ========================= */
 
     const path = document.getElementById("line");
 
