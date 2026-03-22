@@ -29,14 +29,22 @@
                     <span class="logo-icon">₿</span>
                     <span class="logo-text">Finclarity</span>
                 </div>
+                <button class="sidebar-toggle-btn" id="sidebarCollapseBtn" title="Collapse Sidebar">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
             </div>
 
             <nav class="nav-menu">
-                <a href="{{ url_for('dashboard') }}" class="nav-item active">
+                <a href="{{ url_for('dashboard') }}" class="nav-item active" id="navHome">
                     <i class="fas fa-home"></i><span>Home</span>
                 </a>
-                <a href="#" class="nav-item"><i class="fas fa-balance-scale"></i><span>Compare</span></a>
-                <a href="#" class="nav-item"><i class="fas fa-history"></i><span>What Changed</span></a>
+                <a href="#" class="nav-item" id="navCompare"><i class="fas fa-balance-scale"></i><span>Compare</span></a>
+                <a href="#" class="nav-item" id="navWhatChanged"><i class="fas fa-history"></i><span>What Changed</span></a>
+                <div class="nav-divider"></div>
+                <a href="#" class="nav-item" id="navPortfolio"><i class="fas fa-chart-pie"></i><span>Portfolio</span></a>
+                <a href="#" class="nav-item" id="navBudget"><i class="fas fa-wallet"></i><span>Budget</span></a>
+                <a href="#" class="nav-item" id="navInsights"><i class="fas fa-lightbulb"></i><span>Insights</span></a>
+                <a href="#" class="nav-item" id="navCalculators"><i class="fas fa-calculator"></i><span>Calculators</span></a>
             </nav>
 
             <div class="sidebar-footer">
@@ -193,6 +201,28 @@
                             <p style="display: flex; align-items: center; gap: 10px; font-weight: 500; font-size: 15px;"><i class="fas fa-spinner fa-spin" style="color: var(--primary-600);"></i> Extracting provider data...</p>
                             <p style="margin-top: 16px; font-size: 14px; opacity: 0.8; font-style: italic;">Currently displaying structural layout. The content for this provider will be dynamically populated by Firecrawler LLM.</p>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Compare View -->
+                <div id="compareView" class="hidden">
+                    <div class="compare-header">
+                        <h3>Smart Comparison</h3>
+                        <p>Analyze and compare the best financial options tailored for you.</p>
+                    </div>
+                    <div class="compare-grid" id="compareGrid">
+                        <!-- Populated dynamically via JS -->
+                    </div>
+                </div>
+
+                <!-- What Changed View -->
+                <div id="whatChangedView" class="hidden">
+                    <div class="changed-header">
+                        <h3>What's Changed?</h3>
+                        <p>Track updates and modifications in the financial landscape.</p>
+                    </div>
+                    <div class="timeline-container" id="timelineContainer">
+                        <!-- Populated dynamically via JS -->
                     </div>
                 </div>
 

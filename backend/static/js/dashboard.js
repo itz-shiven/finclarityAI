@@ -86,7 +86,7 @@ async function checkBackendSession() {
 
 
 function initializeDashboard() {
-    setupSidebarToggle();
+    setupSidebarCollapse();
     setupNavigation();
     setupChatPanel();
     setupChatInput();
@@ -825,8 +825,207 @@ async function syncUserDataToBackend() {
 // PLACEHOLDERS
 // ============================================
 
-function setupSidebarToggle() { }
-function setupNavigation() { }
+function setupSidebarCollapse() {
+    const sidebar = document.querySelector('.sidebar');
+    const container = document.querySelector('.dashboard-container');
+    const collapseBtn = document.getElementById('sidebarCollapseBtn');
+    
+    if (!sidebar || !container || !collapseBtn) return;
+
+    // Load initial state
+    const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+    if (isCollapsed) {
+        sidebar.classList.add('collapsed');
+        container.classList.add('collapsed');
+    }
+
+    collapseBtn.addEventListener('click', () => {
+        const currentlyCollapsed = sidebar.classList.toggle('collapsed');
+        container.classList.toggle('collapsed');
+        localStorage.setItem('sidebarCollapsed', currentlyCollapsed);
+    });
+}
+
+function setupNavigation() {
+    const navItems = {
+        'navHome': { view: 'mainView', title: 'Home', action: resetToHome },
+        'navCompare': { view: 'compareView', title: 'Smart Comparison', action: () => { switchToView('compareView', 'Smart Comparison'); populateCompareView(); } },
+        'navWhatChanged': { view: 'whatChangedView', title: "What's Changed?", action: () => { switchToView('whatChangedView', "What's Changed?"); populateWhatChangedView(); } },
+        'navPortfolio': { view: 'portfolioView', title: 'Investment Portfolio', action: () => showComingSoon('portfolioView', 'Investment Portfolio') },
+        'navBudget': { view: 'budgetView', title: 'Budget Planner', action: () => showComingSoon('budgetView', 'Budget Planner') },
+        'navInsights': { view: 'insightsView', title: 'Market Insights', action: () => showComingSoon('insightsView', 'Market Insights') },
+        'navCalculators': { view: 'calculatorsView', title: 'Financial Calculators', action: () => showComingSoon('calculatorsView', 'Financial Calculators') }
+    };
+
+    Object.keys(navItems).forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                navItems[id].action();
+            });
+        }
+    });
+}
+
+function showComingSoon(viewId, title) {
+    // Create view container if it doesn't exist
+    let view = document.getElementById(viewId);
+    if (!view) {
+        view = document.createElement('div');
+        view.id = viewId;
+        view.className = 'hidden';
+        view.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 100px 40px; text-align: center; color: var(--text-tertiary);">
+                <i class="fas fa-tools" style="font-size: 64px; margin-bottom: 24px; color: var(--primary-600); opacity: 0.5;"></i>
+                <h2 style="color: var(--text-primary); margin-bottom: 12px;">${title}</h2>
+                <p>This feature is coming soon to your personal financial hub!</p>
+            </div>
+        `;
+        document.querySelector('.main-content').appendChild(view);
+    }
+    
+    switchToView(viewId, title);
+    
+    // Deactivate all nav items and activate current
+    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+    const navId = 'nav' + viewId.replace('View', '').charAt(0).toUpperCase() + viewId.replace('View', '').slice(1);
+    const navEl = document.getElementById(navId);
+    if (navEl) navEl.classList.add('active');
+}
+
+function resetToHome() {
+    // Clear stack except home
+    navStack = [{ id: 'mainView', title: 'Home' }];
+    renderBreadcrumb();
+    
+    // Hide all views, show main
+    document.querySelectorAll('.main-content > div').forEach(v => {
+        if (v.id === 'mainView' || v.classList.contains('dashboard-header-simple')) {
+            v.classList.remove('hidden');
+            v.style.opacity = 1;
+            v.style.transform = 'translateY(0)';
+        } else {
+            v.classList.add('hidden');
+        }
+    });
+
+    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+    document.getElementById('navHome').classList.add('active');
+}
+
+function switchToView(viewId, title) {
+    navStack = [{ id: viewId, title: title }];
+    renderBreadcrumb();
+
+    document.querySelectorAll('.main-content > div').forEach(v => {
+        if (v.id === viewId || v.classList.contains('dashboard-header-simple')) {
+            v.classList.remove('hidden');
+            v.style.opacity = 0;
+            v.style.transform = 'translateY(10px)';
+            setTimeout(() => {
+                v.style.opacity = 1;
+                v.style.transform = 'translateY(0)';
+            }, 50);
+        } else {
+            v.classList.add('hidden');
+        }
+    });
+
+    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+    if (viewId === 'compareView') document.getElementById('navCompare').classList.add('active');
+    if (viewId === 'whatChangedView') document.getElementById('navWhatChanged').classList.add('active');
+}
+
+function populateCompareView() {
+    const grid = document.getElementById('compareGrid');
+    if (!grid) return;
+
+    const data = [
+        {
+            title: "Premium Rewards",
+            subtitle: "HDFC Regalia Gold",
+            price: "₹2,500",
+            period: "/ year",
+            icon: "fas fa-crown",
+            features: ["4 Reward Points / ₹150", "Club Marriott Membership", "Complimentary Lounge Access", "Low Foreign Markup (2%)"],
+            recommended: true
+        },
+        {
+            title: "Travel Specialist",
+            subtitle: "AXIS Atlas",
+            price: "₹5,000",
+            period: "/ year",
+            icon: "fas fa-plane",
+            features: ["5 Edge Miles / ₹100", "Tiered Milestone Rewards", "Exclusive Airport Services", "DineOut Benefits"],
+            recommended: false
+        },
+        {
+            title: "Cashback Master",
+            subtitle: "SBI Cashback Card",
+            price: "₹999",
+            period: "/ year",
+            icon: "fas fa-wallet",
+            features: ["5% Unlimited Cashback", "No Merchant Restrictions", "Auto-credited to Bill", "Fuel Surcharge Waiver"],
+            recommended: false
+        }
+    ];
+
+    grid.innerHTML = data.map(item => `
+        <div class="compare-card ${item.recommended ? 'recommended' : ''}">
+            <div class="compare-card-header">
+                <div class="compare-icon"><i class="${item.icon}"></i></div>
+                <div class="compare-card-title">
+                    <h4>${item.title}</h4>
+                    <span>${item.subtitle}</span>
+                </div>
+            </div>
+            <div class="compare-price">${item.price}<span>${item.period}</span></div>
+            <ul class="compare-features">
+                ${item.features.map(f => `<li class="compare-feature"><i class="fas fa-check-circle"></i> ${f}</li>`).join('')}
+            </ul>
+            <button class="compare-btn">${item.recommended ? 'Get Most Popular' : 'Compare Now'}</button>
+        </div>
+    `).join('');
+}
+
+async function populateWhatChangedView() {
+    const container = document.getElementById('timelineContainer');
+    if (!container) return;
+
+    container.innerHTML = '<p style="text-align:center; padding:40px; color:var(--text-tertiary);"><i class="fas fa-spinner fa-spin"></i> Loading latest updates...</p>';
+
+    try {
+        const res = await fetch('/api/what_changed');
+        const data = await res.json();
+        
+        if (data.status === 'success' && data.updates && data.updates.length > 0) {
+            container.innerHTML = data.updates.map(item => `
+                <div class="timeline-item">
+                    <div class="timeline-dot"></div>
+                    <span class="timeline-date">${item.date}</span>
+                    <div class="timeline-content">
+                        <div class="timeline-title">
+                            ${item.title}
+                            <span class="timeline-badge ${item.badgeClass}">${item.badge}</span>
+                        </div>
+                        <div class="timeline-diff">
+                            <span class="diff-old">${item.oldVal}</span>
+                            <i class="fas fa-arrow-right diff-arrow"></i>
+                            <span class="diff-new">${item.newVal}</span>
+                        </div>
+                        <p style="margin-top:12px; font-size:14px; color:var(--text-secondary);">${item.desc}</p>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = '<p style="text-align:center; padding:40px; color:var(--text-tertiary);">No new updates found.</p>';
+        }
+    } catch (err) {
+        console.error("Error fetching what_changed:", err);
+        container.innerHTML = '<p style="text-align:center; padding:40px; color:var(--text-danger);">Failed to load updates. Please try again.</p>';
+    }
+}
 function setupChatPanel() {
     const chatToggleBtn = document.getElementById('chatToggleBtn');
     const chatWindow = document.getElementById('chatWindow');

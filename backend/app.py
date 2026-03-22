@@ -596,6 +596,132 @@ Before sending response:
         import traceback
         traceback.print_exc()
         return jsonify({"reply": "Server error"})
+@app.route("/api/what_changed", methods=["GET"])
+def get_what_changed():
+    if 'user_id' not in session:
+        # For guests or non-logged in users, return standard updates
+        return jsonify({
+            "status": "success",
+            "updates": [
+                {
+                    "date": "March 21, 2024",
+                    "title": "HDFC Home Loan Rates",
+                    "badge": "Update",
+                    "badgeClass": "badge-update",
+                    "oldVal": "8.75%",
+                    "newVal": "8.40%",
+                    "desc": "New Repo-linked rates applied to existing floating loans."
+                },
+                {
+                    "date": "March 18, 2024",
+                    "title": "Axis Bank Policy Shift",
+                    "badge": "Alert",
+                    "badgeClass": "badge-alert",
+                    "oldVal": "Unlimited Lounge",
+                    "newVal": "₹50k Spend Filter",
+                    "desc": "Airport lounge access now requires a minimum spend of ₹50,000 in previous quarter."
+                },
+                {
+                    "date": "March 15, 2024",
+                    "title": "Gold ETF Inflows",
+                    "badge": "Info",
+                    "badgeClass": "badge-info",
+                    "oldVal": "Neutral",
+                    "newVal": "Bullish",
+                    "desc": "Market analysts suggest increasing allocation to Gold due to global uncertainty."
+                }
+            ]
+        })
+
+    user_id = session['user_id']
+    try:
+        # Fetch user data (memory)
+        response = requests.get(
+            f"{SUPABASE_URL}/rest/v1/user_data",
+            headers=HEADERS,
+            params={"user_id": f"eq.{user_id}"}
+        )
+        
+        memory = []
+        if response.status_code == 200:
+            rows = response.json()
+            if rows:
+                memory = rows[0].get("memory", [])
+        
+        # All available updates
+        all_updates = [
+            {
+                "keywords": ["SBI", "card", "credit"],
+                "date": "March 22, 2024",
+                "title": "SBI Card Reward Update",
+                "badge": "Update",
+                "badgeClass": "badge-update",
+                "oldVal": "10x Points",
+                "newVal": "5x Points",
+                "desc": "SBI Card has revised reward points on online rent payments."
+            },
+            {
+                "keywords": ["HDFC", "loan", "home"],
+                "date": "March 21, 2024",
+                "title": "HDFC Home Loan Rates",
+                "badge": "Update",
+                "badgeClass": "badge-update",
+                "oldVal": "8.75%",
+                "newVal": "8.40%",
+                "desc": "New Repo-linked rates applied to existing floating loans."
+            },
+            {
+                "keywords": ["Axis", "card", "lounge"],
+                "date": "March 18, 2024",
+                "title": "Axis Bank Policy Shift",
+                "badge": "Alert",
+                "badgeClass": "badge-alert",
+                "oldVal": "Unlimited Lounge",
+                "newVal": "₹50k Spend Filter",
+                "desc": "Airport lounge access now requires a minimum spend of ₹50,000 in previous quarter."
+            },
+            {
+                "keywords": ["Gold", "ETF", "invest"],
+                "date": "March 15, 2024",
+                "title": "Gold ETF Inflows",
+                "badge": "Info",
+                "badgeClass": "badge-info",
+                "oldVal": "Neutral",
+                "newVal": "Bullish",
+                "desc": "Market analysts suggest increasing allocation to Gold due to global uncertainty."
+            },
+            {
+                "keywords": ["Crypto", "tax", "TDS"],
+                "date": "March 12, 2024",
+                "title": "Crypto TDS Reminder",
+                "badge": "Alert",
+                "badgeClass": "badge-alert",
+                "oldVal": "N/A",
+                "newVal": "1% TDS",
+                "desc": "Reminder to ensure all VDA trades are reported for 1% TDS compliance."
+            }
+        ]
+
+        # Filter based on memory
+        personalized = []
+        interests = " ".join(memory).lower()
+        
+        for up in all_updates:
+            if any(kw.lower() in interests for kw in up["keywords"]):
+                personalized.append(up)
+
+        # Fallback to standard if no personalized matches
+        if not personalized:
+            personalized = all_updates[:3]
+
+        return jsonify({
+            "status": "success",
+            "updates": personalized
+        })
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
 # -------------------------
 # PROFILE MANAGEMENT API
 # -------------------------
