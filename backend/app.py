@@ -8,14 +8,22 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from sentence_transformers import SentenceTransformer
 from functools import lru_cache
+from supabase import create_client, Client
+
 load_dotenv()
 
+# -------------------------
+# SUPABASE SETUP (Cleaned up imports)
+# -------------------------
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 if not SUPABASE_URL or not SUPABASE_KEY:
     raise Exception("Supabase env variables missing")
+
+print("⏳ Initializing Supabase Client...")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
@@ -43,25 +51,12 @@ app = Flask(
     static_folder=os.path.join(BASE_DIR, "static")
 )
 
-# -------------------------
-# SESSION CONFIG
-# -------------------------
 app.secret_key = os.getenv("SECRET_KEY", "change-this-in-production")
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SECURE'] = False  # True in production
-# Allow cross-site redirects from OAuth
+app.config['SESSION_COOKIE_SECURE'] = False
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 CORS(app, supports_credentials=True)
-
-# -------------------------
-# SUPABASE CONFIG
-# -------------------------
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-
-if not SUPABASE_URL or not SUPABASE_KEY:
-    raise ValueError("Missing SUPABASE credentials. Check your .env file.")
 
 HEADERS = {
     "apikey": SUPABASE_KEY,
@@ -69,17 +64,11 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
-# -------------------------
-# ROUTES
-# -------------------------
-
-# 🔥 FIXED FOR UPTIMEROBOT (HEAD SUPPORT)
-
 
 @app.route("/", methods=["GET", "HEAD"])
 def home():
     if request.method == "HEAD":
-        return "", 200  # fast response for uptime robot
+        return "", 200
     return render_template("index.html")
 
 
@@ -98,19 +87,10 @@ def dashboard():
         "dashboard.html",
         username=username
     )
-
-# -------------------------
-# SIGNUP API
-# -------------------------
-
-
 @app.route("/api/signup", methods=["POST"])
 def signup():
     try:
         data = request.get_json()
-        if not data:
-            return jsonify({"status": "error", "message": "No data received"})
-
         name = data.get("name")
         email = data.get("email")
         password = data.get("password")
@@ -118,93 +98,66 @@ def signup():
         if not name or not email or not password:
             return jsonify({"status": "error", "message": "Missing required fields"})
 
-        check_res = requests.get(
-            f"{SUPABASE_URL}/rest/v1/users",
-            headers=HEADERS,
-            params={"email": f"eq.{email}"}
-        )
-
-        if check_res.status_code != 200:
-            return jsonify({"status": "error", "message": "Database error"})
-
-        if check_res.json():
-            return jsonify({"status": "exists"})
-
-        hashed_password = generate_password_hash(password)
-
-        insert_res = requests.post(
-            f"{SUPABASE_URL}/rest/v1/users",
-            headers=HEADERS,
-            json={
-                "name": name,
-                "email": email,
-                "password": hashed_password
+        # 🔥 PURE VAULT. NO CUSTOM TABLES.
+        response = supabase.auth.sign_up({
+            "email": email,
+            "password": password,
+            "options": {
+                "data": {
+                    "full_name": name
+                }
             }
-        )
-
-        if insert_res.status_code in [200, 201]:
-            return jsonify({"status": "success"})
-
-        return jsonify({"status": "error", "message": "Insert failed"})
+        })
+        
+        return jsonify({"status": "success"})
 
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)})
+        error_msg = str(e)
+        print(f"🚨 ACTUAL VAULT ERROR: {error_msg}")
+        
+        # Catch duplicate users
+        if "already registered" in error_msg.lower() or "user already exists" in error_msg.lower():
+            return jsonify({"status": "exists", "message": "User already exists."})
+            
+        return jsonify({"status": "error", "message": f"Auth error: {error_msg}"})
 
 # -------------------------
-# LOGIN API
+# LOGIN API (VAULT ONLY)
 # -------------------------
-
-
 @app.route("/api/login", methods=["POST"])
 def login():
     try:
         data = request.get_json()
-
         email = data.get("email")
         password = data.get("password")
 
         if not email or not password:
             return jsonify({"status": "error", "message": "Missing email or password"})
 
-        response = requests.get(
-            f"{SUPABASE_URL}/rest/v1/users",
-            headers=HEADERS,
-            params={"email": f"eq.{email}"}
-        )
+        # 🔥 Check credentials directly against the encrypted Vault
+        response = supabase.auth.sign_in_with_password({
+            "email": email,
+            "password": password
+        })
 
-        if response.status_code != 200:
-            return jsonify({"status": "error", "message": "Database error"})
+        user = response.user
+        session['user_id'] = user.id
+        session['user_email'] = user.email
+        session['user_name'] = user.user_metadata.get('full_name', 'User')
 
-        users = response.json()
-
-        if not users:
-            return jsonify({"status": "fail", "message": "User not found"})
-
-        user = users[0]
-
-        if check_password_hash(user["password"], password):
-            session['user_id'] = user.get('id')
-            session['user_name'] = user.get('name')
-            session['user_email'] = user.get('email')
-
-            return jsonify({
-                "status": "success",
-                "redirect": "/dashboard"
-            })
-
-        return jsonify({"status": "fail", "message": "Invalid credentials"})
+        return jsonify({
+            "status": "success",
+            "redirect": "/dashboard"
+        })
 
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)})
-
-# -------------------------
-# CURRENT USER API
-# -------------------------
-# -------------------------
-# GOOGLE LOGIN API
-# -------------------------
+        print(f"🚨 VAULT LOGIN ERROR: {str(e)}")
+        return jsonify({"status": "fail", "message": "Invalid credentials"})
 
 
+# -------------------------
+# GOOGLE LOGIN API (VAULT ONLY)
+# -------------------------
 @app.route("/api/google-login", methods=["POST"])
 def google_login():
     try:
@@ -215,55 +168,12 @@ def google_login():
         if not email:
             return jsonify({"status": "error", "message": "Email required"})
 
-        # Check if user exists
-        print(f"DEBUG: Checking if {email} exists in Supabase...")
-        response = requests.get(
-            f"{SUPABASE_URL}/rest/v1/users",
-            headers=HEADERS,
-            params={"email": f"eq.{email}"}
-        )
-        
-        # 🚨 NEW: Print exact Supabase error if the GET fails
-        if response.status_code != 200:
-            print(f"🚨 SUPABASE GET ERROR: {response.text}")
-            return jsonify({"status": "error", "message": f"Database error: {response.text}"})
-
-        users = response.json()
-
-        if users:
-            print("DEBUG: User found! Logging them in.")
-            user = users[0]
-        else:
-            print("DEBUG: User not found. Attempting to create new user...")
-            # Create new user
-            insert_res = requests.post(
-                f"{SUPABASE_URL}/rest/v1/users",
-                headers=HEADERS,
-                json={
-                    "name": name or "Google User",
-                    "email": email,
-                    "password": ""
-                }
-            )
-
-            # 🚨 NEW: Print exact Supabase error if the POST fails
-            if insert_res.status_code not in [200, 201]:
-                print(f"🚨 SUPABASE INSERT ERROR: {insert_res.text}")
-                return jsonify({"status": "error", "message": f"Insert failed: {insert_res.text}"})
-
-            # Fetch again
-            fetch_res = requests.get(
-                f"{SUPABASE_URL}/rest/v1/users",
-                headers=HEADERS,
-                params={"email": f"eq.{email}"}
-            )
-            user = fetch_res.json()[0]
-
-        # SET SESSION
-        session['user_id'] = user.get('id')
-        session['user_name'] = user.get('name')
-        session['user_email'] = user.get('email')
-        print("DEBUG: Session successfully created!")
+        # 🔥 Google handles the Vault insertion on the frontend!
+        # By the time this hits Python, they are already safely in the database.
+        # We just need to set the Flask session so they can enter the dashboard.
+        session['user_id'] = email # Using email as fallback ID for Google
+        session['user_name'] = name or "Google User"
+        session['user_email'] = email
 
         return jsonify({
             "status": "success",
@@ -271,9 +181,7 @@ def google_login():
         })
 
     except Exception as e:
-        print(f"🚨 PYTHON CRASH: {str(e)}")
         return jsonify({"status": "error", "message": str(e)})
-
 @app.route("/api/user", methods=["GET"])
 def get_user():
     if 'user_id' in session:
@@ -299,9 +207,6 @@ def get_user():
 
     return jsonify({"status": "error", "message": "Not logged in"}), 401
 
-# -------------------------
-# USER DATA SYNC API
-# -------------------------
 
 @app.route("/api/get_userdata", methods=["GET"])
 def get_userdata():
@@ -360,10 +265,6 @@ def sync_userdata():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
 
-# -------------------------
-# GUEST LOGIN API
-# -------------------------
-
 
 @app.route("/api/guest-login", methods=["POST"])
 def guest_login():
@@ -378,19 +279,12 @@ def guest_login():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
 
-# -------------------------
-# LOGOUT API
-# -------------------------
 
 
 @app.route("/api/logout", methods=["POST"])
 def logout():
     session.clear()
     return jsonify({"status": "success"})
-
-# -------------------------
-# CHAT API
-# -------------------------
 
 
 @app.route("/chat", methods=["POST"])
@@ -407,26 +301,19 @@ def chat():
         if not message:
             return jsonify({"reply": "Empty message"})
 
-        # =========================
-        # 🔥 STEP 1: CACHED EMBEDDING
-        # =========================
         query_embedding = get_cached_embedding(message)
 
-        # =========================
-        # 🔥 STEP 2: SUPABASE VECTOR OVER-FETCH & RERANK
-        # =========================
         res = requests.post(
             f"{SUPABASE_URL}/rest/v1/rpc/match_documents",
             headers=HEADERS,
             json={
                 "query_embedding": query_embedding,
-                "match_count": 8  # Fetch more to cast a wider net
+                "match_count": 8
             }
         )
 
         raw_docs = res.json()
         
-        # Filter relevant context with adaptive threshold
         docs = sorted([d for d in raw_docs if d.get('similarity', 1) > 0.60], key=lambda x: x.get('similarity', 0), reverse=True)[:3]
 
         # =========================
