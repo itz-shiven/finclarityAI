@@ -38,6 +38,7 @@ async function checkSupabaseAuth() {
                     headers: { "Content-Type": "application/json" },
                     credentials: "include",
                     body: JSON.stringify({
+                        id: user.id,
                         name: user.user_metadata?.full_name || "User",
                         email: user.email
                     })
@@ -1175,7 +1176,7 @@ function setupProfileModal() {
 
     // Open Modal
     if (profileBtn) {
-        profileBtn.addEventListener('click', (e) => {
+        profileBtn.addEventListener('click', async (e) => {
             e.preventDefault();
 
             // Populate data
@@ -1192,6 +1193,28 @@ function setupProfileModal() {
             // Clear passwords
             const pwFields = [document.getElementById('currentPassword'), document.getElementById('newPassword')];
             pwFields.forEach(f => { if (f) f.value = ''; });
+
+            // Check if user has a password (email provider)
+            if (window.supabase) {
+                const { data: { user: sbUser } } = await window.supabase.auth.getUser();
+                if (sbUser) {
+                    const hasPassword = sbUser.identities && sbUser.identities.some(id => id.provider === 'email');
+                    
+                    const currentPwGroup = document.getElementById('currentPasswordGroup');
+                    const currentPwInput = document.getElementById('currentPassword');
+                    const changePwBtn = document.getElementById('changePasswordBtn');
+                    
+                    if (hasPassword) {
+                        if (currentPwGroup) currentPwGroup.style.display = 'block';
+                        if (currentPwInput) currentPwInput.setAttribute('required', '');
+                        if (changePwBtn) changePwBtn.textContent = 'Change Password';
+                    } else {
+                        if (currentPwGroup) currentPwGroup.style.display = 'none';
+                        if (currentPwInput) currentPwInput.removeAttribute('required');
+                        if (changePwBtn) changePwBtn.textContent = 'Set Password';
+                    }
+                }
+            }
 
             // Set Avatar Initials
             const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
@@ -1297,35 +1320,45 @@ function setupProfileModal() {
             const currentPassword = document.getElementById('currentPassword').value;
             const newPassword = document.getElementById('newPassword').value;
 
+            if (newPassword.length < 6) {
+                alert("Password must be at least 6 characters long.");
+                btn.textContent = originalText;
+                btn.disabled = false;
+                return;
+            }
+
             try {
-                const res = await fetch('/change_password', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ currentPassword, newPassword })
+                // 🔥 Use Supabase client directly for better multi-auth support
+                if (!window.supabase) throw new Error("Supabase not initialized");
+
+                // Ensure we have a session
+                const { data: { session }, error: sessionError } = await window.supabase.auth.getSession();
+                if (sessionError || !session) {
+                    throw new Error("Your session has expired or is missing. Please try logging out and back in once to refresh your connection.");
+                }
+
+                const { data, error } = await window.supabase.auth.updateUser({ 
+                    password: newPassword 
                 });
 
-                const data = await res.json();
-                if (data.status === 'success') {
-                    btn.textContent = 'Password Changed';
-                    btn.style.borderColor = '#4caf50';
-                    btn.style.color = '#4caf50';
-                    changePasswordForm.reset();
-
-                    setTimeout(() => {
-                        btn.textContent = originalText;
-                        btn.style.borderColor = '';
-                        btn.style.color = '';
-                        btn.disabled = false;
-                    }, 2500);
-                } else {
-                    alert(data.message || 'Error changing password');
-                    btn.textContent = originalText;
-                    btn.disabled = false;
+                if (error) {
+                    throw error;
                 }
+
+                btn.textContent = 'Success!';
+                btn.style.borderColor = '#4caf50';
+                btn.style.color = '#4caf50';
+                changePasswordForm.reset();
+
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.borderColor = '';
+                    btn.style.color = '';
+                    btn.disabled = false;
+                }, 2500);
             } catch (err) {
-                console.error(err);
-                alert('Connection error');
+                console.error("Password update error:", err);
+                alert(err.message || 'Error updating password');
                 btn.textContent = originalText;
                 btn.disabled = false;
             }

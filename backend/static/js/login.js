@@ -44,18 +44,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
 
                 const data = await res.json();
+
                 if (data.status === "success") {
-                    alert("Account created successfully!");
+                    showNotification("Account created successfully! Please Log In.", "success");
                     container.classList.remove("right-panel-active");
                     signupForm.reset();
                 } else if (data.status === "exists") {
-                    alert("User already exists");
+                    showNotification("User already exists", "error");
                 } else {
-                    alert("Signup failed");
+                    showNotification("Signup failed: " + (data.message || "Unknown error"), "error");
                 }
             } catch (err) {
                 console.error(err);
-                alert("Server error during signup");
+                showNotification("Server error during signup", "error");
             }
         });
     }
@@ -77,18 +78,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 const data = await res.json();
                 if (data.status === "success") {
+                    // 🔥 Sync Frontend Supabase Client Session
+                    if (window.supabase) {
+                        try {
+                            const { data: authData, error: authError } = await window.supabase.auth.signInWithPassword({ 
+                                email: email, 
+                                password: password 
+                            });
+                            if (authError) console.warn("Supabase frontend auth sync error:", authError);
+                        } catch (supaErr) {
+                            console.warn("Supabase frontend auth catch error:", supaErr);
+                        }
+                    }
+
                     localStorage.setItem("currentUser", JSON.stringify({
                         email: email,
                         isGuest: false
                     }));
-                    alert("Login successful");
+                    // Optional: show success or just redirect
                     window.location.href = data.redirect || "/dashboard";
                 } else {
-                    alert("Invalid credentials or user not found");
+                    showNotification(data.message || "Invalid credentials or user not found", "error");
                 }
             } catch (err) {
                 console.error(err);
-                alert("Server error during login");
+                showNotification("Server error during login", "error");
             }
         });
     }
@@ -114,11 +128,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     }));
                     window.location.href = data.redirect || "/dashboard";
                 } else {
-                    alert("Failed to continue as guest");
+                    showNotification("Failed to continue as guest", "error");
                 }
             } catch (err) {
                 console.error(err);
-                alert("Server error during guest login");
+                showNotification("Server error during guest login", "error");
             }
         });
     }
@@ -137,7 +151,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             if (!window.supabase) {
-                alert("Authentication service not loaded. Please refresh and try again.");
+                showNotification("Authentication service not loaded. Please refresh and try again.", "error");
                 return;
             }
 
@@ -151,11 +165,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 if (error) {
                     console.error("OAuth error:", error);
-                    alert("Google login failed: " + (error.message || "Unknown error"));
+                    showNotification("Google login failed: " + (error.message || "Unknown error"), "error");
                 }
             } catch (err) {
                 console.error("OAuth crash:", err);
-                alert("Google login error. Please try again.");
+                showNotification("Google login error. Please try again.", "error");
             }
         });
     });
@@ -178,6 +192,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             headers: { "Content-Type": "application/json" },
                             credentials: "include",
                             body: JSON.stringify({
+                                id: user.id,
                                 name: user.user_metadata?.full_name || "User",
                                 email: user.email
                             })
@@ -200,4 +215,51 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
     setupAuthStateChange();
-});
+    setupNotifications(); // Initialize custom notifications
+});
+
+function setupNotifications() {
+    const overlay = document.getElementById('notificationOverlay');
+    const closeBtn = document.getElementById('notificationClose');
+    
+    if (closeBtn && overlay) {
+        closeBtn.addEventListener('click', () => {
+            overlay.classList.remove('show');
+        });
+        
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                overlay.classList.remove('show');
+            }
+        });
+    }
+}
+
+function showNotification(message, type = 'info') {
+    const overlay = document.getElementById('notificationOverlay');
+    const box = overlay.querySelector('.notification-box');
+    const icon = document.getElementById('notificationIcon');
+    const title = document.getElementById('notificationTitle');
+    const msgElem = document.getElementById('notificationMessage');
+    
+    // Reset types
+    box.classList.remove('success', 'error', 'info');
+    box.classList.add(type);
+    
+    // Set content
+    msgElem.textContent = message;
+    
+    if (type === 'success') {
+        title.textContent = 'Success!';
+        icon.innerHTML = '<i class="fas fa-check-circle"></i>';
+    } else if (type === 'error') {
+        title.textContent = 'Oops!';
+        icon.innerHTML = '<i class="fas fa-exclamation-circle"></i>';
+    } else {
+        title.textContent = 'Notification';
+        icon.innerHTML = '<i class="fas fa-info-circle"></i>';
+    }
+    
+    // Show
+    overlay.classList.add('show');
+}

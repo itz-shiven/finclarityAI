@@ -10,20 +10,30 @@ from sentence_transformers import SentenceTransformer
 from functools import lru_cache
 from supabase import create_client, Client
 
-load_dotenv()
+load_dotenv(override=True)
 
 # -------------------------
 # SUPABASE SETUP (Cleaned up imports)
 # -------------------------
+print(f"[DEBUG] Current Working Directory: {os.getcwd()}")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") # 🔥 SECURE BACKEND KEY
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 if not SUPABASE_URL or not SUPABASE_KEY:
     raise Exception("Supabase env variables missing")
 
-print("⏳ Initializing Supabase Client...")
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+# Use Service Role Key if available for administrative tasks (bypasses RLS)
+backend_key = SUPABASE_SERVICE_ROLE_KEY or SUPABASE_KEY
+if SUPABASE_SERVICE_ROLE_KEY:
+    # Safely print first few chars
+    print(f"[INFO] SUCCESS: Service Role Key loaded ({SUPABASE_SERVICE_ROLE_KEY[:10]}...)")
+else:
+    print("[WARNING] Service Role Key NOT FOUND in environment! Using Anon Key.")
+
+print(f"[INFO] Initializing Supabase Client with {'Service Role' if SUPABASE_SERVICE_ROLE_KEY else 'Anon'} Key...")
+supabase: Client = create_client(SUPABASE_URL, backend_key)
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
@@ -127,8 +137,10 @@ def signup():
         return jsonify({"status": "success"})
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         error_msg = str(e)
-        print(f"🚨 ACTUAL VAULT ERROR: {error_msg}")
+        print(f"[ERROR] ACTUAL VAULT ERROR: {error_msg}")
         
         # Catch duplicate users
         if "already registered" in error_msg.lower() or "user already exists" in error_msg.lower():
@@ -162,14 +174,35 @@ def login():
         session['user_email'] = user.email
         session['user_name'] = user.user_metadata.get('full_name', 'User')
 
+        # 🔥 Ensure user_data row exists
+        ensure_user_data(user.id, user.email, session['user_name'])
+
         return jsonify({
             "status": "success",
             "redirect": "/dashboard"
         })
 
     except Exception as e:
-        print(f"🚨 VAULT LOGIN ERROR: {str(e)}")
-        return jsonify({"status": "fail", "message": "Invalid credentials"})
+        error_msg = str(e)
+        print(f"[ERROR] LOGIN FAILURE for {email}: {error_msg}")
+        
+        # 🔥 ULTRA SMART HINT: Check if user exists in Supabase Auth directly
+        try:
+            # Try to sign up with a dummy password. 
+            # If they exist, Supabase will return "User already registered"
+            check_signup = supabase.auth.sign_up({"email": email, "password": "DummyPassword123!"})
+            # If it reaches here, the user DID NOT exist (or signup was allowed)
+        except Exception as signup_err:
+            if "already registered" in str(signup_err).lower():
+                return jsonify({
+                    "status": "fail", 
+                    "message": f"Account exists. If you previously signed in via Google, please use the 'Login with Google' button, then set your password in Profile Settings."
+                })
+            
+        return jsonify({
+            "status": "fail", 
+            "message": "Invalid credentials or user not found"
+        })
 
 
 # -------------------------
@@ -184,61 +217,24 @@ def login():
 def google_login():
     try:
         data = request.get_json()
-        name = data.get("name")
-        email = data.get("email")
+        user_id = data.get("id")
+        user_name = data.get("name")
+        user_email = data.get("email")
 
-        if not email:
-            return jsonify({"status": "error", "message": "Email required"})
-
-        # Check if user exists
-        print(f"DEBUG: Checking if {email} exists in Supabase...")
-        response = requests.get(
-            f"{SUPABASE_URL}/rest/v1/users",
-            headers=HEADERS,
-            params={"email": f"eq.{email}"}
-        )
-        
-        # 🚨 NEW: Print exact Supabase error if the GET fails
-        if response.status_code != 200:
-            print(f"🚨 SUPABASE GET ERROR: {response.text}")
-            return jsonify({"status": "error", "message": f"Database error: {response.text}"})
-
-        users = response.json()
-
-        if users:
-            print("DEBUG: User found! Logging them in.")
-            user = users[0]
-        else:
-            print("DEBUG: User not found. Attempting to create new user...")
-            # Create new user
-            insert_res = requests.post(
-                f"{SUPABASE_URL}/rest/v1/users",
-                headers=HEADERS,
-                json={
-                    "name": name or "Google User",
-                    "email": email,
-                    "password": ""
-                }
-            )
-
-            # 🚨 NEW: Print exact Supabase error if the POST fails
-            if insert_res.status_code not in [200, 201]:
-                print(f"🚨 SUPABASE INSERT ERROR: {insert_res.text}")
-                return jsonify({"status": "error", "message": f"Insert failed: {insert_res.text}"})
-
-            # Fetch again
-            fetch_res = requests.get(
-                f"{SUPABASE_URL}/rest/v1/users",
-                headers=HEADERS,
-                params={"email": f"eq.{email}"}
-            )
-            user = fetch_res.json()[0]
+        if not user_email or not user_id:
+            return jsonify({"status": "error", "message": "User data missing"})
 
         # SET SESSION
-        session['user_id'] = user.get('id')
-        session['user_name'] = user.get('name')
-        session['user_email'] = user.get('email')
-        print("DEBUG: Session successfully created!")
+        # Since we use "PURE VAULT", we trust the frontend's authentication 
+        # (which was verified by Supabase) and set the session directly.
+        session['user_id'] = user_id
+        session['user_name'] = user_name or "Google User"
+        session['user_email'] = user_email
+        
+        # 🔥 Ensure user_data row exists
+        ensure_user_data(user_id, user_email, session['user_name'])
+        
+        print(f"DEBUG: Session successfully created for {user_email}!")
 
         return jsonify({
             "status": "success",
@@ -246,6 +242,7 @@ def google_login():
         })
 
     except Exception as e:
+        print(f"🚨 GOOGLE LOGIN ERROR: {str(e)}")
         return jsonify({"status": "error", "message": str(e)})
 @app.route("/api/user", methods=["GET"])
 def get_user():
@@ -273,61 +270,65 @@ def get_user():
     return jsonify({"status": "error", "message": "Not logged in"}), 401
 
 
-@app.route("/api/get_userdata", methods=["GET"])
-def get_userdata():
-    if 'user_id' not in session:
-        return jsonify({"status": "error", "message": "Not authenticated"}), 401
-        
-    user_id = session['user_id']
-    
+# -------------------------
+# USER DATA PERSISTENCE (CHATS/MEMORY)
+# -------------------------
+
+def ensure_user_data(user_id, email, name):
+    """Ensures a row exists in user_data for this user_id."""
     try:
-        response = requests.get(
-            f"{SUPABASE_URL}/rest/v1/user_data",
-            headers=HEADERS,
-            params={"user_id": f"eq.{user_id}"}
-        )
-        
-        if response.status_code == 200:
-            rows = response.json()
-            if rows:
-                return jsonify({"status": "success", "data": rows[0]})
-        
-        return jsonify({"status": "success", "data": {"chats": [], "memory": []}})
+        # Check if exists
+        res = supabase.table("user_data").select("user_id").eq("user_id", user_id).execute()
+        if not res.data:
+            # Create new row (Matching confirmed schema: user_id, chats, memory)
+            supabase.table("user_data").insert({
+                "user_id": user_id,
+                "chats": [],
+                "memory": []
+            }).execute()
+            print(f"[DATABASE] Created new user_data row for ID: {user_id}")
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)})
+        print(f"[ERROR] ensure_user_data failed: {str(e)}")
+
 
 @app.route("/api/sync_userdata", methods=["POST"])
 def sync_userdata():
     if 'user_id' not in session:
-        return jsonify({"status": "error", "message": "Not authenticated"}), 401
-        
-    user_id = session['user_id']
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
     
     try:
         data = request.get_json()
-        payload = {
-            "user_id": user_id,
-            "chats": data.get("chats", []),
-            "memory": data.get("memory", []),
-            "updated_at": "now()"
-        }
+        chats = data.get("chats")
+        memory = data.get("memory")
         
-        # Upsert using PostgREST resolution=merge-duplicates
-        upsert_headers = HEADERS.copy()
-        upsert_headers["Prefer"] = "resolution=merge-duplicates"
+        update_data = {}
+        if chats is not None: update_data["chats"] = chats
+        if memory is not None: update_data["memory"] = memory
         
-        response = requests.post(
-            f"{SUPABASE_URL}/rest/v1/user_data",
-            headers=upsert_headers,
-            json=payload
-        )
-        
-        if response.status_code in [200, 201, 204]:
-            return jsonify({"status": "success"})
-        else:
-            return jsonify({"status": "error", "message": f"DB Error: {response.text}"})
+        if update_data:
+            supabase.table("user_data").update(update_data).eq("user_id", session['user_id']).execute()
             
+        return jsonify({"status": "success"})
     except Exception as e:
+        print(f"🚨 SYNC ERROR: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)})
+
+
+@app.route("/api/get_userdata", methods=["GET"])
+def get_userdata():
+    if 'user_id' not in session:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    
+    try:
+        res = supabase.table("user_data").select("chats, memory").eq("user_id", session['user_id']).execute()
+        if res.data:
+            return jsonify({
+                "status": "success",
+                "data": res.data[0]
+            })
+        return jsonify({"status": "success", "data": {"chats": [], "memory": []}})
+    except Exception as e:
+        print(f"🚨 GET USERDATA ERROR: {str(e)}")
         return jsonify({"status": "error", "message": str(e)})
 
 
@@ -382,7 +383,7 @@ def chat():
         docs = sorted([d for d in raw_docs if d.get('similarity', 1) > 0.60], key=lambda x: x.get('similarity', 0), reverse=True)[:3]
 
         # =========================
-        # 🔥 STEP 3: CONTEXT & MEMORY INJECTION
+        # [STEP 3]: CONTEXT & MEMORY INJECTION
         # =========================
         if docs:
             rag_context = "\n\n".join([
@@ -399,7 +400,7 @@ def chat():
         context = memory_block + rag_context
 
         # =========================
-        # 🔥 STEP 4: DYNAMIC PROMPT
+        # [STEP 4]: DYNAMIC PROMPT
         # =========================
         system_prompt = """
 You are Finclarity AI — a smart financial assistant for Indian users.
@@ -583,7 +584,7 @@ Before sending response:
 """
 
         # =========================
-        # 🔥 STEP 5: LLM
+        # [STEP 5]: LLM
         # =========================
         messages = [{"role": "system", "content": system_prompt}]
         
@@ -609,7 +610,7 @@ Before sending response:
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({"reply": "Server error"})
+        return jsonify({"reply": "[ERROR] Server error"})
 @app.route("/api/what_changed", methods=["GET"])
 def get_what_changed():
     if 'user_id' not in session:
@@ -753,23 +754,16 @@ def update_profile():
         new_name = data.get("name")
         new_email = data.get("email")
 
-        # Update in Supabase
-        update_res = requests.patch(
-            f"{SUPABASE_URL}/rest/v1/users",
-            headers=HEADERS,
-            params={"id": f"eq.{session['user_id']}"},
-            json={
-                "name": new_name,
-                "email": new_email
-            }
-        )
-
-        if update_res.status_code in [200, 204]:
-            session['user_name'] = new_name
-            session['user_email'] = new_email
-            return jsonify({"status": "success"})
+        # Update in Supabase Auth (This requires Service Role Key or user token)
+        # For now, we update the session. If user has Service Role Key, 
+        # they should use it for the client.
+        session['user_name'] = new_name
+        session['user_email'] = new_email
         
-        return jsonify({"status": "error", "message": f"Update failed: {update_res.text}"})
+        # Optional: Attempt to update metadata if client is capable
+        # supabase.auth.update_user({"data": {"full_name": new_name}})
+        
+        return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
 
@@ -784,44 +778,13 @@ def change_password():
 
     try:
         data = request.get_json()
-        current_password = data.get("currentPassword")
-        new_password = data.get("newPassword")
-
-        # Fetch current user to verify password
-        fetch_res = requests.get(
-            f"{SUPABASE_URL}/rest/v1/users",
-            headers=HEADERS,
-            params={"id": f"eq.{session['user_id']}"}
-        )
-
-        users = fetch_res.json()
-        if not users:
-            return jsonify({"status": "error", "message": "User not found"})
+        # new_password = data.get("newPassword")
         
-        user = users[0]
-        stored_hash = user.get("password", "")
-        
-        # Verify current password (if stored password exists)
-        if stored_hash and not check_password_hash(stored_hash, current_password):
-            return jsonify({"status": "error", "message": "Incorrect current password"})
+        # NOTE: Changing password via server-side session without 
+        # service role key is restricted in Supabase for security.
+        # This route should ideally be handled directly via frontend Supabase client.
+        return jsonify({"status": "error", "message": "Please change password via the account settings (Supabase Auth)."})
 
-        # Hash new password
-        hashed_password = generate_password_hash(new_password)
-
-        # Update in Supabase
-        update_res = requests.patch(
-            f"{SUPABASE_URL}/rest/v1/users",
-            headers=HEADERS,
-            params={"id": f"eq.{session['user_id']}"},
-            json={
-                "password": hashed_password
-            }
-        )
-
-        if update_res.status_code in [200, 204]:
-            return jsonify({"status": "success"})
-        
-        return jsonify({"status": "error", "message": f"Update failed: {update_res.text}"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
 

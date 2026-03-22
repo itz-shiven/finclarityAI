@@ -3,8 +3,7 @@
 
 <head>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<script src="/static/js/supabase.js"></script>
-<script src="/static/js/dashboard.js"></script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finclarity - AI Finance Assistant</title>
@@ -300,7 +299,7 @@
 
         const supabase = createClient(
             "https://oooykmtjwolypmqkdxpk.supabase.co",
-            "YOUR_ANON_KEY"
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vb3lrbXRqd29seXBtcWtkeHBrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NDIwOTgsImV4cCI6MjA4OTQxODA5OH0.nGZc9qYn4lnqYMLfrWyl6nUuomgncJR1WjlPvyBLnQg"
         );
 
         window.supabase = supabase;
@@ -347,9 +346,9 @@
                 <div class="settings-section">
                     <h5>Security</h5>
                     <form id="changePasswordForm">
-                        <div class="input-group">
+                        <div class="input-group" id="currentPasswordGroup" style="display: none;">
                             <label>Current Password</label>
-                            <input type="password" id="currentPassword" required>
+                            <input type="password" id="currentPassword">
                         </div>
                         <div class="input-group">
                             <label>New Password</label>

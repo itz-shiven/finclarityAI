@@ -2,8 +2,7 @@
 <html lang="en">
 
 <head>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<script src="/static/js/supabase.js"></script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finclarity Auth</title>
@@ -106,6 +105,18 @@
 
 </div>
 
+<!-- Premium Notification Modal -->
+<div id="notificationOverlay" class="notification-overlay">
+    <div class="notification-box">
+        <div id="notificationIcon" class="notification-icon">
+            <i class="fas fa-info-circle"></i>
+        </div>
+        <h3 id="notificationTitle">Notification</h3>
+        <p id="notificationMessage">This is a message.</p>
+        <button id="notificationClose" class="notification-btn">Got it</button>
+    </div>
+</div>
+
 <div style="position:absolute;top:30px;left:40px;font-size:32px;font-weight:700;">
     FinClarity AI
 </div>
@@ -120,11 +131,7 @@
     const SUPABASE_URL = "https://oooykmtjwolypmqkdxpk.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9vb3lrbXRqd29seXBtcWtkeHBrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4NDIwOTgsImV4cCI6MjA4OTQxODA5OH0.nGZc9qYn4lnqYMLfrWyl6nUuomgncJR1WjlPvyBLnQg"; // 🔥 replace
 
-    window.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        auth: {
-            storage: window.sessionStorage
-        }
-    });
+    window.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 </script>
 
 
