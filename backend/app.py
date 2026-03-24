@@ -399,6 +399,15 @@ def chat():
         
         docs = sorted([d for d in raw_docs if d.get('similarity', 1) > 0.60], key=lambda x: x.get('similarity', 0), reverse=True)[:3]
 
+        # ===== DEBUG: RAG SOURCE TRACKING =====
+        print(f"[RAG DEBUG] Total docs from DB: {len(raw_docs)}")
+        print(f"[RAG DEBUG] Docs after similarity filter (>0.60): {len(docs)}")
+        for i, doc in enumerate(docs):
+            print(f"[RAG DEBUG] Doc #{i+1} | similarity={doc.get('similarity', 'N/A'):.4f} | preview: {str(doc.get('content', ''))[:120]}")
+        if not docs:
+            print("[RAG DEBUG] [WARNING] NO DOCS MATCHED - LLM will use GENERAL KNOWLEDGE, NOT table data!")
+        # =======================================
+
         # =========================
         # [STEP 3]: CONTEXT & MEMORY INJECTION
         # =========================
@@ -409,7 +418,8 @@ def chat():
             ])
         else:
             # Fallback when no financial data found
-            rag_context = "No specific financial documents found. Provide general financial guidance based on your knowledge."
+            print("[RAG DEBUG] [WARNING] FALLBACK TRIGGERED - Replying from general LLM knowledge, NOT from financial_docs table!")
+            rag_context = "❌ NO DATA AVAILABLE: There are no financial documents in the database matching this query. You MUST refuse to answer and tell the user to contact support or check back later. DO NOT use your training data to answer."
         
         memory_str = "\n".join(f"- {m}" for m in user_memory)
         memory_block = f"USER PROFILE MEMORY (Facts you learned in past sessions):\n{memory_str}\n\n" if memory_str else ""
@@ -420,6 +430,15 @@ def chat():
         # [STEP 4]: DYNAMIC PROMPT
         # =========================
         system_prompt = """
+🔒 IMPORTANT: DATA SOURCE RESTRICTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+You MUST ONLY answer questions using the financial documents provided in the CONTEXT section below.
+- If the context says "❌ NO DATA AVAILABLE", you MUST refuse to answer.
+- DO NOT use your training data, general knowledge, or the internet.
+- If context doesn't have the information, say: "I don't have this information in my database. Please contact support."
+- NEVER answer financial questions that aren't covered by the provided documents.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 You are Finclarity AI — a smart financial assistant for Indian users.
 
 Your goal: Give clear, practical, and easy-to-understand financial guidance.
@@ -431,6 +450,10 @@ OUT OF DOMAIN & SMALL TALK HANDLING
 - STRICTLY OUT OF DOMAIN: If the user asks complex non-financial questions (e.g., coding, history, politics) or types random gibberish (e.g., "asdf"):
   - Do NOT attempt to answer the external question.
   - Reply with 1 short sentence politely refusing, reminding them you are a financial assistant.
+- NO DATA IN DATABASE: If no matching financial documents exist in the database for the user's query:
+  - You MUST refuse to answer.
+  - Say: "I don't have information about this in my database. Please contact support or try rephrasing your question."
+  - DO NOT use your training knowledge or make up information.
 
 ━━━━━━━━━━━━━━━━━━━
 INTENT DETECTION
@@ -598,6 +621,7 @@ SELF-CORRECTION:
 Before sending response:
 - Check: "Did I write any paragraph?"
 → If YES → convert into bullet format
+->
 """
 
         # =========================
