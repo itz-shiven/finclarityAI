@@ -2,151 +2,204 @@ import os
 import json
 import time
 from dotenv import load_dotenv
+from firecrawl import FirecrawlApp
 from supabase import create_client, Client
-from firecrawl import Firecrawl 
-from sentence_transformers import SentenceTransformer
-import google.generativeai as genai
+from openai import OpenAI
+
+# Load environment variables
+load_dotenv()
+
+# Initialize API Clients (Gemini removed, fully reliant on OpenAI now)
+supabase: Client = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_SERVICE_ROLE_KEY"))
+firecrawl_app = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
+openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # -------------------------
-# 1. SETUP & AUTH
+# 1. THE EMBEDDING GENERATOR
 # -------------------------
-load_dotenv(override=True)
-
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY") 
-FIRECRAWL_API_KEY = os.getenv("FIRECRAWL_API_KEY")
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-firecrawl_app = Firecrawl(api_key=FIRECRAWL_API_KEY)
-
-print("⏳ Loading Vector Embedding Model...")
-embedding_model = SentenceTransformer('all-MiniLM-L6-v2') 
-
-print("⏳ Loading Gemini 2.5 Flash (The Data Cleaner)...")
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-gemini_model = genai.GenerativeModel('gemini-2.5-flash')
-print("✅ All AI Systems Loaded!")
-
-# -------------------------
-# 2. THE CHUNKER
-# -------------------------
-def chunk_text(text, max_words=150):
-    paragraphs = text.split('\n\n')
-    chunks = []
-    current_chunk = ""
-    for p in paragraphs:
-        if len(current_chunk.split()) + len(p.split()) < max_words:
-            current_chunk += p + "\n\n"
-        else:
-            if current_chunk.strip():
-                chunks.append(current_chunk.strip())
-            current_chunk = p + "\n\n"
-    if current_chunk.strip():
-        chunks.append(current_chunk.strip())
-    return chunks
-
-# -------------------------
-# 3. THE ETL ENGINE
-# -------------------------
-def process_target(url, provider_name, service_name, doc_type):
-    print(f"\n🕷️ Crawling {doc_type.upper()} page: {url}")
+def get_embedding(text):
+    """
+    Generates a 1536-dimension vector using OpenAI's highly accurate embedding model.
+    """
     try:
-        # Step A: Leashed Crawl (Max 3 pages to catch PDFs but prevent infinite loops)
-        # 🔥 Updated to the newest Firecrawl SDK syntax
-        crawl_result = firecrawl_app.crawl(
-            url, 
-            limit=3,
-            scrape_options={'formats': ['markdown']},
-            poll_interval=2
+        response = openai_client.embeddings.create(
+            input=text,
+            model="text-embedding-3-small"
+        )
+        return response.data[0].embedding
+    except Exception as e:
+        print(f"🚨 OpenAI Embedding Error: {e}")
+        return None
+
+# -------------------------
+# 2. THE DEEP CRAWL PIPELINE
+# -------------------------
+def run_financial_crawl(start_url, provider_name, service_name):
+    print(f"🚀 Crawling {provider_name} ({service_name}) at: {start_url}")
+
+    try:
+        crawl_job = firecrawl_app.start_crawl(
+            url=start_url,
+            limit=100,
+            scrape_options={"formats": ["markdown"]},
+            max_discovery_depth=5,
+            include_paths=[
+                "cards", "loans", "insurance", "invest", 
+                "accounts", "deposits", "wealth", "nri", 
+                "fees", "terms", "faq"
+            ],
+            exclude_paths=[
+                "careers", "about-us", "investor-relations", 
+                "press", "news", "blog", "sustainability", 
+                "locations", "branches", "atms"
+            ]
         )
         
-        # 🔥 Failsafe Data Extractor (Handles both Objects and Dictionaries)
-        pages = crawl_result.data if hasattr(crawl_result, 'data') else crawl_result.get('data', [])
+        crawl_id = crawl_job.id if hasattr(crawl_job, 'id') else crawl_job.get('id')
+        print(f"✅ Crawl initiated. ID: {crawl_id}")
         
-        raw_markdown = ""
-        for page in pages:
-            md = page.markdown if hasattr(page, 'markdown') else page.get('markdown', '')
-            if md:
-                raw_markdown += md + "\n\n"
+        while True:
+            status_response = firecrawl_app.get_crawl_status(crawl_id)
+            status = status_response.model_dump() if hasattr(status_response, 'model_dump') else (status_response.dict() if hasattr(status_response, 'dict') else status_response)
             
-        if not raw_markdown.strip():
-            print("   ⚠️ No text found, skipping.")
-            return False
+            current_state = status.get('status')
             
-        print(f"   ✅ Crawled {len(raw_markdown)} characters. Handing off to Gemini Flash...")
-        
-        # Step B: LLM Interceptor (Cleaning the Data)
-        if doc_type == "product":
-            prompt = f"""You are a financial data extractor. Read this messy website data.
-            Extract all the factual features, interest rates, rewards, and benefits.
-            Remove all marketing fluff, navigation menus, and junk. Return clean, structured paragraphs.
-            Raw Data: {raw_markdown}"""
-        else:
-            prompt = f"""You are a strict financial auditor. Read these Terms and Conditions.
-            Find every single hidden fee, penalty charge, lock-in period, and red flag.
-            List them out clearly as bullet points. Do not miss anything.
-            Raw Data: {raw_markdown}"""
+            if current_state == 'completed':
+                data = status.get('data', [])
+                print(f"✅ Crawl finished! Found {len(data)} pages.")
+                process_and_save_data(data, provider_name, service_name)
+                break
+            elif current_state == 'failed':
+                print("🚨 Crawl failed.")
+                break
             
-        response = gemini_model.generate_content(prompt)
-        clean_data = response.text
-        
-        print(f"   🧠 Gemini cleaned the data! New optimized size: {len(clean_data)} characters.")
-        
-        # Step C: Chunk & Embed the CLEAN data
-        chunks = chunk_text(clean_data)
-        for chunk in chunks:
-            embedding = embedding_model.encode(chunk).tolist() 
+            print("⏳ Crawling in progress... waiting 10 seconds.")
+            time.sleep(10)
             
-            supabase.table("financial_docs").insert({
-                "url": url,
-                "content": chunk,
-                "embedding": embedding,
-                "provider_name": provider_name,
-                "service_name": service_name,
-                "doc_type": doc_type
-            }).execute()
-            
-        print(f"   💾 Saved {len(chunks)} ultra-clean chunks to Database.")
-        return True
-
     except Exception as e:
-        print(f"   🚨 Error processing {url}: {str(e)}")
-        return False
+        print(f"🚨 Error starting crawl: {e}")
 
 # -------------------------
-# 4. THE MASTER LOOP
+# 3. THE AI FILTER & DATABASE INSERTION
+# -------------------------
+def process_and_save_data(crawled_pages, provider_name, service_name):
+    print(f"🧠 Passing {provider_name} {service_name} data through OpenAI (gpt-4o-mini) and generating embeddings...")
+    
+    for page in crawled_pages:
+        raw_markdown = page.get('markdown', '')
+        source_url = page.get('metadata', {}).get('sourceURL', 'Unknown URL')
+        
+        if not raw_markdown or len(raw_markdown) < 100:
+            continue
+            
+        # Still cap at 40k characters to keep token costs extremely low
+        safe_markdown = raw_markdown[:40000] 
+        
+        try:
+            # 1. Extract JSON facts via OpenAI gpt-4o-mini
+            completion = openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system", 
+                        "content": """You are an expert financial data analyst. Read the markdown from this bank's website and extract all distinct financial products. 
+                        
+                        Return a strict JSON object with a single key 'products' containing an array of objects. 
+                        Each object MUST have these exact string keys:
+                        - 'product_name': The exact name of the card, loan, or account.
+                        - 'category': The type of product (e.g., 'Credit Card', 'Personal Loan', 'Savings Account').
+                        - 'details': A highly detailed summary. You MUST include specific numbers if found: interest rates (APR), annual/joining fees, key reward benefits, eligibility criteria, and penalty charges."""
+                    },
+                    {
+                        "role": "user", 
+                        "content": f"Please extract the financial products from this raw markdown:\n\n{safe_markdown}"
+                    }
+                ],
+                response_format={"type": "json_object"}
+            )
+            
+            response_text = completion.choices[0].message.content
+            extracted_data = json.loads(response_text)
+            extracted_products = extracted_data.get('products', [])
+            
+            # 2. Process each specific product
+            for product in extracted_products:
+                product_name = product.get('product_name', 'Unknown')
+                category = product.get('category', 'Unknown')
+                details = product.get('details', '')
+                
+                print(f"💾 Processing: {product_name} from {source_url}")
+                
+                content_chunk = f"Provider: {provider_name}\nService: {service_name}\nProduct: {product_name}\nCategory: {category}\nDetails: {details}\nSource: {source_url}"
+                
+                # 3. Generate OpenAI Vector (1536 dimensions)
+                vector = get_embedding(content_chunk)
+                if not vector:
+                    print(f"⚠️ Skipping insertion for {product_name} due to embedding failure.")
+                    continue
+                
+                # 4. Insert directly into Supabase WITH rich metadata tags
+                supabase.table('financial_docs').insert({
+                    "content": content_chunk,
+                    "metadata": {
+                        "provider": provider_name,
+                        "service_type": service_name,
+                        "source": source_url, 
+                        "category": category,
+                        "product_name": product_name
+                    },
+                    "embedding": vector
+                }).execute()
+                
+                print(f"✅ Successfully vaulted: {product_name}")
+                
+        except Exception as e:
+            print(f"⚠️ Error processing page {source_url}: {e}")
+            
+        # The ultimate speed upgrade: Just a half-second breather instead of 13 seconds
+        time.sleep(0.5) 
+
+# -------------------------
+# 4. EXECUTION & TARGET PARSING
 # -------------------------
 if __name__ == "__main__":
-    print("\n🚀 Starting FinClarity AI ETL Pipeline...")
+    print("📂 Locating targets.json...")
     
-    # 🔥 Bulletproof Path Fix (Forces Python to find the file)
     script_dir = os.path.dirname(os.path.abspath(__file__))
     json_path = os.path.join(script_dir, 'targets.json')
     
     try:
         with open(json_path, 'r') as file:
             targets = json.load(file)
-    except FileNotFoundError:
-        print(f"🚨 targets.json not found! I am looking exactly here: {json_path}")
-        exit()
+            
+        if not targets:
+            print("⚠️ No targets found in targets.json.")
+        else:
+            print(f"🎯 Found {len(targets)} services to map. Starting batch crawl...\n")
+            
+            for target in targets:
+                provider = target.get("provider_name", "Unknown Provider")
+                service = target.get("service_name", "Unknown Service")
+                product_url = target.get("product_url")
+                terms_url = target.get("terms_url")
+                
+                print(f"\n=========================================")
+                print(f"🏦 INITIALIZING: {provider} - {service}")
+                print(f"=========================================")
+                
+                if product_url:
+                    run_financial_crawl(product_url, provider, service)
+                    # We keep this 35s sleep to respect Firecrawl's free tier limits between sites
+                    time.sleep(35) 
+                    
+                if terms_url:
+                    print(f"\n📄 Engaging separate Terms & Conditions crawl for {provider}...")
+                    run_financial_crawl(terms_url, provider, service)
+                    time.sleep(35)
+                    
+            print("\n🎉 ALL TARGETS CRAWLED AND VAULTED SUCCESSFULLY!")
 
-    for target in targets:
-        provider = target['provider_name']
-        service = target['service_name']
-        
-        print(f"\n========================================")
-        print(f"🏦 Processing: {provider} - {service}")
-        print(f"========================================")
-        
-        # Process Marketing Page
-        process_target(target['product_url'], provider, service, "product")
-        
-        # Process T&C / PDF Pages
-        process_target(target['terms_url'], provider, service, "terms")
-        
-        # 🔥 ADD THESE TWO LINES RIGHT HERE
-        print("\n⏳ Pausing for 25 seconds to respect Firecrawl's speed limits...")
-        time.sleep(25) 
-        
-    # Make sure this final print statement is OUTSIDE the loop (no indentation)
-    print("\n✅ All targets processed successfully! Your AI is now a genius.")
+    except FileNotFoundError:
+        print(f"🚨 Error: Could not find the file at {json_path}")
+    except json.JSONDecodeError:
+        print("🚨 Error: 'targets.json' is not valid JSON. Check for missing commas or quotes.")

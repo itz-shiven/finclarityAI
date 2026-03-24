@@ -3,12 +3,12 @@ import json
 import requests
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for
 from flask_cors import CORS
-from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 from openai import OpenAI
 from sentence_transformers import SentenceTransformer
 from functools import lru_cache
 from supabase import create_client, Client
+from werkzeug.exceptions import HTTPException
 
 load_dotenv(override=True)
 
@@ -75,8 +75,40 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SECURE'] = False
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
-CORS(app, supports_credentials=True)
+# -------------------------
+# SECURE CORS SETUP
+# -------------------------
+# Your VIP Guest List of allowed frontend URLs
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",       # If you are using React/Next.js locally
+    "http://127.0.0.1:5000",       # Local HTML/JS testing
+    "http://localhost:5000",       # Local HTML/JS testing
+    "https://your-future-domain.com" # Put your Vercel/Netlify link here later!
+]
 
+CORS(app, supports_credentials=True, origins=ALLOWED_ORIGINS)
+
+# -------------------------
+# GLOBAL ERROR HANDLER
+# -------------------------
+@app.errorhandler(Exception)
+def handle_exception(e):
+    # 1. Handle standard HTTP errors (like 404 Not Found, 401 Unauthorized)
+    if isinstance(e, HTTPException):
+        return jsonify({
+            "status": "error",
+            "message": e.description
+        }), e.code
+
+    # 2. Catch all unexpected backend crashes (500 Internal Server Error)
+    import traceback
+    print("🚨 [GLOBAL CRASH CATCHER] An error occurred:")
+    traceback.print_exc() 
+    
+    return jsonify({
+        "status": "error",
+        "message": "An unexpected server error occurred. Our team has been notified."
+    }), 500
 # -------------------------
 # SUPABASE CONFIG
 # -------------------------
@@ -328,22 +360,19 @@ def get_userdata():
     if 'user_id' not in session:
         return jsonify({"status": "error", "message": "Unauthorized"}), 401
     
-    try:
-        res = supabase.table("user_data").select("chats, memory").eq("user_id", session['user_id']).execute()
-        if res.data:
-            return jsonify({
-                "status": "success",
-                "data": res.data[0]
-            })
-        return jsonify({"status": "success", "data": {"chats": [], "memory": []}})
-    except Exception as e:
-        print(f"🚨 GET USERDATA ERROR: {str(e)}")
-        return jsonify({"status": "error", "message": str(e)})
+    res = supabase.table("user_data").select("chats, memory").eq("user_id", session['user_id']).execute()
+    
+    if res.data:
+        return jsonify({
+            "status": "success",
+            "data": res.data[0]
+        })
+        
+    return jsonify({"status": "success", "data": {"chats": [], "memory": []}})
 
 
 @app.route("/api/guest-login", methods=["POST"])
 def guest_login():
-    try:
         session['is_guest'] = True
         session['user_name'] = 'Guest'
 
@@ -351,11 +380,7 @@ def guest_login():
             "status": "success",
             "redirect": "/dashboard"
         })
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)})
-
-
-
+    
 @app.route("/api/logout", methods=["POST"])
 def logout():
     session.clear()
