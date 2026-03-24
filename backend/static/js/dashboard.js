@@ -9,7 +9,10 @@ document.addEventListener('DOMContentLoaded', async function () {
     setupSettingsAndLogout();
     setupProfileModal();
     setupAdvancedNavigation();
+    setupComparisonFeature();
 });
+
+let comparisonList = []; // Global comparison state
 
 
 async function checkSupabaseAuth() {
@@ -92,6 +95,7 @@ function initializeDashboard() {
     setupChatPanel();
     setupChatInput();
     setupActionCards();
+    setupComparisonFeature();
     setupResponsive();
 }
 
@@ -139,6 +143,7 @@ async function sendMessage() {
     const message = chatInput.value.trim();
     if (!message) return;
 
+    const chatIdAtStart = currentChatId;
     appendMessage(message, "user");
 
     const welcomeSubtitle = document.getElementById('welcomeSubtitle');
@@ -197,6 +202,22 @@ async function sendMessage() {
 
         if (reply === "") reply = "Okay, I'll remember that for the future!";
 
+        if (currentChatId !== chatIdAtStart) {
+            // Glitch fix: User switched tabs! Update the original chat's history silently
+            const targetChat = chatHistories.find(c => c.id === chatIdAtStart);
+            if (targetChat) {
+                targetChat.messages.push({ role: "assistant", content: reply });
+                // We also need to update its HTML so it's there when they switch back
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = targetChat.html;
+                // Append the AI message to the temp HTML
+                const aiMsgHTML = createMessageHTML(reply, "ai");
+                targetChat.html += aiMsgHTML;
+                saveLocalChats();
+            }
+            return;
+        }
+
         appendMessage(reply, "ai");
         currentConversation.push({ role: "assistant", content: reply });
 
@@ -220,81 +241,67 @@ function appendMessage(text, sender) {
 
     const messageDiv = document.createElement('div');
     messageDiv.className = `chat-message ${sender}`;
-
-    const bubbleWrapper = document.createElement('div');
-    bubbleWrapper.className = `bubble-wrapper ${sender}`;
-
-    const bubble = document.createElement('div');
-    bubble.className = `message-bubble ${sender}`;
+    messageDiv.innerHTML = createMessageHTML(text, sender);
     
-    if (sender === 'ai' && window.marked) {
-        let i = 0;
-        const speed = 15;
-        bubble.innerHTML = '';
-        
-        bubbleWrapper.appendChild(bubble);
-        messageDiv.appendChild(bubbleWrapper);
-        chatBox.appendChild(messageDiv);
-
-        function typeWriter() {
-            if (i < text.length) {
-                i += 2;
-                if (i > text.length) i = text.length;
-                
-                bubble.innerHTML = marked.parse(text.substring(0, i));
-                // scrollToBottom() removed to keep screen static during AI typing as per user request
-                
-                setTimeout(typeWriter, speed);
-            } else {
-                if (typeof saveCurrentChat === 'function') {
-                    saveCurrentChat();
-                }
-            }
-        }
-        typeWriter();
-    } else {
-        bubble.textContent = text;
-        bubbleWrapper.appendChild(bubble);
-
-        if (sender === 'user') {
-            const actionsDiv = document.createElement('div');
-            actionsDiv.className = 'message-actions';
-            
-            const copyBtn = document.createElement('button');
-            copyBtn.className = 'message-action-btn';
-            copyBtn.innerHTML = '<i class="far fa-copy"></i>';
-            copyBtn.title = 'Copy';
-            copyBtn.onclick = () => {
-                navigator.clipboard.writeText(text);
-                copyBtn.innerHTML = '<i class="fas fa-check"></i>';
-                setTimeout(() => { copyBtn.innerHTML = '<i class="far fa-copy"></i>'; }, 2000);
-            };
-
-            const editBtn = document.createElement('button');
-            editBtn.className = 'message-action-btn';
-            editBtn.innerHTML = '<i class="fas fa-pencil-alt"></i>';
-            editBtn.title = 'Edit';
-            editBtn.onclick = () => {
-                showInlineEdit(messageDiv, bubble, text);
-            };
-
-            actionsDiv.appendChild(copyBtn);
-            actionsDiv.appendChild(editBtn);
-            bubbleWrapper.appendChild(actionsDiv);
-        }
-
-        messageDiv.appendChild(bubbleWrapper);
-        chatBox.appendChild(messageDiv);
-        
-        // Store index for future editing
-        messageDiv.dataset.index = currentConversation.length - 1;
-        scrollToBottom();
-    }
+    chatBox.appendChild(messageDiv);
+    
+    // Store index for future editing
+    messageDiv.dataset.index = currentConversation.length - 1;
+    scrollToBottom();
 
     if (typeof saveCurrentChat === 'function') {
         saveCurrentChat();
     }
 }
+
+/**
+ * Helper to generate message HTML string (DRY principle)
+ */
+function createMessageHTML(text, sender) {
+    const isAI = sender === 'ai';
+    const content = (isAI && window.marked) ? marked.parse(text) : text;
+    
+    // Actions block (Copy/Edit)
+    let actionsHTML = `
+        <div class="message-actions">
+            <button class="message-action-btn" title="Copy" onclick="handleCopy(this)">
+                <i class="far fa-copy"></i>
+            </button>`;
+    
+    if (sender === 'user') {
+        actionsHTML += `
+            <button class="message-action-btn" title="Edit" onclick="handleEdit(this)">
+                <i class="fas fa-pencil-alt"></i>
+            </button>`;
+    }
+    
+    actionsHTML += `</div>`;
+
+    return `
+        <div class="bubble-wrapper ${sender}">
+            <div class="message-bubble ${sender}">${content}</div>
+            ${actionsHTML}
+        </div>
+    `;
+}
+
+// Global handlers for buttons (works after innerHTML replacement)
+window.handleCopy = function(btn) {
+    const bubble = btn.closest('.bubble-wrapper').querySelector('.message-bubble');
+    const text = bubble.innerText || bubble.textContent;
+    navigator.clipboard.writeText(text);
+    
+    const icon = btn.querySelector('i');
+    icon.className = 'fas fa-check';
+    setTimeout(() => { icon.className = 'far fa-copy'; }, 2000);
+};
+
+window.handleEdit = function(btn) {
+    const messageDiv = btn.closest('.chat-message');
+    const bubble = messageDiv.querySelector('.message-bubble');
+    const text = bubble.innerText || bubble.textContent;
+    showInlineEdit(messageDiv, bubble, text);
+};
 
 // ============================================
 // INLINE EDIT FUNCTIONALITY
@@ -562,10 +569,11 @@ function saveCurrentChat() {
     const chatMessages = document.getElementById('chatMessages');
     if (!chatMessages) return;
 
-    const firstUserMsg = chatMessages.querySelector('.chat-message.user .message-bubble');
-    if (!firstUserMsg) return;
-
-    const title = firstUserMsg.textContent.trim();
+    const firstUserMsgDiv = chatMessages.querySelector('.chat-message.user');
+    if (!firstUserMsgDiv) return;
+    
+    const bubble = firstUserMsgDiv.querySelector('.message-bubble');
+    const title = bubble ? bubble.textContent.trim() : firstUserMsgDiv.textContent.trim();
     const shortTitle = title.length > 25 ? title.substring(0, 25) + "..." : title;
 
     if (currentChatId) {
@@ -850,7 +858,7 @@ function setupSidebarCollapse() {
 function setupNavigation() {
     const navItems = {
         'navHome': { view: 'mainView', title: 'Home', action: resetToHome },
-        'navCompare': { view: 'compareView', title: 'Smart Comparison', action: () => { switchToView('compareView', 'Smart Comparison'); populateCompareView(); } },
+        'navCompare': { view: 'compareView', title: 'Smart Comparison', action: () => { switchToView('compareView', 'Smart Comparison'); generateComparisonTable(); } },
         'navWhatChanged': { view: 'whatChangedView', title: "What's Changed?", action: () => { switchToView('whatChangedView', "What's Changed?"); populateWhatChangedView(); } },
         'navPortfolio': { view: 'portfolioView', title: 'Investment Portfolio', action: () => showComingSoon('portfolioView', 'Investment Portfolio') },
         'navBudget': { view: 'budgetView', title: 'Budget Planner', action: () => showComingSoon('budgetView', 'Budget Planner') },
@@ -934,60 +942,493 @@ function switchToView(viewId, title) {
     });
 
     document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-    if (viewId === 'compareView') document.getElementById('navCompare').classList.add('active');
-    if (viewId === 'whatChangedView') document.getElementById('navWhatChanged').classList.add('active');
+    if (viewId === 'compareView') {
+        const navCompare = document.getElementById('navCompare');
+        if (navCompare) navCompare.classList.add('active');
+        generateComparisonTable(); 
+    }
+    if (viewId === 'whatChangedView') {
+        const navWhatChanged = document.getElementById('navWhatChanged');
+        if (navWhatChanged) navWhatChanged.classList.add('active');
+    }
 }
 
-function populateCompareView() {
-    const grid = document.getElementById('compareGrid');
-    if (!grid) return;
-
-    const data = [
+const productsData = {
+    "cards": [
         {
-            title: "Premium Rewards",
-            subtitle: "HDFC Regalia Gold",
-            price: "₹2,500",
-            period: "/ year",
+            id: "card_hdfc_regalia",
+            category: "Cards",
+            provider: "HDFC",
+            name: "HDFC Regalia Gold",
             icon: "fas fa-crown",
-            features: ["4 Reward Points / ₹150", "Club Marriott Membership", "Complimentary Lounge Access", "Low Foreign Markup (2%)"],
+            details: {
+                "Joining Fee": "₹2,500 + GST",
+                "Annual Fee": "₹2,500 (Waived on ₹4L spend)",
+                "Reward Rate": "4 Points per ₹150",
+                "Lounge Access": "12 Domestic + 6 Intl",
+                "Forex Markup": "2% + GST",
+                "Milestones": "₹5,000 Voucher on ₹5L spend",
+                "Best For": "Premium Lifestyle & Travel"
+            },
             recommended: true
         },
         {
-            title: "Travel Specialist",
-            subtitle: "AXIS Atlas",
-            price: "₹5,000",
-            period: "/ year",
+            id: "card_axis_atlas",
+            category: "Cards",
+            provider: "AXIS",
+            name: "AXIS Atlas",
             icon: "fas fa-plane",
-            features: ["5 Edge Miles / ₹100", "Tiered Milestone Rewards", "Exclusive Airport Services", "DineOut Benefits"],
+            details: {
+                "Joining Fee": "₹5,000 + GST",
+                "Annual Fee": "₹5,000 (5,000 Edge Miles reward)",
+                "Reward Rate": "5% (Edge Miles) on Travel",
+                "Lounge Access": "Unlimited Domestic + 8 Intl",
+                "Forex Markup": "3.5% + GST",
+                "Milestones": "Up to 10,000 Miles on Spends",
+                "Best For": "Frequent Flyers"
+            },
             recommended: false
         },
         {
-            title: "Cashback Master",
-            subtitle: "SBI Cashback Card",
-            price: "₹999",
-            period: "/ year",
+            id: "card_sbi_cashback",
+            category: "Cards",
+            provider: "SBI",
+            name: "SBI Cashback Card",
             icon: "fas fa-wallet",
-            features: ["5% Unlimited Cashback", "No Merchant Restrictions", "Auto-credited to Bill", "Fuel Surcharge Waiver"],
+            details: {
+                "Joining Fee": "₹999 + GST",
+                "Annual Fee": "₹999 (Waived on ₹2L spend)",
+                "Reward Rate": "5% Unlimited Cashback (Online)",
+                "Lounge Access": "None",
+                "Forex Markup": "3.5% + GST",
+                "Milestones": "Fuel Surcharge Waiver",
+                "Best For": "Online Shopping"
+            },
+            recommended: false
+        },
+        {
+            id: "card_icici_amazon",
+            category: "Cards",
+            provider: "ICICI",
+            name: "Amazon Pay ICICI",
+            icon: "fab fa-amazon",
+            details: {
+                "Joining Fee": "Lifetime Free (₹0)",
+                "Annual Fee": "Lifetime Free (₹0)",
+                "Reward Rate": "5% for Prime Customers",
+                "Lounge Access": "None",
+                "Forex Markup": "3.5% + GST",
+                "Milestones": "Unlimited Earnings",
+                "Best For": "Amazon Loyalists"
+            },
             recommended: false
         }
+    ],
+    "insurance": [
+        {
+            id: "ins_star_health",
+            category: "Insurance",
+            provider: "Star Health",
+            name: "Star Health Comprehensive",
+            icon: "fas fa-heartbeat",
+            details: {
+                "Sum Insured": "₹5L - ₹1Cr",
+                "Premium": "Starts at ₹12,000/yr",
+                "Waiting Period": "36 Months (PED)",
+                "No Claim Bonus": "Up to 100%",
+                "Restoration": "100% Automatic",
+                "OPD Cover": "Included up to ₹5,000",
+                "Best For": "Family Floater"
+            },
+            recommended: true
+        },
+        {
+            id: "ins_hdfc_life",
+            category: "Insurance",
+            provider: "HDFC Life",
+            name: "HDFC Life Click 2 Protect",
+            icon: "fas fa-user-shield",
+            details: {
+                "Sum Insured": "₹50L - ₹10Cr",
+                "Premium": "Starts at ₹18,000/yr",
+                "Policy Term": "Up to 85 Years",
+                "Riders": "Critical Illness, ADR",
+                "Death Benefit": "Lump sum or Income",
+                "Claim Ratio": "99.3%",
+                "Best For": "Term Life Protection"
+            },
+            recommended: false
+        }
+    ],
+    "savings": [
+        {
+            id: "sav_kotak_811",
+            category: "Savings",
+            provider: "Kotak",
+            name: "Kotak 811",
+            icon: "fas fa-piggy-bank",
+            details: {
+                "Min Balance": "Zero Balance",
+                "Interest Rate": "Up to 7% p.a.",
+                "Debit Card": "Virtual (Free)",
+                "Account Type": "Full Digital",
+                "Mobile App": "Industry Leading",
+                "ATM Access": "Any ATM",
+                "Best For": "Digital Savvy Users"
+            },
+            recommended: true
+        },
+        {
+            id: "sav_idfc_first",
+            category: "Savings",
+            provider: "IDFC First",
+            name: "IDFC First Savings",
+            icon: "fas fa-vault",
+            details: {
+                "Min Balance": "₹25,000 (Average)",
+                "Interest Rate": "Up to 7.25% p.a.",
+                "Debit Card": "Visa Infinite",
+                "Lounge Access": "Airport Lounges Included",
+                "Monthly Credit": "Interest Paid Monthly",
+                "Cashback": "On Merchant Spends",
+                "Best For": "High Interest Seekers"
+            },
+            recommended: false
+        }
+    ]
+};
+
+function setupComparisonFeature() {
+    const productSearch = document.getElementById('productSearch');
+    const searchSuggestions = document.getElementById('searchSuggestions');
+    const clearBtn = document.getElementById('clearCompareBtn');
+    const trayCompareBtn = document.getElementById('trayCompareBtn');
+
+    if (productSearch && searchSuggestions) {
+        productSearch.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            if (!query) {
+                searchSuggestions.classList.remove('show');
+                return;
+            }
+
+            let matches = [];
+            Object.values(productsData).forEach(categoryProducts => {
+                categoryProducts.forEach(p => {
+                    if (p.name.toLowerCase().includes(query) || p.category.toLowerCase().includes(query)) {
+                        matches.push(p);
+                    }
+                });
+            });
+
+            if (matches.length > 0) {
+                searchSuggestions.innerHTML = matches.map(p => `
+                    <div class="suggestion-item" onclick="toggleSelection('${p.id}')">
+                        <i class="${p.icon}"></i>
+                        <div>
+                            <div style="font-weight: 600; font-size: 14px;">${p.name}</div>
+                            <div style="font-size: 11px; color: var(--text-tertiary);">${p.category}</div>
+                        </div>
+                    </div>
+                `).join('');
+                searchSuggestions.classList.add('show');
+            } else {
+                searchSuggestions.classList.remove('show');
+            }
+        });
+    }
+
+    if (trayCompareBtn) {
+        trayCompareBtn.addEventListener('click', () => {
+            switchToView('compareView', 'Smart Comparison');
+            generateComparisonTable();
+        });
+    }
+
+    // Close suggestions on blur
+    document.addEventListener('click', (e) => {
+        if (productSearch && !productSearch.contains(e.target)) {
+            searchSuggestions?.classList.remove('show');
+        }
+    });
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', clearSelection);
+    }
+}
+
+window.toggleSelection = function(productId) {
+    const index = comparisonList.indexOf(productId);
+    if (index === -1) {
+        if (comparisonList.length >= 3) {
+            alert("You can only select up to 3 products at a time.");
+            return;
+        }
+        comparisonList.push(productId);
+    } else {
+        comparisonList.splice(index, 1);
+    }
+
+    updateSelectionTray();
+    
+    // Update any "Select" buttons in the UI if visible
+    document.querySelectorAll(`.select-product-btn[data-id="${productId}"]`).forEach(btn => {
+        btn.classList.toggle('selected', comparisonList.includes(productId));
+        btn.textContent = comparisonList.includes(productId) ? 'Selected' : 'Select';
+    });
+};
+
+function updateSelectionTray() {
+    const tray = document.getElementById('comparisonTray');
+    const countEl = document.getElementById('selectedCount');
+    const previewsEl = document.getElementById('trayPreviews');
+    const dashboardContainer = document.querySelector('.dashboard-container');
+
+    if (!tray || !countEl || !previewsEl) return;
+
+    countEl.textContent = comparisonList.length;
+    
+    if (comparisonList.length > 0) {
+        tray.classList.add('show');
+        dashboardContainer.classList.add('has-tray');
+        
+        previewsEl.innerHTML = comparisonList.map(id => {
+            const p = findProductById(id);
+            return p ? `<div class="tray-item-thumb" title="${p.name}"><i class="${p.icon}"></i></div>` : '';
+        }).join('');
+    } else {
+        tray.classList.remove('show');
+        dashboardContainer.classList.remove('has-tray');
+        previewsEl.innerHTML = '';
+    }
+}
+
+window.clearSelection = function() {
+    comparisonList = [];
+    updateSelectionTray();
+    document.querySelectorAll('.select-product-btn').forEach(btn => {
+        btn.classList.remove('selected');
+        btn.textContent = 'Select';
+    });
+    const tableContainer = document.getElementById('compareTableContainer');
+    if (tableContainer) tableContainer.innerHTML = '';
+    const emptyState = document.getElementById('compareEmptyState');
+    if (emptyState) emptyState.classList.remove('hidden');
+};
+
+function findProductById(id) {
+    for (const cat of Object.values(productsData)) {
+        const found = cat.find(p => p.id === id);
+        if (found) return found;
+    }
+    return null;
+}
+
+function generateComparisonTable() {
+    console.log("Generating comparison table for:", comparisonList);
+    const tableContainer = document.getElementById('compareTableContainer');
+    const emptyState = document.getElementById('compareEmptyState');
+    const compareGrid = document.getElementById('compareGrid');
+
+    if (!tableContainer || !emptyState) return;
+
+    if (comparisonList.length === 0) {
+        tableContainer.innerHTML = '';
+        if (compareGrid) compareGrid.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        renderCompareCategoryGrid();
+        return;
+    }
+
+    emptyState.classList.add('hidden');
+
+    const selectedProducts = comparisonList.map(id => findProductById(id)).filter(p => p);
+    
+    // 1. Show Card Preview (always show cards)
+    if (compareGrid) {
+        compareGrid.innerHTML = selectedProducts.map(item => `
+            <div class="compare-card ${item.recommended ? 'recommended' : ''}">
+                ${item.recommended ? '<div class="recommended-badge">Recommended</div>' : ''}
+                <button class="remove-card-btn" onclick="toggleSelection('${item.id}')" title="Remove">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="compare-card-header">
+                    <div class="compare-icon"><i class="${item.icon}"></i></div>
+                    <div class="compare-card-title">
+                        <h4>${item.name}</h4>
+                        <span>${item.category}</span>
+                    </div>
+                </div>
+                <div class="compare-price">${item.details['Joining Fee'] || 'Free'}</div>
+                <ul class="compare-features">
+                    <li class="compare-feature"><i class="fas fa-check-circle"></i> ${item.details['Best For'] || 'General Use'}</li>
+                    <li class="compare-feature"><i class="fas fa-check-circle"></i> ${item.details['Annual Fee'] || 'No annual fee'}</li>
+                </ul>
+            </div>
+        `).join('');
+    }
+
+    // 2. Show Detailed Table (if 2+ products)
+    if (selectedProducts.length < 2) {
+        tableContainer.innerHTML = `
+            <div style="text-align:center; padding: 40px; background: var(--bg-secondary); border-radius: 16px; margin-top: 20px; border: 1px dashed var(--border-color);">
+                <i class="fas fa-info-circle" style="font-size: 32px; color: var(--primary-600); margin-bottom: 16px; opacity: 0.6;"></i>
+                <h4 style="color: var(--text-primary); margin-bottom: 8px;">Add more products to compare</h4>
+                <p style="color: var(--text-secondary); font-size: 14px;">Select at least one more product to see a side-by-side feature comparison table.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Get all unique feature keys (rows)
+    const allDetailKeys = new Set();
+    selectedProducts.forEach(p => {
+        if (p.details) {
+            Object.keys(p.details).forEach(k => allDetailKeys.add(k));
+        }
+    });
+
+    const rows = Array.from(allDetailKeys);
+
+    let html = `
+        <div class="compare-table-wrapper" style="overflow-x: auto;">
+            <table class="compare-table">
+                <thead>
+                    <tr>
+                        <th class="row-label">Feature Filter</th>
+                        ${selectedProducts.map(p => `
+                            <th class="product-col">
+                                <div class="table-product-header">
+                                    <i class="${p.icon}"></i>
+                                    <b>${p.name}</b>
+                                </div>
+                            </th>
+                        `).join('')}
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    rows.forEach(key => {
+        html += `
+            <tr>
+                <td class="row-label">${key}</td>
+                ${selectedProducts.map(p => {
+                    const val = p.details ? (p.details[key] || '—') : '—';
+                    const valStr = String(val).toLowerCase();
+                    const isCheck = valStr === 'none' || val === '—' ? '<i class="fas fa-times check-no"></i>' : (valStr === 'unlimited' || valStr === 'included' ? '<i class="fas fa-check-circle check-yes"></i>' : '');
+                    return `<td>${isCheck ? isCheck : val}</td>`;
+                }).join('')}
+            </tr>
+        `;
+    });
+
+    html += `</tbody></table></div>`;
+    tableContainer.innerHTML = html;
+}
+
+// Intercept sub-view card generation to add select buttons
+// For now, I'll modify openProviderSelection to show products instead of just brands if it's the "Cards" category
+const originalOpenProviderSelection = window.openProviderSelection;
+window.openProviderSelection = function(featureTitle) {
+    if (featureTitle.includes("Cards")) {
+        renderProductSelectionGrid('cards', featureTitle);
+        return;
+    }
+    // Fallback to original brand-based selection for others
+    if (typeof originalOpenProviderSelection === 'function') {
+        originalOpenProviderSelection(featureTitle);
+    }
+};
+
+function renderCompareCategoryGrid() {
+    const grid = document.getElementById('compareCategoryGrid');
+    if (!grid) return;
+
+    const categories = [
+        { id: 'cards', title: 'Cards', icon: 'fas fa-credit-card' },
+        { id: 'insurance', title: 'Insurance', icon: 'fas fa-shield-alt' },
+        { id: 'savings', title: 'Savings', icon: 'fas fa-piggy-bank' }
     ];
 
-    grid.innerHTML = data.map(item => `
-        <div class="compare-card ${item.recommended ? 'recommended' : ''}">
-            <div class="compare-card-header">
-                <div class="compare-icon"><i class="${item.icon}"></i></div>
-                <div class="compare-card-title">
-                    <h4>${item.title}</h4>
-                    <span>${item.subtitle}</span>
-                </div>
-            </div>
-            <div class="compare-price">${item.price}<span>${item.period}</span></div>
-            <ul class="compare-features">
-                ${item.features.map(f => `<li class="compare-feature"><i class="fas fa-check-circle"></i> ${f}</li>`).join('')}
-            </ul>
-            <button class="compare-btn">${item.recommended ? 'Get Most Popular' : 'Compare Now'}</button>
+    grid.innerHTML = categories.map(cat => `
+        <div class="action-card category-card" onclick="renderCompareProviderGrid('${cat.id}', '${cat.title}')">
+            <i class="${cat.icon}"></i>
+            <span>${cat.title}</span>
         </div>
     `).join('');
+}
+
+function renderCompareProviderGrid(categoryKey, title) {
+    const providerGrid = document.getElementById('providerGrid');
+    const subtitle = document.getElementById('providerSelectionSubtitle');
+    if (!providerGrid || !subtitle) return;
+
+    subtitle.textContent = `Which bank/provider for ${title}?`;
+    providerGrid.innerHTML = '';
+
+    const products = productsData[categoryKey] || [];
+    const providers = [...new Set(products.map(p => p.provider))];
+
+    providers.forEach(providerName => {
+        const pInfo = products.find(p => p.provider === providerName);
+        const card = document.createElement('div');
+        card.className = 'action-card provider-card';
+        card.innerHTML = `<i class="${pInfo ? pInfo.icon : 'fas fa-building'}"></i><span>${providerName}</span>`;
+
+        card.addEventListener('click', () => {
+            renderProductSelectionGrid(categoryKey, title, providerName);
+        });
+
+        providerGrid.appendChild(card);
+    });
+
+    navigateTo('providerSelectionView', 'Select ' + title);
+}
+
+function renderProductSelectionGrid(categoryKey, title, providerName = null) {
+    const gridId = providerName ? 'productGrid' : 'providerGrid';
+    const subtitleId = providerName ? 'productSelectionSubtitle' : 'providerSelectionSubtitle';
+    const viewId = providerName ? 'productSelectionView' : 'providerSelectionView';
+    
+    const targetGrid = document.getElementById(gridId);
+    const targetSubtitle = document.getElementById(subtitleId);
+    
+    if (!targetGrid || !targetSubtitle) return;
+
+    if (providerName) {
+        targetSubtitle.textContent = `Select ${providerName} ${title} to Compare`;
+    } else {
+        targetSubtitle.textContent = `Select ${title} to Compare`;
+    }
+    
+    targetGrid.innerHTML = '';
+
+    let products = productsData[categoryKey] || [];
+    if (providerName) {
+        products = products.filter(p => p.provider === providerName);
+    }
+
+    products.forEach(p => {
+        const isSelected = comparisonList.includes(p.id);
+        const card = document.createElement('div');
+        card.className = 'action-card';
+        card.innerHTML = `
+            <i class="${p.icon}"></i>
+            <span>${p.name}</span>
+            <button class="select-product-btn ${isSelected ? 'selected' : ''}" data-id="${p.id}" onclick="event.stopPropagation(); toggleSelection('${p.id}')">
+                ${isSelected ? 'Selected' : 'Select'}
+            </button>
+        `;
+        
+        card.addEventListener('click', () => {
+             toggleSelection(p.id);
+        });
+
+        targetGrid.appendChild(card);
+    });
+
+    navigateTo(viewId, providerName || title);
 }
 
 async function populateWhatChangedView() {

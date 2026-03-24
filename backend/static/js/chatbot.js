@@ -59,8 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const userMsg = document.createElement("div");
         userMsg.className = "user-message";
-        userMsg.innerText = text;
-
+        userMsg.innerHTML = createMessageHTML(text, "user");
         messages.appendChild(userMsg);
 
         input.value = "";
@@ -83,14 +82,18 @@ document.addEventListener("DOMContentLoaded", () => {
         for (let i = 0; i < messageElements.length - 2; i++) {
             const element = messageElements[i];
             if (element.classList.contains("user-message")) {
+                const bubble = element.querySelector('.message-bubble');
+                const content = bubble ? bubble.innerText : element.innerText;
                 history.push({
                     role: "user",
-                    content: element.innerText
+                    content: content
                 });
             } else if (element.classList.contains("bot-message")) {
+                const bubble = element.querySelector('.message-bubble');
+                const content = bubble ? bubble.innerText : element.innerText;
                 history.push({
                     role: "assistant",
-                    content: element.innerText
+                    content: content
                 });
             }
         }
@@ -121,8 +124,7 @@ document.addEventListener("DOMContentLoaded", () => {
             
             const botReply = document.createElement("div");
             botReply.className = "bot-message";
-            botReply.innerText = data.reply || "Sorry, I encountered an error.";
-
+            botReply.innerHTML = createMessageHTML(data.reply || "Sorry, I encountered an error.", "ai");
             messages.appendChild(botReply);
 
             messages.scrollTop = messages.scrollHeight;
@@ -179,4 +181,53 @@ document.addEventListener("DOMContentLoaded", () => {
 
     }
 
+    function createMessageHTML(text, sender) {
+        // Simple chatbot uses plain text (no marked usually, but we'll stick to innerText)
+        const escapedText = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        
+        let actionsHTML = `
+            <div class="message-actions">
+                <button class="message-action-btn" title="Copy" onclick="handleCopy(this)">
+                    <i class="far fa-copy"></i>
+                </button>`;
+        
+        if (sender === 'user') {
+            actionsHTML += `
+                <button class="message-action-btn" title="Edit" onclick="handleEdit(this)">
+                    <i class="fas fa-pencil-alt"></i>
+                </button>`;
+        }
+        
+        actionsHTML += `</div>`;
+
+        return `
+            <div class="bubble-wrapper ${sender}">
+                <div class="message-bubble ${sender}">${escapedText}</div>
+                ${actionsHTML}
+            </div>
+        `;
+    }
+
+    window.handleCopy = function(btn) {
+        const bubble = btn.closest('.bubble-wrapper').querySelector('.message-bubble');
+        navigator.clipboard.writeText(bubble.innerText);
+        const icon = btn.querySelector('i');
+        icon.className = 'fas fa-check';
+        setTimeout(() => { icon.className = 'far fa-copy'; }, 2000);
+    };
+
+    window.handleEdit = function(btn) {
+        const userMsgDiv = btn.closest('.user-message');
+        const bubble = userMsgDiv.querySelector('.message-bubble');
+        const originalText = bubble.innerText;
+        
+        // Simple inline edit for chatbot
+        const newText = prompt("Edit your message:", originalText);
+        if (newText && newText !== originalText) {
+            input.value = newText;
+            sendMessage();
+            // Note: In a real app we might remove the old message, 
+            // but here we follow the dashboard logic of sending a NEW one.
+        }
+    };
 });

@@ -47,6 +47,23 @@ def get_cached_embedding(text):
     """Caches sentence embeddings to prevent CPU thread blocking on repeat queries."""
     return embed_model.encode(text).tolist()
 
+def is_greeting(text):
+    """Detects if the message is a simple greeting or casual small talk."""
+    import re
+    greetings = [
+        r"\bhi\b", r"\bhello\b", r"\bhey\b", r"\bgood morning\b", 
+        r"\bgood afternoon\b", r"\bgood evening\b", r"\bhow are you\b",
+        r"\bwho are you\b", r"\bthanks\b", r"\bthank you\b", r"\bnamaste\b"
+    ]
+    text_lower = text.lower().strip()
+    for pattern in greetings:
+        if re.search(pattern, text_lower):
+            return True
+    # Also check for very short messages that might be greetings
+    if len(text_lower.split()) <= 2 and any(word in text_lower for word in ["hi", "hey", "hello"]):
+        return True
+    return False
+
 app = Flask(
     __name__,
     template_folder=os.path.join(BASE_DIR, "templates"),
@@ -391,15 +408,23 @@ def chat():
                 f"{doc['content']}\nSource: {doc.get('url', 'N/A')}"
                 for doc in docs
             ])
+            source_info = "SOURCE: 🏦 **Finclarity Database**"
         else:
             # Fallback when no financial data found
             print("[RAG DEBUG] [WARNING] FALLBACK TRIGGERED - Replying from general LLM knowledge, NOT from financial_docs table!")
-            rag_context = "❌ NO DATA AVAILABLE: There are no financial documents in the database matching this query. You MUST refuse to answer and tell the user to contact support or check back later. DO NOT use your training data to answer."
+            
+            # Check if it's a greeting/small talk
+            if is_greeting(message):
+                rag_context = "USER IS GREETING: This is casual small talk. You are NOT restricted by the 'NO DATA AVAILABLE' rule. Please greet the user warmly and naturally. Be varied in your greeting—if the user greets you multiple times, don't use the exact same words. Keep it to 1-2 sentences."
+                source_info = "SOURCE: 🤖 **AI Knowledge**"
+            else:
+                rag_context = "❌ NO DATA AVAILABLE: There are no financial documents in the database matching this query. You MUST refuse to answer and tell the user to contact support or check back later. DO NOT use your training data to answer."
+                source_info = "SOURCE: 🏦 **Finclarity Database** (Attempted)"
         
         memory_str = "\n".join(f"- {m}" for m in user_memory)
         memory_block = f"USER PROFILE MEMORY (Facts you learned in past sessions):\n{memory_str}\n\n" if memory_str else ""
         
-        context = memory_block + rag_context
+        context = f"INFORMATION SOURCE: {source_info}\n\n" + memory_block + rag_context
 
         # =========================
         # [STEP 4]: DYNAMIC PROMPT
@@ -545,9 +570,24 @@ VISUAL SPACING & MARKDOWN (STRICT)
 - Each bullet point MUST be on a new line.
 - Response should be scannable in 5 seconds.
 
-━━━━━━━━━━━━━━━━━━━
-SELF-CORRECTION & READABILITY:
-━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚨 MANDATORY SOURCE CITATION (CRITICAL)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Every single response without exception MUST end with a source citation.
+This is a HARD CONSTRAINT.
+
+FORMAT:
+Source: 🏦 **Finclarity Database** (If information came from the provided context)
+Source: 🤖 **AI Knowledge** (If this was a greeting, small talk, or AI explanation)
+
+RULES:
+- Place it at the VERY BOTTOM of your response.
+- Separate it with a blank line.
+- If context URLs exist, list them below the "Finclarity Database" footer.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SELF-CORRECTION & FINAL CHECK:
+- "Did I include the Source footer at the very end?" -> If NO, fix it before sending.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Before sending response:
 - "Is the most important info bolded?"
 - "Are there headers to guide the eye?"
@@ -612,10 +652,16 @@ Before sending response:
             "content": f"Context:\n{context}\n\nQuestion:\n{message}"
         })
 
+        # Multi-greeting variety hint & Source reminder
+        if is_greeting(message):
+            messages[-1]["content"] += "\n\n(IMPORTANT: Use Source: 🤖 **AI Knowledge** and provide a varied greeting.)"
+        else:
+            messages[-1]["content"] += f"\n\n(IMPORTANT: Based on the provided context, you must use {source_info} at the end of your response.)"
+
         ai_res = client.chat.completions.create(
             model="meta-llama/llama-3-8b-instruct",
             messages=messages,
-            temperature=0.3,
+            temperature=0.7 if is_greeting(message) else 0.3, # Variety for greetings, precision for finance
             max_tokens=600
         )
 
@@ -626,7 +672,7 @@ Before sending response:
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({"reply": "[ERROR] Server error"})
+        return jsonify({"reply": "[ERROR] Server error\n\nSource: 🤖 **System Error Handler**"})
 @app.route("/api/what_changed", methods=["GET"])
 def get_what_changed():
     if 'user_id' not in session:
