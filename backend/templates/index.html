@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
     <link rel="stylesheet" href="https://unpkg.com/simplebar@latest/dist/simplebar.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="{{ url_for('static', filename='js/theme-toggle.js') }}"></script>
 
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
@@ -36,7 +37,6 @@
                     <a href="#">Features</a>
                     <a href="#">Service</a>
                     <a href="#">Testimonial</a>
-                    <a href="#" class="theme-toggle" style="font-size: 18px; margin-left: 10px; color: var(--text-main);"><i class="fas fa-moon"></i></a>
                 </nav>
 
                 <div class="hero-buttons">
@@ -46,6 +46,8 @@
                     <button class="secondary-btn" onclick="window.location.href=`{{ url_for('login_page') }}`">
                         Get Started
                     </button>
+
+                    <a href="#" class="theme-toggle"><i class="fas fa-moon"></i></a>
                 </div>
 
             </div>
@@ -56,8 +58,8 @@
 
         <section class="hero">
 
-            <video autoplay muted loop playsinline class="hero-video">
-                <source src="{{ url_for('static', filename='images/sssss.mp4') }}" type="video/mp4">
+            <video autoplay muted playsinline class="hero-video" id="heroVideo">
+                <source src="{{ url_for('static', filename='images/bg_light_video.mp4') }}" type="video/mp4">
             </video>
 
             <div class="container hero-grid">
@@ -70,7 +72,7 @@
                         Intelligent Platform
                     </h1>
 
-                    <p style="color: black;">
+                    <p>
                         AI-powered insights from real-time banking data to find the best results instantly.
                     </p>
 
@@ -238,6 +240,66 @@ C1380 780 1480 580 1700 675.329
 
         });
 
+    </script>
+
+    <script>
+        // Hero video theme switching and looping
+        const heroVideo = document.getElementById('heroVideo');
+        const START_DURATION = 0.4; // starting duration in seconds
+        const LIGHT_MODE_LOOP = 5.0; // Light mode loop duration
+        const DARK_MODE_LOOP = 8.083333; // Dark mode - full video duration
+        let isLooping = false; // Prevent multiple seeks
+
+        const getLoopDuration = () => {
+            const theme = localStorage.getItem('theme') || 'light';
+            return theme === 'dark' ? DARK_MODE_LOOP : LIGHT_MODE_LOOP;
+        };
+
+        const updateVideoSource = () => {
+            const theme = localStorage.getItem('theme') || 'light';
+            const videoFile = theme === 'dark' ? 'bg_dark_video.mp4' : 'bg_light_video.mp4';
+            const videoSource = heroVideo.querySelector('source');
+            const newSrc = videoSource.src.replace(/bg_(light|dark)_video\.mp4/, videoFile);
+            
+            if (videoSource.src !== newSrc) {
+                videoSource.src = newSrc;
+                heroVideo.load();
+                heroVideo.play().catch(e => console.log('Autoplay prevented:', e));
+            }
+        };
+
+        // Set initial video source
+        updateVideoSource();
+
+        // Handle theme changes
+        const observer = new MutationObserver(() => {
+            updateVideoSource();
+            isLooping = false; // Reset looping flag when theme changes
+        });
+
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+        // Ultra-smooth looping with separate durations for each theme
+        heroVideo.addEventListener('timeupdate', () => {
+            const LOOP_DURATION = getLoopDuration();
+            if (heroVideo.currentTime > LOOP_DURATION && !isLooping) {
+                isLooping = true;
+                heroVideo.currentTime = START_DURATION;
+                heroVideo.play().catch(e => console.log('Play failed:', e));
+                setTimeout(() => { isLooping = false; }, 100);
+            }
+        });
+
+        // Ensure video plays when ended
+        heroVideo.addEventListener('ended', () => {
+            heroVideo.currentTime = START_DURATION;
+            heroVideo.play().catch(e => console.log('Play failed:', e));
+        });
+
+        // Keep video playing
+        heroVideo.addEventListener('pause', () => {
+            heroVideo.play().catch(e => console.log('Auto-resume failed:', e));
+        });
     </script>
 </body>
 

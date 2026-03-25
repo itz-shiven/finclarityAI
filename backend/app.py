@@ -1,7 +1,8 @@
 import os
 import json
 import requests
-from flask import Flask, request, jsonify, render_template, session, redirect, url_for
+import flask
+from flask import Flask, request, jsonify, render_template, session, redirect, url_for, Response
 from flask_cors import CORS
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -27,25 +28,44 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 backend_key = SUPABASE_SERVICE_ROLE_KEY or SUPABASE_KEY
 supabase: Client = create_client(SUPABASE_URL, backend_key)
 
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    raise Exception("OpenAI API key missing")
 
-if not OPENROUTER_API_KEY:
-    raise Exception("OpenRouter API key missing")
+# Official OpenAI Client
+client = OpenAI(api_key=OPENAI_API_KEY)
+# Dedicated client for embeddings (same key)
+openai_client = client 
 
-client = OpenAI(
-    api_key=OPENROUTER_API_KEY,
-    base_url="https://openrouter.ai/api/v1"
-)
-
-embed_model = SentenceTransformer("all-MiniLM-L6-v2")
+# embed_model = SentenceTransformer("all-MiniLM-L6-v2") # Removed due to dimension mismatch (384 vs 1536)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 USER_DATA_DIR = os.path.join(BASE_DIR, "user_data")
 os.makedirs(USER_DATA_DIR, exist_ok=True)
 
 @lru_cache(maxsize=2000)
 def get_cached_embedding(text):
-    """Caches sentence embeddings to prevent CPU thread blocking on repeat queries."""
-    return embed_model.encode(text).tolist()
+    """Caches OpenAI embeddings (1536-dim) to match Supabase database schema."""
+    try:
+        # Use OpenAI client for embeddings (ensure it's the real OpenAI client, not OpenRouter if OpenRouter doesn't support embeddings)
+        # Actually, many users use a separate client for real OpenAI if OpenRouter is only for chat.
+        # But let's check if we can use the existing 'client' or if we need a dedicated one.
+        
+        # NOTE: OpenRouter doesn't usually provide embeddings. Usually people use the real OpenAI API for this.
+        # If OPENAI_API_KEY is for real OpenAI:
+        # We might need a separate client.
+        
+        # Let's define a dedicated openai_client for embeddings if needed.
+        openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        
+        response = openai_client.embeddings.create(
+            input=text,
+            model="text-embedding-3-small" # or text-embedding-ada-002
+        )
+        return response.data[0].embedding
+    except Exception as e:
+        print(f"Embedding error: {e}")
+        # Fallback to zeros of correct dimension to prevent server crash, though results will be poor
+        return [0.0] * 1536
 
 def is_greeting(text):
     """Detects if the message is a simple greeting or casual small talk."""
@@ -414,11 +434,11 @@ def chat():
 
         raw_docs = res.json()
         
-        docs = sorted([d for d in raw_docs if d.get('similarity', 1) > 0.60], key=lambda x: x.get('similarity', 0), reverse=True)[:3]
+        docs = sorted([d for d in raw_docs if d.get('similarity', 0) > 0.35], key=lambda x: x.get('similarity', 0), reverse=True)[:5]
 
         # ===== DEBUG: RAG SOURCE TRACKING =====
         print(f"[RAG DEBUG] Total docs from DB: {len(raw_docs)}")
-        print(f"[RAG DEBUG] Docs after similarity filter (>0.60): {len(docs)}")
+        print(f"[RAG DEBUG] Docs after similarity filter (>0.35): {len(docs)}")
         for i, doc in enumerate(docs):
             print(f"[RAG DEBUG] Doc #{i+1} | similarity={doc.get('similarity', 'N/A'):.4f} | preview: {str(doc.get('content', ''))[:120]}")
         if not docs:
@@ -683,21 +703,244 @@ Before sending response:
         else:
             messages[-1]["content"] += f"\n\n(IMPORTANT: Based on the provided context, you must use {source_info} at the end of your response.)"
 
-        ai_res = client.chat.completions.create(
-            model="meta-llama/llama-3-8b-instruct",
-            messages=messages,
-            temperature=0.7 if is_greeting(message) else 0.3, # Variety for greetings, precision for finance
-            max_tokens=600
-        )
+        # =========================
+        # [STEP 5]: Streaming LLM Response
+        # =========================
+        def generate():
+            full_reply = ""
+            print(f"[LLM DEBUG] Starting stream for GPT-4o-mini...")
+            
+            stream = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                temperature=0.7 if is_greeting(message) else 0.3,
+                max_tokens=800,
+                stream=True
+            )
 
-        reply = ai_res.choices[0].message.content
+            for chunk in stream:
+                if chunk.choices[0].delta.content:
+                    content = chunk.choices[0].delta.content
+                    full_reply += content
+                    yield f"data: {json.dumps({'chunk': content})}\n\n"
 
-        return jsonify({"reply": reply})
+            # After stream ends, we can handle memory extraction or background logging if needed
+            print(f"[LLM DEBUG] Stream completed. Length: {len(full_reply)}")
+
+        return flask.Response(generate(), mimetype='text/event-stream')
 
     except Exception as e:
         import traceback
         traceback.print_exc()
         return jsonify({"reply": "[ERROR] Server error\n\nSource: 🤖 **System Error Handler**"})
+@app.route("/api/compare_product", methods=["POST"])
+def compare_product():
+    if 'user_id' not in session and 'is_guest' not in session:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    try:
+        data = request.get_json()
+        product_name = data.get("product_name")
+        provider = data.get("provider")
+        category = data.get("category")
+
+        if not product_name:
+            return jsonify({"status": "error", "message": "Product name is required"}), 400
+
+        # Create search query
+        search_query = f"{provider} {product_name} {category} features fees interest benefits"
+        query_embedding = get_cached_embedding(search_query)
+
+        res = requests.post(
+            f"{SUPABASE_URL}/rest/v1/rpc/match_documents",
+            headers=HEADERS,
+            json={
+                "query_embedding": query_embedding,
+                "match_count": 10 # Increase depth to find more features
+            }
+        )
+        
+        raw_docs = res.json()
+        if not isinstance(raw_docs, list):
+            print(f"SUPABASE ERROR in compare_product: {raw_docs}")
+            raw_docs = []
+            
+        # Slightly more inclusive similarity to ensure we get something if the product name is slightly different
+        docs = sorted([d for d in raw_docs if isinstance(d, dict) and d.get('similarity', 0) > 0.35], key=lambda x: x.get('similarity', 0), reverse=True)[:5]
+        
+        if docs:
+            context = "\n\n".join([doc['content'] for doc in docs])
+        else:
+            context = "❌ NO DATA AVAILABLE: The database does not contain information on this product."
+
+        system_prompt = f"""
+You are an expert financial data extractor. You must extract key comparison details for the product '{product_name}' by '{provider}'.
+Category: {category}
+
+### INSTRUCTIONS:
+1. ONLY return a JSON object. No other text.
+2. Use the provided context to fill in values.
+3. If a value is missing from the context, use "Not Available" for that field.
+4. Keep values extremely concise (under 8 words).
+
+### STRICT KEY LIST (ONLY use these keys for {category}):
+"""
+        if category.lower() == "cards":
+            system_prompt += '{"Joining Fee": "...", "Annual Fee": "...", "Reward Rate": "...", "Lounge Access": "...", "Forex Markup": "...", "Milestones/Offers": "...", "Best For": "..."}'
+        elif category.lower() == "loans":
+            system_prompt += '{"Interest Rate": "...", "Processing Fee": "...", "Max Loan Amount": "...", "Tenure": "...", "Eligibility": "...", "Foreclosure Charges": "..."}'
+        elif category.lower() == "stocks" or category.lower() == "stock market":
+            system_prompt += '{"Brokerage (Intraday)": "...", "Brokerage (Delivery)": "...", "Account Opening Fee": "...", "AMC": "...", "Platforms": "...", "Margin/Leverage": "..."}'
+        else:
+            system_prompt += '{"Feature 1": "...", "Feature 2": "...", "Feature 3": "...", "Pricing": "...", "Pros": "...", "Cons": "..."}'
+
+        system_prompt += "\nDo NOT invent new keys. Use exactly the keys listed above."
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"Context:\n{context}\n\nExtract requested JSON for {product_name}."}
+        ]
+
+        # ===== DEBUG: COMPARE LLM INPUT =====
+        print(f"[COMPARE DEBUG] Fetching JSON for {product_name}...")
+        # ====================================
+
+        ai_res = client.chat.completions.create(
+            model="gpt-4o-mini", # Switched to GPT-4o mini
+            messages=messages,
+            temperature=0.1,
+            max_tokens=300
+        )
+
+        reply = ai_res.choices[0].message.content.strip()
+        
+        # ===== DEBUG: COMPARE LLM OUTPUT =====
+        print(f"[COMPARE DEBUG] Raw LLM Reply: {reply}")
+        # =====================================
+        
+        # Clean up any potential markdown formatting manually just in case
+        if reply.startswith("```json"):
+            reply = reply[7:]
+        if reply.startswith("```"):
+            reply = reply[3:]
+        if reply.endswith("```"):
+            reply = reply[:-3]
+        
+        reply = reply.strip()
+        
+        try:
+            features = json.loads(reply)
+            if isinstance(features, str):
+                # LLM outputted a JSON-encoded string instead of an object
+                features = {"Info": features}
+            if not isinstance(features, dict):
+                features = {"Info": str(features)}
+        except json.JSONDecodeError:
+            print(f"[COMPARE DEBUG] LLM Failed to output valid JSON. Output was: {reply}")
+            features = {"Status": "Not Found", "Details": "The database contains limited info about this specific product." if "NO DATA AVAILABLE" in context else "Unable to parse data."}
+
+        return jsonify({
+            "status": "success",
+            "product_name": product_name,
+            "provider": provider,
+            "features": features
+        })
+
+    except Exception as e:
+        print(f"ERROR in compare_product: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/product_details", methods=["POST"])
+def product_details():
+    if 'user_id' not in session and 'is_guest' not in session:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    try:
+        data = request.get_json()
+        product_name = data.get("product_name")
+        provider = data.get("provider")
+        category = data.get("category")
+
+        if not product_name:
+            return jsonify({"status": "error", "message": "Product name is required"}), 400
+
+        # Create deep search query
+        search_query = f"EXHAUSTIVE DETAILS for {provider} {product_name} {category}: benefits, fees, charges, eligibility, documents required, pros cons, terms and conditions"
+        query_embedding = get_cached_embedding(search_query)
+
+        res = requests.post(
+            f"{SUPABASE_URL}/rest/v1/rpc/match_documents",
+            headers=HEADERS,
+            json={
+                "query_embedding": query_embedding,
+                "match_count": 15 # High depth for exhaustive details
+            }
+        )
+        
+        raw_docs = res.json()
+        if not isinstance(raw_docs, list):
+            raw_docs = []
+            
+        docs = sorted([d for d in raw_docs if isinstance(d, dict) and d.get('similarity', 0) > 0.3], key=lambda x: x.get('similarity', 0), reverse=True)[:8]
+        
+        if docs:
+            context = "\n\n".join([doc['content'] for doc in docs])
+        else:
+            context = "❌ NO DATA AVAILABLE"
+
+        system_prompt = f"""
+You are an expert financial researcher. Your goal is to extract EVERY SINGLE DETAIL for the product '{product_name}' by '{provider}' ({category}).
+Users want 'saari matlab saari' (all of it) info.
+
+### EXTRACTION CATEGORIES:
+1. **Overview**: Catchy summary, Best For (Target Audience), Key Highlights.
+2. **Features & Benefits**: Exhaustive list of rewards, lounge access, cashback, insurance covers, welcome gifts, etc.
+3. **Fees & Charges**: Joining fee, Annual fee (and waivers), Reward redemption fee, Late payment, Cash advance, Interest rates, Forex markup.
+4. **Eligibility & Docs**: Age, Salary, CIBIL, Required documents (KYC, Income proof).
+5. **AI Verdict**: Pros (What's goated?), Cons (What's the catch?), Final recommendation.
+
+### RULES:
+1. RESPONSE MUST BE VALID JSON.
+2. If info is missing, say "Check Official Website" or "Standard terms apply".
+3. Use arrays for lists of benefits/docs.
+4. Maintain a premium, professional tone.
+
+### FORMAT:
+{{
+  "overview": {{ "summary": "...", "best_for": "...", "highlights": ["...", "..."] }},
+  "benefits": [ "...", "...", "..." ],
+  "fees": {{ "joining": "...", "annual": "...", "interest": "...", "forex": "...", "others": ["...", "..."] }},
+  "eligibility": {{ "age": "...", "income": "...", "docs": ["...", "..."] }},
+  "verdict": {{ "pros": ["...", "..."], "cons": ["...", "..."], "recommendation": "..." }}
+}}
+"""
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"Context:\n{context}\n\nExtract requested exhaustive JSON for {product_name}."}
+        ]
+
+        ai_res = client.chat.completions.create(
+            model="gpt-4o", # High quality for deep extraction
+            messages=messages,
+            temperature=0.1,
+            response_format={ "type": "json_object" }
+        )
+
+        reply = ai_res.choices[0].message.content.strip()
+        details = json.loads(reply)
+
+        return jsonify({
+            "status": "success",
+            "product_name": product_name,
+            "provider": provider,
+            "details": details
+        })
+
+    except Exception as e:
+        print(f"ERROR in product_details: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route("/api/what_changed", methods=["GET"])
 def get_what_changed():
     if 'user_id' not in session:
