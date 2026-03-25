@@ -5,11 +5,11 @@ import flask
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for, Response
 from flask_cors import CORS
 from dotenv import load_dotenv
-from openai import OpenAI
-from sentence_transformers import SentenceTransformer
-from functools import lru_cache
 from supabase import create_client, Client
 from werkzeug.exceptions import HTTPException
+
+# 🔥 CONNECTING THE NEW BRAIN
+from chat import get_answer
 
 load_dotenv(override=True)
 
@@ -19,7 +19,6 @@ load_dotenv(override=True)
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") # 🔥 SECURE BACKEND KEY
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 if not SUPABASE_URL or not SUPABASE_KEY:
     raise Exception("Supabase env variables missing")
@@ -98,12 +97,11 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 # -------------------------
 # SECURE CORS SETUP
 # -------------------------
-# Your VIP Guest List of allowed frontend URLs
 ALLOWED_ORIGINS = [
-    "http://localhost:3000",       # If you are using React/Next.js locally
-    "http://127.0.0.1:5000",       # Local HTML/JS testing
-    "http://localhost:5000",       # Local HTML/JS testing
-    "https://your-future-domain.com" # Put your Vercel/Netlify link here later!
+    "http://localhost:3000",       
+    "http://127.0.0.1:5000",       
+    "http://localhost:5000",       
+    "https://your-future-domain.com" 
 ]
 
 CORS(app, supports_credentials=True, origins=ALLOWED_ORIGINS)
@@ -113,14 +111,12 @@ CORS(app, supports_credentials=True, origins=ALLOWED_ORIGINS)
 # -------------------------
 @app.errorhandler(Exception)
 def handle_exception(e):
-    # 1. Handle standard HTTP errors (like 404 Not Found, 401 Unauthorized)
     if isinstance(e, HTTPException):
         return jsonify({
             "status": "error",
             "message": e.description
         }), e.code
 
-    # 2. Catch all unexpected backend crashes (500 Internal Server Error)
     import traceback
     print("🚨 [GLOBAL CRASH CATCHER] An error occurred:")
     traceback.print_exc() 
@@ -129,21 +125,15 @@ def handle_exception(e):
         "status": "error",
         "message": "An unexpected server error occurred. Our team has been notified."
     }), 500
+
 # -------------------------
 # SUPABASE CONFIG
 # -------------------------
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-
-if not SUPABASE_URL or not SUPABASE_KEY:
-    raise ValueError("Missing SUPABASE credentials. Check your .env file.")
-
 HEADERS = {
     "apikey": SUPABASE_KEY,
     "Authorization": f"Bearer {SUPABASE_KEY}",
     "Content-Type": "application/json"
 }
-
 
 @app.route("/", methods=["GET", "HEAD"])
 def home():
@@ -151,11 +141,9 @@ def home():
         return "", 200
     return render_template("index.html")
 
-
 @app.route("/login")
 def login_page():
     return render_template("login.html")
-
 
 @app.route("/dashboard")
 def dashboard():
@@ -171,8 +159,6 @@ def dashboard():
 # -------------------------
 # SIGNUP API
 # -------------------------
-
-
 @app.route("/api/signup", methods=["POST"])
 def signup():
     try:
@@ -184,7 +170,6 @@ def signup():
         if not name or not email or not password:
             return jsonify({"status": "error", "message": "Missing required fields"})
 
-        # 🔥 PURE VAULT. NO CUSTOM TABLES.
         response = supabase.auth.sign_up({
             "email": email,
             "password": password,
@@ -203,7 +188,6 @@ def signup():
         error_msg = str(e)
         print(f"[ERROR] ACTUAL VAULT ERROR: {error_msg}")
         
-        # Catch duplicate users
         if "already registered" in error_msg.lower() or "user already exists" in error_msg.lower():
             return jsonify({"status": "exists", "message": "User already exists."})
             
@@ -212,8 +196,6 @@ def signup():
 # -------------------------
 # LOGIN API
 # -------------------------
-
-
 @app.route("/api/login", methods=["POST"])
 def login():
     try:
@@ -224,7 +206,6 @@ def login():
         if not email or not password:
             return jsonify({"status": "error", "message": "Missing email or password"})
 
-        # 🔥 Check credentials directly against the encrypted Vault
         response = supabase.auth.sign_in_with_password({
             "email": email,
             "password": password
@@ -235,7 +216,6 @@ def login():
         session['user_email'] = user.email
         session['user_name'] = user.user_metadata.get('full_name', 'User')
 
-        # 🔥 Ensure user_data row exists
         ensure_user_data(user.id, user.email, session['user_name'])
 
         return jsonify({
@@ -247,12 +227,8 @@ def login():
         error_msg = str(e)
         print(f"[ERROR] LOGIN FAILURE for {email}: {error_msg}")
         
-        # 🔥 ULTRA SMART HINT: Check if user exists in Supabase Auth directly
         try:
-            # Try to sign up with a dummy password. 
-            # If they exist, Supabase will return "User already registered"
             check_signup = supabase.auth.sign_up({"email": email, "password": "DummyPassword123!"})
-            # If it reaches here, the user DID NOT exist (or signup was allowed)
         except Exception as signup_err:
             if "already registered" in str(signup_err).lower():
                 return jsonify({
@@ -265,15 +241,9 @@ def login():
             "message": "Invalid credentials or user not found"
         })
 
-
-# -------------------------
-# CURRENT USER API
-# -------------------------
 # -------------------------
 # GOOGLE LOGIN API
 # -------------------------
-
-
 @app.route("/api/google-login", methods=["POST"])
 def google_login():
     try:
@@ -285,14 +255,10 @@ def google_login():
         if not user_email or not user_id:
             return jsonify({"status": "error", "message": "User data missing"})
 
-        # SET SESSION
-        # Since we use "PURE VAULT", we trust the frontend's authentication 
-        # (which was verified by Supabase) and set the session directly.
         session['user_id'] = user_id
         session['user_name'] = user_name or "Google User"
         session['user_email'] = user_email
         
-        # 🔥 Ensure user_data row exists
         ensure_user_data(user_id, user_email, session['user_name'])
         
         print(f"DEBUG: Session successfully created for {user_email}!")
@@ -305,6 +271,7 @@ def google_login():
     except Exception as e:
         print(f"🚨 GOOGLE LOGIN ERROR: {str(e)}")
         return jsonify({"status": "error", "message": str(e)})
+
 @app.route("/api/user", methods=["GET"])
 def get_user():
     if 'user_id' in session:
@@ -330,18 +297,13 @@ def get_user():
 
     return jsonify({"status": "error", "message": "Not logged in"}), 401
 
-
 # -------------------------
 # USER DATA PERSISTENCE (CHATS/MEMORY)
 # -------------------------
-
 def ensure_user_data(user_id, email, name):
-    """Ensures a row exists in user_data for this user_id."""
     try:
-        # Check if exists
         res = supabase.table("user_data").select("user_id").eq("user_id", user_id).execute()
         if not res.data:
-            # Create new row (Matching confirmed schema: user_id, chats, memory)
             supabase.table("user_data").insert({
                 "user_id": user_id,
                 "chats": [],
@@ -350,7 +312,6 @@ def ensure_user_data(user_id, email, name):
             print(f"[DATABASE] Created new user_data row for ID: {user_id}")
     except Exception as e:
         print(f"[ERROR] ensure_user_data failed: {str(e)}")
-
 
 @app.route("/api/sync_userdata", methods=["POST"])
 def sync_userdata():
@@ -374,7 +335,6 @@ def sync_userdata():
         print(f"🚨 SYNC ERROR: {str(e)}")
         return jsonify({"status": "error", "message": str(e)})
 
-
 @app.route("/api/get_userdata", methods=["GET"])
 def get_userdata():
     if 'user_id' not in session:
@@ -389,7 +349,6 @@ def get_userdata():
         })
         
     return jsonify({"status": "success", "data": {"chats": [], "memory": []}})
-
 
 @app.route("/api/guest-login", methods=["POST"])
 def guest_login():
@@ -406,7 +365,9 @@ def logout():
     session.clear()
     return jsonify({"status": "success"})
 
-
+# -------------------------
+# THE NEW CHAT ROUTE
+# -------------------------
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
@@ -944,7 +905,6 @@ Users want 'saari matlab saari' (all of it) info.
 @app.route("/api/what_changed", methods=["GET"])
 def get_what_changed():
     if 'user_id' not in session:
-        # For guests or non-logged in users, return standard updates
         return jsonify({
             "status": "success",
             "updates": [
@@ -980,7 +940,6 @@ def get_what_changed():
 
     user_id = session['user_id']
     try:
-        # Fetch user data (memory)
         response = requests.get(
             f"{SUPABASE_URL}/rest/v1/user_data",
             headers=HEADERS,
@@ -993,7 +952,6 @@ def get_what_changed():
             if rows:
                 memory = rows[0].get("memory", [])
         
-        # All available updates
         all_updates = [
             {
                 "keywords": ["SBI", "card", "credit"],
@@ -1047,7 +1005,6 @@ def get_what_changed():
             }
         ]
 
-        # Filter based on memory
         personalized = []
         interests = " ".join(memory).lower()
         
@@ -1055,7 +1012,6 @@ def get_what_changed():
             if any(kw.lower() in interests for kw in up["keywords"]):
                 personalized.append(up)
 
-        # Fallback to standard if no personalized matches
         if not personalized:
             personalized = all_updates[:3]
 
@@ -1066,10 +1022,6 @@ def get_what_changed():
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
-
-# -------------------------
-# PROFILE MANAGEMENT API
-# -------------------------
 
 @app.route("/update_profile", methods=["POST"])
 def update_profile():
@@ -1084,19 +1036,12 @@ def update_profile():
         new_name = data.get("name")
         new_email = data.get("email")
 
-        # Update in Supabase Auth (This requires Service Role Key or user token)
-        # For now, we update the session. If user has Service Role Key, 
-        # they should use it for the client.
         session['user_name'] = new_name
         session['user_email'] = new_email
-        
-        # Optional: Attempt to update metadata if client is capable
-        # supabase.auth.update_user({"data": {"full_name": new_name}})
         
         return jsonify({"status": "success"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
-
 
 @app.route("/change_password", methods=["POST"])
 def change_password():
@@ -1107,23 +1052,15 @@ def change_password():
         return jsonify({"status": "error", "message": "Guest accounts cannot change password"})
 
     try:
-        data = request.get_json()
-        # new_password = data.get("newPassword")
-        
-        # NOTE: Changing password via server-side session without 
-        # service role key is restricted in Supabase for security.
-        # This route should ideally be handled directly via frontend Supabase client.
         return jsonify({"status": "error", "message": "Please change password via the account settings (Supabase Auth)."})
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
 
-
 @app.route("/logout", methods=["GET", "POST"])
 def page_logout():
     session.clear()
     return redirect(url_for('login_page'))
-
 
 # -------------------------
 # RUN SERVER
