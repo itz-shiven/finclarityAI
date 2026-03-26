@@ -34,16 +34,6 @@ FinclarityAI is a full-stack web application built during the **ET AI Hackathon 
 
 ---
 
-## 👥 Team
-
-| Member | Role |
-|---|---|
-| **Shiven** (it-shiven) | Backend, Flask Architecture, Deployment |
-| **Abhi** | Auth Integration, Chat Memory, Supabase |
-| **Varun Arora** | Dashboard UI, LLM Integration, Frontend |
-| **Yuvish** | Google OAuth, Scraper, Database Setup |
-
----
 
 ## ⚙️ Setup Instructions
 
@@ -109,9 +99,10 @@ finclarityAI/
 
 ---
 
-## 📝 Build Process
+## 📝 Documentation & Build Process
 
-The commit history documents our hackathon journey from Day 1 to submission. A detailed log is available in [`build_process_commits.md`](build_process_commits.md).
+- **[Agent Architecture](agent_architecture.md)**: Detailed description of AI roles, communication, and error-handling.
+- **[Build Process Log](build_process_commits.md)**: A chronological timeline of the project’s development journey.
 
 ---
 

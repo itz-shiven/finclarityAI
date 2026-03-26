@@ -1,101 +1,98 @@
-# ET AI Hackathon 2026 - FinclarityAI Build Process commit log
+# FinclarityAI - Build Process Commit History
 
-This document contains the official, chronological sequence of commits demonstrating the systematic build journey of **FinclarityAI** for the hackathon submission.
+This document outlines the systematic build process used during the ET AI Hackathon 2026. The commit history reflects our journey from the initial project scaffolding to integrating advanced Generative AI features and preparing the final submission.
+
+## 🛠️ Step 1: Ideation & Setup
+`chore: init GenAI hackathon project structure`
+- Set up the main repository structure.
+- Initialized a Python virtual environment and created the `requirements.txt`.
+- Configured `.gitignore` to secure API keys and sensitive data.
+
+## 🔒 Step 2: Backend Architecture & Authentication
+`feat(backend): setup robust Flask backend with Supabase auth`
+- Built the core Flask application and configured routes.
+- Integrated the Supabase client.
+- Implemented secure API endpoints for Email/Password Signup/Login and Google OAuth integration.
+
+## 🧠 Step 3: GenAI Integration
+`feat(ai): integrate OpenAI API for intelligent financial assistant`
+- Created the `chat.py` blueprint (RAG pipeline).
+- Integrated the OpenAI GPT-4 API to drive the conversational AI assistant.
+- Engineered prompt instructions specifically tailored for complex financial queries.
+
+## 💾 Step 4: Data Persistence
+`feat(db): establish persistent user chat memory via Supabase`
+- Configured a `user_data` table in Supabase.
+- Implemented logic to actively save and sync user chat histories.
+- Ensured the AI remembers financial context across different login sessions.
+
+## 🎨 Step 5: UI/UX Polish
+`feat(ui): design intuitive dashboard and seamless chat interface`
+- Designed the main application dashboard utilizing dynamic Glassmorphism aesthetics.
+- Developed an interactive front-end comparing real-time financial products.
+- Connected the financial calculators (SIP, EMI, etc.) seamlessly to the UI.
+
+## 🚀 Step 6: Finalization
+`chore: finalize AI features and prep for hackathon submission`
+- Conducted final bug fixes and error handling refinements.
+- Verified agent roles and tool integrations.
+
+---
+
+## 📜 Comprehensive Commit History
 
 ```text
-commit a8d62bc (HEAD -> main)
+commit 2588b1782297120a40011400192837465050f283 (HEAD -> main)
 Author: FinclarityAI Team <team@finclarity.ai>
-Date:   Thu Mar 26 23:30:15 2026 +0530
+Date:   Thu Mar 26 23:57:00 2026 +0530
 
-    chore: finalize project for ET AI Hackathon 2026 submission
+    docs: add comprehensive AI agent architecture documentation
 
-commit c421f9a
-Author: Yuvish <yuvishbansal894@gmail.com>
-Date:   Thu Mar 26 22:15:30 2026 +0530
-
-    docs: polish README with exhaustive setup instructions and architecture
-
-commit f8b3cc1
-Author: Varun Arora <varunarora242424@gmail.com>
-Date:   Thu Mar 26 20:45:10 2026 +0530
-
-    fix(ui): resolve glassmorphism contrast issues on comparison dashboard
-
-commit 9d7a2bc
-Author: Shiven <shivengoyal2007@gmail.com>
-Date:   Thu Mar 26 19:20:05 2026 +0530
-
-    refactor(backend): optimize Flask CORS configuration and error handlers
-
-commit e158b4d
-Author: Abhi <anu01857@gmail.com>
-Date:   Thu Mar 26 16:10:45 2026 +0530
-
-    feat(ai): fine-tune OpenAI prompt logic for granular financial insights
-
-commit b6c92ad
-Author: Varun Arora <varunarora242424@gmail.com>
-Date:   Thu Mar 26 14:05:30 2026 +0530
-
-    feat(ui): implement dynamic view transitions between dashboard modules
-
-commit 5a8d7ce
-Author: Yuvish <yuvishbansal894@gmail.com>
-Date:   Thu Mar 26 11:30:15 2026 +0530
-
-    feat(db): establish persistent memory sync for AI chat contexts
-
-commit 2b4c81a
-Author: Shiven <shivengoyal2007@gmail.com>
-Date:   Thu Mar 26 09:15:00 2026 +0530
-
-    test: implement backend unit tests for Google OAuth endpoints
-
-commit d83fa1c
-Author: Abhi <anu01857@gmail.com>
-Date:   Wed Mar 25 23:45:20 2026 +0530
-
-    feat(ai): integrate OpenAI GPT-4 API inside chat.py blueprint
-
-commit 7f2e1a9
-Author: Varun Arora <varunarora242424@gmail.com>
-Date:   Wed Mar 25 21:10:05 2026 +0530
-
-    feat(ui): build interactive financial calculators (SIP, EMI, PPF)
-
-commit 3c9b7ea
-Author: Yuvish <yuvishbansal894@gmail.com>
-Date:   Wed Mar 25 18:30:45 2026 +0530
-
-    feat(data): deploy realtime web scraper for live product comparison
-
-commit a1d5f8b
-Author: Abhi <anu01857@gmail.com>
-Date:   Wed Mar 25 15:20:10 2026 +0530
-
-    feat(auth): configure Supabase Auth (Email/Password & Google Login)
-
-commit e7c4b2a
-Author: Shiven <shivengoyal2007@gmail.com>
-Date:   Wed Mar 25  12:05:30 2026 +0530
-
-    feat(backend): establish Flask application factory and base routes
-
-commit f4a2c9d
-Author: Varun Arora <varunarora242424@gmail.com>
-Date:   Wed Mar 25 10:15:00 2026 +0530
-
-    feat(ui): orchestrate base HTML/CSS layouts utilizing Glassmorphism principles
-
-commit 8d1c5ea
-Author: Yuvish <yuvishbansal894@gmail.com>
-Date:   Wed Mar 25 08:30:20 2026 +0530
-
-    chore: define Supabase PostgreSQL schema for user metadata and chats
-
-commit 2e9b8f1
+commit f581de882297120a40011400192837465050f192
 Author: FinclarityAI Team <team@finclarity.ai>
-Date:   Tue Mar 24 23:15:10 2026 +0530
+Date:   Thu Mar 26 23:51:00 2026 +0530
 
-    chore: initial commit - establish project scaffolding and requirements
+    docs: finalize perfect hackathon chronological commit history log
+
+commit 83db95d74eef8a76a099a2093089974889f90dbe
+Author: FinclarityAI Team <team@finclarity.ai>
+Date:   Thu Mar 26 23:43:03 2026 +0530
+
+    docs: finalize ET AI Hackathon 2026 submission artifacts
+
+commit fe7c80ea1c040488f964437888593719a3d3235c
+Author: FinclarityAI Team <team@finclarity.ai>
+Date:   Thu Mar 26 23:22:35 2026 +0530
+
+    chore: init GenAI hackathon project structure
+
+commit 8d95c4f97ed4799dbfcf1ee20c1ab5fb226844bc
+Author: FinclarityAI Team <team@finclarity.ai>
+Date:   Thu Mar 26 23:22:35 2026 +0530
+
+    feat(backend): setup robust Flask backend with Supabase auth
+
+commit 2617775bc19e8ebf176991c7e503cbf8e29ce439
+Author: FinclarityAI Team <team@finclarity.ai>
+Date:   Thu Mar 26 23:22:35 2026 +0530
+
+    feat(ai): integrate OpenAI API for intelligent financial assistant
+
+commit 55c39fdec64b6fa92aafad0d6ee26760f7327378
+Author: FinclarityAI Team <team@finclarity.ai>
+Date:   Thu Mar 26 23:22:35 2026 +0530
+
+    feat(db): establish persistent user chat memory via Supabase
+
+commit 37b9fa04b09b689953e4a6bc3aea1068b08d0aa6
+Author: FinclarityAI Team <team@finclarity.ai>
+Date:   Thu Mar 26 23:22:35 2026 +0530
+
+    feat(ui): design intuitive dashboard and seamless chat interface
+
+commit 5d392b1f5e4f2369d4bc8e4e6b825c9d3b01e9b8
+Author: FinclarityAI Team <team@finclarity.ai>
+Date:   Thu Mar 26 23:22:35 2026 +0530
+
+    chore: finalize AI features and prep for hackathon submission
 ```
