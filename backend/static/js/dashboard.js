@@ -2435,6 +2435,11 @@ function renderBreadcrumb() {
     const dashboardHeaderTitle = document.getElementById('dashboardHeaderTitle');
     if (!dashboardHeaderTitle) return;
 
+    const headerContainer = dashboardHeaderTitle.closest('.dashboard-header-simple');
+    if (headerContainer) {
+        headerContainer.style.display = navStack.length > 1 ? 'flex' : 'none';
+    }
+
     if (navStack.length <= 1) {
         const user = window.currentUserData;
         dashboardHeaderTitle.textContent = user && user.name ? user.name : "Home";

@@ -650,8 +650,8 @@ body {
    ============================================ */
 
 .welcome-hero {
-    padding: 40px 0;
-    margin-bottom: 20px;
+    padding: 28px 0;
+    margin-bottom: 12px;
     position: relative;
 }
 
@@ -760,31 +760,23 @@ body {
     flex-direction: column;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 32px;
+    padding: 24px 32px;
     background-color: var(--bg-secondary);
 }
 
 .dashboard-header-simple {
-    padding: 24px 0;
-    margin-bottom: 20px;
-    transition: var(--transition-base);
-    display: flex;
     align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    margin-bottom: 12px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.25);
 }
-
-/* Hide breadcrumb header when on Home view to let Hero shine */
-#mainView:not(.hidden) ~ .dashboard-header-simple,
-#mainView:not(.hidden) .dashboard-header-simple {
-    display: none;
-}
-/* Wait, the header is BEFORE mainView in HTML. Let's fix that or hide it via sibling selector if possible, or just use JS. */
-/* Actually, let's just make the simple header look ultra clean and subtle. */
 
 .dashboard-header-simple h2 {
+    margin: 0;
     font-size: 18px;
     font-weight: 600;
-    color: var(--text-tertiary);
-    margin: 0;
+    color: var(--text-secondary);
 }
 
 /* Main Wrapper no longer has top-header, so main-content takes full height naturally */
@@ -935,6 +927,17 @@ body {
     overflow: hidden;
     align-items: center;
     gap: 16px;
+}
+
+.service-grid {
+    gap: 32px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.service-grid .action-card {
+    min-height: 160px;
+    padding: 38px 32px;
+    border-radius: 32px;
 }
 
 .action-card::before {
@@ -1358,6 +1361,16 @@ body {
 [data-theme="dark"] .cards-grid .action-card {
     background: var(--bg-tertiary);
     border: 1px solid var(--border-light);
+}
+
+[data-theme="dark"] #compareCategoryGrid .action-card {
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+[data-theme="dark"] .service-grid .action-card {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 25px 40px rgba(2, 6, 23, 0.65);
 }
 
 [data-theme="dark"] .stat-card {
@@ -3011,14 +3024,6 @@ input:focus-visible {
     color: var(--primary-600) !important;
 }
 
-[data-theme="dark"] #dashboardHeaderTitle a {
-    color: var(--text-secondary);
-}
-
-[data-theme="dark"] #dashboardHeaderTitle a:hover {
-    color: var(--primary-600);
-}
-
 /* ============================================
    BOTTOM BEAUTIFUL SETTINGS BUTTON
    ============================================ */
@@ -3498,7 +3503,7 @@ input:focus-visible {
 }
 
 .compare-empty-state {
-    padding: 80px 40px;
+    padding: 48px 40px;
     text-align: center;
     background: var(--bg-tertiary);
     border-radius: 20px;
@@ -3514,6 +3519,29 @@ input:focus-visible {
     font-size: 56px;
     color: var(--text-tertiary);
     margin-bottom: 20px;
+}
+
+[data-theme="dark"] .compare-empty-state {
+    padding: 40px 36px;
+    background: linear-gradient(135deg, rgba(104, 111, 255, 0.12), rgba(255, 255, 255, 0.04));
+    border-radius: 28px;
+    border: 1px dashed rgba(148, 163, 184, 0.35);
+    box-shadow: 0 25px 60px rgba(2, 6, 23, 0.65);
+    gap: 18px;
+}
+
+[data-theme="dark"] .compare-empty-state .empty-icon {
+    font-size: 48px;
+    color: rgba(255, 255, 255, 0.65);
+    padding: 8px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+    width: 72px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.08);
 }
 
 .compare-empty-state h4 {

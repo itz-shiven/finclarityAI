@@ -86,9 +86,8 @@
             <main class="main-content">
 
                 <div class="dashboard-header-simple">
-                    <h2 id="dashboardHeaderTitle">{{ username|title }}</h2>
+                    <h2 id="dashboardHeaderTitle">Home</h2>
                 </div>
-
                 <div id="mainView" class="animate-fade-in">
                     <div class="welcome-hero">
                         <div class="hero-content">
@@ -131,7 +130,7 @@
                         <span>Explore Services</span>
                     </div>
 
-                    <div class="cards-grid">
+                    <div class="cards-grid service-grid">
                         <div class="action-card category-card" data-target="cardsSubView" data-title="Cards"><i
                                 class="fas fa-credit-card"></i><span>Cards</span></div>
                         <div class="action-card category-card" data-target="loansSubView" data-title="Loans"><i
@@ -303,15 +302,17 @@
                     </div>
 
                     <div class="compare-empty-state" id="compareEmptyState">
-                        <div class="empty-icon"><i class="fas fa-balance-scale"></i></div>
-                        <h4>Select a category to start comparing</h4>
-                        <p>Choose a financial area below to browse and add products for a side-by-side comparison.</p>
-
                         <div class="cards-grid" id="compareCategoryGrid">
                             </div>
-                    </div>
 
-                    <div id="compareProviderMultiSelectView" class="hidden compare-subview">
+                        <div class="empty-icon"><i class="fas fa-balance-scale"></i></div>
+
+                        <div class="compare-empty-text">
+                            <h4>Select a category to start comparing</h4>
+                            <p>Choose a financial area below to browse and add products for a side-by-side comparison.</p>
+                        </div>
+                    </div>
+                <div id="compareProviderMultiSelectView" class="hidden compare-subview">
                         <div class="compare-multi-header">
                             <div class="z-index-2">
                                 <button class="btn-outline btn-back-compare" onclick="clearSelection()">
@@ -562,3 +563,6 @@
 </body>
 
 </html>
+
+
+
