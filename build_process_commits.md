@@ -1,98 +1,611 @@
-# FinclarityAI - Build Process Commit History
+# FinclarityAI: Comprehensive Build Journey 🚀
 
-This document outlines the systematic build process used during the ET AI Hackathon 2026. The commit history reflects our journey from the initial project scaffolding to integrating advanced Generative AI features and preparing the final submission.
-
-## 🛠️ Step 1: Ideation & Setup
-`chore: init GenAI hackathon project structure`
-- Set up the main repository structure.
-- Initialized a Python virtual environment and created the `requirements.txt`.
-- Configured `.gitignore` to secure API keys and sensitive data.
-
-## 🔒 Step 2: Backend Architecture & Authentication
-`feat(backend): setup robust Flask backend with Supabase auth`
-- Built the core Flask application and configured routes.
-- Integrated the Supabase client.
-- Implemented secure API endpoints for Email/Password Signup/Login and Google OAuth integration.
-
-## 🧠 Step 3: GenAI Integration
-`feat(ai): integrate OpenAI API for intelligent financial assistant`
-- Created the `chat.py` blueprint (RAG pipeline).
-- Integrated the OpenAI GPT-4 API to drive the conversational AI assistant.
-- Engineered prompt instructions specifically tailored for complex financial queries.
-
-## 💾 Step 4: Data Persistence
-`feat(db): establish persistent user chat memory via Supabase`
-- Configured a `user_data` table in Supabase.
-- Implemented logic to actively save and sync user chat histories.
-- Ensured the AI remembers financial context across different login sessions.
-
-## 🎨 Step 5: UI/UX Polish
-`feat(ui): design intuitive dashboard and seamless chat interface`
-- Designed the main application dashboard utilizing dynamic Glassmorphism aesthetics.
-- Developed an interactive front-end comparing real-time financial products.
-- Connected the financial calculators (SIP, EMI, etc.) seamlessly to the UI.
-
-## 🚀 Step 6: Finalization
-`chore: finalize AI features and prep for hackathon submission`
-- Conducted final bug fixes and error handling refinements.
-- Verified agent roles and tool integrations.
+This document provides an exhaustive, chronological log of every technical milestone and commit made during the development of FinclarityAI for the **ET AI Hackathon 2026**. This journey showcases our transition from basic scaffolding to a multi-agent, RAG-enhanced financial intelligence platform.
 
 ---
 
-## 📜 Comprehensive Commit History
+### 📍 Commit: docs: finalize ET AI Hackathon 2026 submission package
+- **Hash:** `0cdd080`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Thu Mar 26 23:58:36 2026 +0530
 
-```text
-commit 2588b1782297120a40011400192837465050f283 (HEAD -> main)
-Author: FinclarityAI Team <team@finclarity.ai>
-Date:   Thu Mar 26 23:57:00 2026 +0530
+---
 
-    docs: add comprehensive AI agent architecture documentation
+### 📍 Commit: docs: add comprehensive AI agent architecture documentation
+- **Hash:** `2588b17`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Thu Mar 26 23:57:37 2026 +0530
 
-commit f581de882297120a40011400192837465050f192
-Author: FinclarityAI Team <team@finclarity.ai>
-Date:   Thu Mar 26 23:51:00 2026 +0530
+---
 
-    docs: finalize perfect hackathon chronological commit history log
+### 📍 Commit: docs: finalize perfect hackathon chronological commit history log
+- **Hash:** `f581de8`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Thu Mar 26 23:53:02 2026 +0530
 
-commit 83db95d74eef8a76a099a2093089974889f90dbe
-Author: FinclarityAI Team <team@finclarity.ai>
-Date:   Thu Mar 26 23:43:03 2026 +0530
+---
 
-    docs: finalize ET AI Hackathon 2026 submission artifacts
+### 📍 Commit: docs: append comprehensive commit history to build process log
+- **Hash:** `ae1d735`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Thu Mar 26 23:50:21 2026 +0530
 
-commit fe7c80ea1c040488f964437888593719a3d3235c
-Author: FinclarityAI Team <team@finclarity.ai>
-Date:   Thu Mar 26 23:22:35 2026 +0530
+---
 
-    chore: init GenAI hackathon project structure
+### 📍 Commit: docs: link new markdown timeline
+- **Hash:** `1ec6dce`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Thu Mar 26 23:46:26 2026 +0530
 
-commit 8d95c4f97ed4799dbfcf1ee20c1ab5fb226844bc
-Author: FinclarityAI Team <team@finclarity.ai>
-Date:   Thu Mar 26 23:22:35 2026 +0530
+---
 
-    feat(backend): setup robust Flask backend with Supabase auth
+### 📍 Commit: docs: replace raw txt commit log with beautiful markdown timeline for hackathon
+- **Hash:** `2503e39`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Thu Mar 26 23:46:07 2026 +0530
 
-commit 2617775bc19e8ebf176991c7e503cbf8e29ce439
-Author: FinclarityAI Team <team@finclarity.ai>
-Date:   Thu Mar 26 23:22:35 2026 +0530
+---
 
-    feat(ai): integrate OpenAI API for intelligent financial assistant
+### 📍 Commit: docs: finalize ET AI Hackathon 2026 submission artifacts
+- **Hash:** `83db95d`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Thu Mar 26 23:43:03 2026 +0530
 
-commit 55c39fdec64b6fa92aafad0d6ee26760f7327378
-Author: FinclarityAI Team <team@finclarity.ai>
-Date:   Thu Mar 26 23:22:35 2026 +0530
+---
 
-    feat(db): establish persistent user chat memory via Supabase
+### 📍 Commit: chore: refresh build process log
+- **Hash:** `b1a7996`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Thu Mar 26 23:24:03 2026 +0530
 
-commit 37b9fa04b09b689953e4a6bc3aea1068b08d0aa6
-Author: FinclarityAI Team <team@finclarity.ai>
-Date:   Thu Mar 26 23:22:35 2026 +0530
+---
 
-    feat(ui): design intuitive dashboard and seamless chat interface
+### 📍 Commit: docs: update README with hackathon focus
+- **Hash:** `4c08ef2`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Thu Mar 26 23:24:03 2026 +0530
 
-commit 5d392b1f5e4f2369d4bc8e4e6b825c9d3b01e9b8
-Author: FinclarityAI Team <team@finclarity.ai>
-Date:   Thu Mar 26 23:22:35 2026 +0530
+---
 
-    chore: finalize AI features and prep for hackathon submission
-```
+### 📍 Commit: docs: finalize GenAI hackathon README and build logs
+- **Hash:** `1d96801`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Thu Mar 26 23:23:19 2026 +0530
+
+---
+
+### 📍 Commit: chore: finalize AI features and prep for hackathon submission
+- **Hash:** `5d392b1`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Thu Mar 26 23:22:35 2026 +0530
+
+---
+
+### 📍 Commit: feat(ui): design intuitive dashboard and seamless chat interface
+- **Hash:** `37b9fa0`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Thu Mar 26 23:22:35 2026 +0530
+
+---
+
+### 📍 Commit: feat(db): establish persistent user chat memory via Supabase
+- **Hash:** `55c39fd`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Thu Mar 26 23:22:35 2026 +0530
+
+---
+
+### 📍 Commit: feat(ai): integrate OpenAI API for intelligent financial assistant
+- **Hash:** `2617775`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Thu Mar 26 23:22:35 2026 +0530
+
+---
+
+### 📍 Commit: feat(backend): setup robust Flask backend with Supabase auth
+- **Hash:** `8d95c4f`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Thu Mar 26 23:22:35 2026 +0530
+
+---
+
+### 📍 Commit: chore: init GenAI hackathon project structure
+- **Hash:** `fe7c80e`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Thu Mar 26 23:22:35 2026 +0530
+
+---
+
+### 📍 Commit: restore history
+- **Hash:** `8a5b5ef`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Thu Mar 26 22:48:46 2026 +0530
+
+---
+
+### 📍 Commit: breadcrumb navigation fixed
+- **Hash:** `127c5f0`
+- **Author:** it-shiven <shivengoyal2007@gamail.com>
+- **Date:** Thu Mar 26 17:28:34 2026 +0530
+
+---
+
+### 📍 Commit: Chinese Removed
+- **Hash:** `17f6cd1`
+- **Author:** it-shiven <shivengoyal2007@gamail.com>
+- **Date:** Thu Mar 26 13:56:54 2026 +0530
+
+---
+
+### 📍 Commit: chat.py updated
+- **Hash:** `279666c`
+- **Author:** it-shiven <shivengoyal2007@gamail.com>
+- **Date:** Thu Mar 26 13:19:38 2026 +0530
+
+---
+
+### 📍 Commit: Merge branch 'main' of https://github.com/itz-shiven/finclarityAI
+- **Hash:** `d100fe5`
+- **Author:** Varun Arora <varunarora242424@gmail.com>
+- **Date:** Thu Mar 26 02:37:28 2026 +0530
+
+---
+
+### 📍 Commit: Reformed home page, linked database to documents, reformed compare section, Added financial calculators, changed delete button
+- **Hash:** `18d7b97`
+- **Author:** Varun Arora <varunarora242424@gmail.com>
+- **Date:** Thu Mar 26 02:32:38 2026 +0530
+
+---
+
+### 📍 Commit: chat bot updated
+- **Hash:** `b8f2753`
+- **Author:** Yuvish <yuvishbansal894@gmail.com>
+- **Date:** Wed Mar 25 22:32:38 2026 +0530
+
+---
+
+### 📍 Commit: Merge branch 'main' of https://github.com/itz-shiven/finclarityAI
+- **Hash:** `6dbe05d`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Tue Mar 24 22:35:56 2026 +0530
+
+---
+
+### 📍 Commit: compare section
+- **Hash:** `1fc4a83`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Tue Mar 24 22:35:48 2026 +0530
+
+---
+
+### 📍 Commit: Merge branch 'main' of https://github.com/itz-shiven/finclarityAI
+- **Hash:** `045f692`
+- **Author:** Yuvish <yuvishbansal894@gmail.com>
+- **Date:** Tue Mar 24 21:29:04 2026 +0530
+
+---
+
+### 📍 Commit: scrapper done
+- **Hash:** `94048f4`
+- **Author:** Yuvish <yuvishbansal894@gmail.com>
+- **Date:** Tue Mar 24 21:21:06 2026 +0530
+
+---
+
+### 📍 Commit: error handling made global# Please enter the commit message for your changes. Lines starting
+- **Hash:** `3c4bf28`
+- **Author:** Yuvish <yuvishbansal894@gmail.com>
+- **Date:** Mon Mar 23 20:27:59 2026 +0530
+
+---
+
+### 📍 Commit: fixed llm
+- **Hash:** `c73e9be`
+- **Author:** Varun Arora <varunarora242424@gmail.com>
+- **Date:** Mon Mar 23 20:25:22 2026 +0530
+
+---
+
+### 📍 Commit: Merge branch 'main' of https://github.com/itz-shiven/finclarityAI into ychanges
+- **Hash:** `bad1d6b`
+- **Author:** Yuvish <yuvishbansal894@gmail.com>
+- **Date:** Sun Mar 22 23:32:51 2026 +0530
+
+---
+
+### 📍 Commit: FINALLLYLYYYYYYYYYYYYYYYYYYYYYYYY DONEEEEEEEEEEEE
+- **Hash:** `cdf9eb8`
+- **Author:** Varun Arora <varunarora242424@gmail.com>
+- **Date:** Sun Mar 22 20:57:47 2026 +0530
+
+---
+
+### 📍 Commit: sorted sign-in/sign-up with bunch of features in dasdhboard
+- **Hash:** `ad4f0d5`
+- **Author:** Varun Arora <varunarora242424@gmail.com>
+- **Date:** Sun Mar 22 20:33:04 2026 +0530
+
+---
+
+### 📍 Commit: commiting for pull
+- **Hash:** `72bd091`
+- **Author:** Varun Arora <varunarora242424@gmail.com>
+- **Date:** Sun Mar 22 16:45:19 2026 +0530
+
+---
+
+### 📍 Commit: commiting for pull
+- **Hash:** `f56df4f`
+- **Author:** Varun Arora <varunarora242424@gmail.com>
+- **Date:** Sun Mar 22 16:42:24 2026 +0530
+
+---
+
+### 📍 Commit: Merge branch 'main' of https://github.com/itz-shiven/finclarityAI
+- **Hash:** `826aa56`
+- **Author:** Yuvish <yuvishbansal894@gmail.com>
+- **Date:** Sun Mar 22 16:41:16 2026 +0530
+
+---
+
+### 📍 Commit: database sorted
+- **Hash:** `0d9daf3`
+- **Author:** Yuvish <yuvishbansal894@gmail.com>
+- **Date:** Sun Mar 22 16:38:29 2026 +0530
+
+---
+
+### 📍 Commit: ChatBot Done
+- **Hash:** `eeae80c`
+- **Author:** it-shiven <shivengoyal2007@gamail.com>
+- **Date:** Sun Mar 22 11:43:01 2026 +0530
+
+---
+
+### 📍 Commit: Merge branch 'main' of https://github.com/itz-shiven/finclarityAI
+- **Hash:** `2c166cc`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Sat Mar 21 22:15:16 2026 +0530
+
+---
+
+### 📍 Commit: fixed
+- **Hash:** `52c428a`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Sat Mar 21 22:15:11 2026 +0530
+
+---
+
+### 📍 Commit: ChatBort Working
+- **Hash:** `1ba2aa4`
+- **Author:** it-shiven <shivengoyal2007@gamail.com>
+- **Date:** Sat Mar 21 22:09:53 2026 +0530
+
+---
+
+### 📍 Commit: updated deployment setup
+- **Hash:** `d37b73e`
+- **Author:** it-shiven <shivengoyal2007@gamail.com>
+- **Date:** Sat Mar 21 21:42:03 2026 +0530
+
+---
+
+### 📍 Commit: error detection for deployment
+- **Hash:** `61582d7`
+- **Author:** it-shiven <shivengoyal2007@gamail.com>
+- **Date:** Sat Mar 21 21:32:41 2026 +0530
+
+---
+
+### 📍 Commit: formatting
+- **Hash:** `21d46b4`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Sat Mar 21 21:30:39 2026 +0530
+
+---
+
+### 📍 Commit: Requirements updated
+- **Hash:** `78830b5`
+- **Author:** it-shiven <shivengoyal2007@gamail.com>
+- **Date:** Sat Mar 21 21:04:50 2026 +0530
+
+---
+
+### 📍 Commit: human response
+- **Hash:** `2f1cfd1`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Sat Mar 21 20:11:45 2026 +0530
+
+---
+
+### 📍 Commit: streamenable type shi8
+- **Hash:** `bbeab63`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Sat Mar 21 20:03:19 2026 +0530
+
+---
+
+### 📍 Commit: ChatBot updated
+- **Hash:** `7e19be3`
+- **Author:** it-shiven <shivengoyal2007@gamail.com>
+- **Date:** Sat Mar 21 18:23:19 2026 +0530
+
+---
+
+### 📍 Commit: ChatBot updated
+- **Hash:** `8726a69`
+- **Author:** it-shiven <shivengoyal2007@gamail.com>
+- **Date:** Sat Mar 21 18:20:26 2026 +0530
+
+---
+
+### 📍 Commit: targets removed
+- **Hash:** `2f53ac8`
+- **Author:** Yuvish <yuvishbansal894@gmail.com>
+- **Date:** Sat Mar 21 17:51:57 2026 +0530
+
+---
+
+### 📍 Commit: Merge pull request #4 from itz-shiven/ychanges
+- **Hash:** `f2b2dbe`
+- **Author:** Yuvi-bansal <Yuvishbansal894@gmail.com>
+- **Date:** Sat Mar 21 17:37:24 2026 +0530
+
+**Details:**
+> scrapper work done
+
+---
+
+### 📍 Commit: final scrapper added
+- **Hash:** `6c690bd`
+- **Author:** Yuvish <yuvishbansal894@gmail.com>
+- **Date:** Sat Mar 21 17:28:36 2026 +0530
+
+---
+
+### 📍 Commit: Merge branch 'main' of https://github.com/itz-shiven/finclarityAI into ychanges
+- **Hash:** `46f88e0`
+- **Author:** Yuvish <yuvishbansal894@gmail.com>
+- **Date:** Sat Mar 21 17:28:24 2026 +0530
+
+---
+
+### 📍 Commit: scrapper added
+- **Hash:** `52debe4`
+- **Author:** Yuvish <yuvishbansal894@gmail.com>
+- **Date:** Sat Mar 21 15:09:11 2026 +0530
+
+---
+
+### 📍 Commit: added llm which responds with Database
+- **Hash:** `cc15043`
+- **Author:** Varun Arora <varunarora242424@gmail.com>
+- **Date:** Sat Mar 21 15:09:06 2026 +0530
+
+---
+
+### 📍 Commit: changed theme of project
+- **Hash:** `30742c7`
+- **Author:** Varun Arora <varunarora242424@gmail.com>
+- **Date:** Sat Mar 21 12:45:23 2026 +0530
+
+---
+
+### 📍 Commit: Merge branch 'main' of https://github.com/itz-shiven/finclarityAI into ychanges
+- **Hash:** `5ac9d10`
+- **Author:** Yuvish <yuvishbansal894@gmail.com>
+- **Date:** Sat Mar 21 11:27:33 2026 +0530
+
+---
+
+### 📍 Commit: updated dashbooard with lot of features
+- **Hash:** `5990a46`
+- **Author:** Varun Arora <varunarora242424@gmail.com>
+- **Date:** Sat Mar 21 03:56:10 2026 +0530
+
+---
+
+### 📍 Commit: profile button added
+- **Hash:** `b2146c9`
+- **Author:** it-shiven <shivengoyal2007@gamail.com>
+- **Date:** Sat Mar 21 02:17:39 2026 +0530
+
+---
+
+### 📍 Commit: setting icon fix
+- **Hash:** `d51545a`
+- **Author:** it-shiven <shivengoyal2007@gamail.com>
+- **Date:** Sat Mar 21 02:03:25 2026 +0530
+
+---
+
+### 📍 Commit: Dashboard Fix
+- **Hash:** `8192d8b`
+- **Author:** it-shiven <shivengoyal2007@gamail.com>
+- **Date:** Sat Mar 21 01:42:54 2026 +0530
+
+---
+
+### 📍 Commit: Dashboard
+- **Hash:** `79849fa`
+- **Author:** it-shiven <shivengoyal2007@gamail.com>
+- **Date:** Sat Mar 21 01:36:19 2026 +0530
+
+---
+
+### 📍 Commit: final google
+- **Hash:** `ecbecfe`
+- **Author:** Yuvish <yuvishbansal894@gmail.com>
+- **Date:** Fri Mar 20 16:30:25 2026 +0530
+
+---
+
+### 📍 Commit: google fix
+- **Hash:** `cb186c6`
+- **Author:** Yuvish <yuvishbansal894@gmail.com>
+- **Date:** Fri Mar 20 15:34:58 2026 +0530
+
+---
+
+### 📍 Commit: corrected
+- **Hash:** `c99b1e4`
+- **Author:** Yuvish <yuvishbansal894@gmail.com>
+- **Date:** Fri Mar 20 14:12:11 2026 +0530
+
+---
+
+### 📍 Commit: first change
+- **Hash:** `592e898`
+- **Author:** Yuvish <yuvishbansal894@gmail.com>
+- **Date:** Fri Mar 20 14:00:13 2026 +0530
+
+---
+
+### 📍 Commit: o auth redirect fix try1
+- **Hash:** `d307fbc`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Fri Mar 20 00:00:37 2026 +0530
+
+---
+
+### 📍 Commit: dashboard redirecting fixed
+- **Hash:** `a8a7070`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Thu Mar 19 23:49:59 2026 +0530
+
+---
+
+### 📍 Commit: dashboard fix
+- **Hash:** `a6f914d`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Thu Mar 19 23:30:58 2026 +0530
+
+---
+
+### 📍 Commit: o auth processing
+- **Hash:** `e7fbf79`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Thu Mar 19 23:27:47 2026 +0530
+
+---
+
+### 📍 Commit: partial_google_auth
+- **Hash:** `30cb4ad`
+- **Author:** Varun Arora <varunarora242424@gmail.com>
+- **Date:** Thu Mar 19 22:14:30 2026 +0530
+
+---
+
+### 📍 Commit: Requirment updated
+- **Hash:** `b49faa2`
+- **Author:** it-shiven <shivengoyal2007@gamail.com>
+- **Date:** Thu Mar 19 20:20:25 2026 +0530
+
+---
+
+### 📍 Commit: IDK
+- **Hash:** `3a29978`
+- **Author:** it-shiven <shivengoyal2007@gamail.com>
+- **Date:** Thu Mar 19 20:05:57 2026 +0530
+
+---
+
+### 📍 Commit: uptime robot
+- **Hash:** `82cd7e4`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Thu Mar 19 16:41:05 2026 +0530
+
+---
+
+### 📍 Commit: updated requirements.txt
+- **Hash:** `dcde4b2`
+- **Author:** it-shiven <shivengoyal2007@gamail.com>
+- **Date:** Thu Mar 19 00:03:43 2026 +0530
+
+---
+
+### 📍 Commit: Upadated requirements.txt
+- **Hash:** `99ec0f9`
+- **Author:** it-shiven <shivengoyal2007@gamail.com>
+- **Date:** Thu Mar 19 00:00:19 2026 +0530
+
+---
+
+### 📍 Commit: it works
+- **Hash:** `1e62aba`
+- **Author:** Abhi <anu01857@gmail.com>
+- **Date:** Wed Mar 18 22:43:27 2026 +0530
+
+---
+
+### 📍 Commit: added .env to gitignore
+- **Hash:** `6e2cc00`
+- **Author:** Varun Arora <varunarora242424@gmail.com>
+- **Date:** Wed Mar 18 22:14:45 2026 +0530
+
+---
+
+### 📍 Commit: connecting to supabase
+- **Hash:** `f6506ae`
+- **Author:** Varun Arora <varunarora242424@gmail.com>
+- **Date:** Wed Mar 18 20:55:47 2026 +0530
+
+---
+
+### 📍 Commit: updated app.py
+- **Hash:** `6753400`
+- **Author:** it-shiven <shivengoyal2007@gamail.com>
+- **Date:** Wed Mar 18 18:24:32 2026 +0530
+
+---
+
+### 📍 Commit: added gunicorn
+- **Hash:** `aed9ebe`
+- **Author:** it-shiven <shivengoyal2007@gamail.com>
+- **Date:** Wed Mar 18 18:10:48 2026 +0530
+
+---
+
+### 📍 Commit: Cloud Deployment Architecture
+- **Hash:** `b62147e`
+- **Author:** it-shiven <shivengoyal2007@gamail.com>
+- **Date:** Wed Mar 18 17:59:31 2026 +0530
+
+---
+
+### 📍 Commit: Flask server made
+- **Hash:** `ec4e89f`
+- **Author:** it-shiven <shivengoyal2007@gamail.com>
+- **Date:** Wed Mar 18 03:06:26 2026 +0530
+
+---
+
+### 📍 Commit: animation added
+- **Hash:** `a18f203`
+- **Author:** it-shiven <shivengoyal2007@gamail.com>
+- **Date:** Wed Mar 18 00:14:24 2026 +0530
+
+---
+
+### 📍 Commit: removed demo button
+- **Hash:** `a5b9d30`
+- **Author:** Varun Arora <varunarora242424@gmail.com>
+- **Date:** Tue Mar 17 00:36:11 2026 +0530
+
+---
+
+### 📍 Commit: Added Basic Files
+- **Hash:** `d57a551`
+- **Author:** Varun Arora <varunarora242424@gmail.com>
+- **Date:** Tue Mar 17 00:10:26 2026 +0530
+
+---
+
+### 📍 Commit: Initial commit
+- **Hash:** `5795225`
+- **Author:** itz-shiven <shivengoyal2007@gmail.com>
+- **Date:** Mon Mar 16 23:50:01 2026 +0530
+
+---
+
