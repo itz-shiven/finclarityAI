@@ -1,71 +1,155 @@
-# FinclarityAI: Agent Architecture & Logic Flow
+🚀 FinclarityAI: Agent Architecture & Logic Flow
 
-This document outlines the generative AI architecture within FinclarityAI, detailing the distinct agent roles, their inter-communication methods, external tool integrations, and robust error-handling pipelines designed for the **ET AI Hackathon 2026**.
+FinclarityAI is a multi-agent, retrieval-augmented generative AI system designed to deliver accurate, explainable, and personalized financial intelligence. The system leverages specialized AI agents, a vector-based knowledge layer, and a resilient backend orchestration pipeline built using Flask, Supabase, and OpenAI APIs.
 
----
+🤖 1. Agent Roles & Capabilities
 
-## 🤖 1. Agent Roles & Capabilities
+FinclarityAI adopts a modular multi-agent architecture, where each agent is optimized for a specific task:
 
-Our system is divided into three highly specialized AI agents, each scoped with distinct LLM prompts and models based on operational complexity:
+A. Financial Advisor Agent (Conversational Core)
 
-### A. The Financial Advisor Agent (Main Chat)
-- **Model:** `gpt-4o-mini` (Streaming)
-- **Role:** Handles conversational queries, provides personalized financial advice, and manages small talk.
-- **Core Directives:** 
-  - Strictly operates entirely on provided context (RAG paradigm).
-  - Enforces mandatory source citations.
-  - Generates state-of-the-art permanent fact extraction tokens (`[MEMORY: <fact>]`) to build contextual memory vaults.
+Model: gpt-4o-mini (Streaming)
+Purpose: Primary user-facing chatbot for financial guidance and Q&A
 
-### B. The Comparative Extractor Agent
-- **Model:** `gpt-4o-mini` (JSON Output)
-- **Role:** Parses massive textual documents and distills raw financial data into structured comparative JSON logic (e.g., matching features, pricing, pros/cons).
-- **Core Directives:** Required to output exact JSON schemas tailored dynamically to the requested financial category (Cards, Loans, Stocks, etc.).
+Capabilities:
 
-### C. The Deep Research Agent (Product Details)
-- **Model:** `gpt-4o` (High-tier reasoning, JSON Output)
-- **Role:** Performs exhaustive evaluations of singular financial products (credit cards, loans) to generate deep-dives.
-- **Core Directives:** Isolates extremely nuanced details such as hidden fees, exact forex markups, and explicit eligibility criteria, outputting a precise JSON object (`"pros"`, `"cons"`, `"verdict"`).
+Context-aware conversational responses
+Personalized financial advice
+Natural dialogue handling (follow-ups, small talk)
 
----
+Constraints:
 
-## 🔄 2. Agent Communication & Lifecycles
+Operates strictly on retrieved context (RAG-based)
+Enforces mandatory source citations
+Generates structured memory tokens like:
+[MEMORY: User prefers low-risk investments]
+Builds long-term user intelligence
+B. Comparative Extractor Agent (Structured Intelligence Engine)
 
-Agents do not run in isolation; they are orchestrated by a tightly coupled Python Flask backend managing state and memory.
+Model: gpt-4o-mini (JSON Output)
+Purpose: Converts unstructured financial documents into structured comparison data
 
-1. **User Query Initiation:** User submits a textual query via the frontend JS client.
-2. **Vectorization pipeline:** The Orchestrator intercepts the query and automatically converts it into a 1536-dimensional vector using OpenAI's `text-embedding-3-small`.
-3. **Database Handshake (Retrieval):** The Orchestrator calls a Supabase Remote Procedure Call (`rpc: match_financial_docs`) executing cosine similarity matching against the knowledge base.
-4. **Context Assembly:** 
-  - Short-term conversational history is loaded.
-  - Long-term persistent memory (`USER PROFILE MEMORY`) is injected.
-  - Extracted Supabase documents are stitched into a giant context block.
-5. **Agent Inference:** The appropriate Agent (Advisor, Extractor, or Researcher) is invoked via an asynchronous POST request to the OpenAI API.
-6. **Streaming & Hydration:** For the Advisor Agent, data is streamed directly back to the DOM via Server-Sent Events (SSE) using HTML5 `EventSource`. For JSON Extractors, Flask blocks until completion and hydrates frontend Reactivity pipelines.
+Capabilities:
 
----
+Extracts features, pricing, eligibility, pros/cons
+Outputs strict JSON schemas dynamically based on category
 
-## 🔌 3. Tool Integrations
+Example Output:
+{
+"product": "Credit Cards",
+"features": [...],
+"fees": [...],
+"pros": [...],
+"cons": [...]
+}
 
-The overarching intelligence of FinclarityAI relies on heavy integration between three distinct cloud tools:
+C. Deep Research Agent (High-Reasoning Specialist)
 
-*   **Supabase Vector Store (PostgreSQL):** Acts as the semantic brain. We bypass standard keyword search in favor of `pgvector` indexing to ensure the agents always retrieve the most contextually relevant documents.
-*   **OpenAI GPT-4 API:** Handles all text embeddings and language generation paradigms.
-*   **Finclarity Custom Scraper (`scrapper.py`):** An automated headless data tool designed to ingest current web data and securely pipe it directly into our Supabase vector arrays.
+Model: gpt-4o (Advanced reasoning, JSON Output)
+Purpose: Performs deep analysis of individual financial products
 
----
+Capabilities:
 
-## 🛡️ 4. Resilience & Error-Handling Logic
+Detects hidden fees and fine print
+Evaluates forex markup, eligibility, rewards
+Produces structured verdicts
 
-FinclarityAI is engineered with defensive programming strategies to ensure the agent never hallucinates or crashes the UI during external downtimes:
+Output Format:
+{
+"pros": [...],
+"cons": [...],
+"verdict": "Best for frequent travelers..."
+}
 
-### "No Data" Fallbacks & Hallucination Prevention
-- If the Vector search yields irrelevant results (Threshold mismatch), the orchestrator automatically injects `"❌ NO DATA AVAILABLE"` into the agent context.
-- The Global System Prompt strictly mandates that the LLM must refuse to answer using general pre-trained knowledge if this token is present, entirely mitigating financial hallucinations.
+🔄 2. Agent Communication & Lifecycle
 
-### Graceful External API Degradation
-- **Embeddings Failure:** Caught via explicit `try/except` blocks. Reverts gracefully to a generic API error message without halting the main Flask loop (`"I'm having trouble connecting to my knowledge base right now."`).
-- **Malformed JSON Recovery:** When Extractor agents occasionally output markdown blockquotes instead of raw JSON strings, the backend incorporates aggressive string stripping logic (e.g. `reply.strip("```json")`) followed by a safe `json.loads()`.
-- **Parsing Fallback:** If JSON decoding mathematically fails entirely after scrubbing, the agent injects a safe dummy object (`{"Status": "Not Found"}`) allowing the frontend to degrade gracefully rather than throwing undefined JS exceptions.
+All agents are orchestrated through a central Flask backend that manages context, routing, and memory.
 
-### Global Crash Catcher
-- Implemented at the highest application registry layer (`@app.errorhandler`), ensuring any deep agent failure or asynchronous timeout resolves to a safe `HTTP 500` JSON wrapper returning `"An unexpected server error occurred"` instead of leaking tracebacks to the client.
+End-to-End Flow:
+
+User Query Input
+User sends a query via the frontend (JavaScript / EventSource)
+Query Vectorization
+Converted into embeddings using text-embedding-3-small (1536-dimensional vector)
+Semantic Retrieval (Supabase)
+An RPC call (match_financial_docs) performs cosine similarity search using pgvector
+Context Assembly
+Combines:
+Retrieved documents
+Chat history
+Persistent user memory
+Agent Routing
+Based on query type:
+Advice → Advisor Agent
+Comparison → Extractor Agent
+Deep analysis → Research Agent
+Inference Execution
+Asynchronous API call to OpenAI
+Response Delivery
+Advisor Agent → Streaming via Server-Sent Events (SSE)
+Extractor/Research Agents → JSON responses
+🔌 3. Tool Integrations
+
+Supabase (Vector Database Layer):
+
+PostgreSQL with pgvector
+Stores document embeddings
+Enables semantic similarity search
+
+OpenAI APIs:
+
+Embeddings: text-embedding-3-small
+Models: gpt-4o-mini, gpt-4o
+Handles reasoning, generation, and structured outputs
+
+Custom Scraper (scrapper.py):
+
+Headless scraping pipeline
+Extracts financial data (banks, policies, etc.)
+Pushes processed data into Supabase vector store
+🛡️ 4. Resilience & Error Handling
+
+FinclarityAI is designed with defensive AI principles to ensure reliability and prevent hallucinations.
+
+A. Hallucination Prevention
+If vector search fails, system injects:
+"❌ NO DATA AVAILABLE"
+LLM is strictly instructed to refuse answering without context
+Ensures fully grounded financial responses
+B. API Failure Handling
+
+Embedding Failure:
+
+Wrapped in try/except
+Returns fallback message:
+"I'm having trouble connecting to my knowledge base right now."
+
+JSON Formatting Issues:
+
+Cleans malformed responses (e.g., removing ```json blocks)
+Uses safe parsing with json.loads()
+
+Parsing Failure Fallback:
+
+Injects safe object:
+{
+"Status": "Not Found"
+}
+Prevents frontend crashes
+C. Global Crash Handler
+Implemented using @app.errorhandler
+Returns safe response:
+{
+"error": "An unexpected server error occurred"
+}
+
+Prevents:
+
+Stack trace leaks
+UI failures
+🧠 Key Innovation Summary
+Multi-agent AI system with specialized roles
+Retrieval-Augmented Generation (RAG) with strict grounding
+Real-time streaming and structured JSON pipelines
+Persistent user memory for personalization
+Robust error handling and fallback mechanisms
