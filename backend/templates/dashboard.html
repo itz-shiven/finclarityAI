@@ -8,15 +8,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finclarity - AI Finance Assistant</title>
 
-    <!-- Fonts & Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
-    
-    <!-- Chart.js -->
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
     <script src="{{ url_for('static', filename='js/theme-toggle.js') }}"></script>
 </head>
@@ -24,11 +21,10 @@
 <body>
     <div class="dashboard-container">
 
-        <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
-                    <span class="logo-icon">₿</span>
+                    <span class="logo-icon">竄ｿ</span>
                     <span class="logo-text">Finclarity</span>
                 </div>
                 <button class="sidebar-toggle-btn" id="sidebarCollapseBtn" title="Collapse Sidebar">
@@ -40,73 +36,77 @@
                 <a href="{{ url_for('dashboard') }}" class="nav-item active" id="navHome">
                     <i class="fas fa-home"></i><span>Home</span>
                 </a>
-                <a href="#" class="nav-item" id="navCompare"><i class="fas fa-balance-scale"></i><span>Compare</span></a>
-                <a href="#" class="nav-item" id="navWhatChanged"><i class="fas fa-history"></i><span>What Changed</span></a>
+                <a href="#" class="nav-item" id="navCompare"><i
+                        class="fas fa-balance-scale"></i><span>Compare</span></a>
+                <a href="#" class="nav-item" id="navWhatChanged"><i class="fas fa-history"></i><span>What
+                        Changed</span></a>
                 <div class="nav-divider"></div>
-                <a href="#" class="nav-item" id="navPortfolio"><i class="fas fa-chart-pie"></i><span>Portfolio</span></a>
+                <a href="#" class="nav-item" id="navPortfolio"><i
+                        class="fas fa-chart-pie"></i><span>Portfolio</span></a>
                 <a href="#" class="nav-item" id="navBudget"><i class="fas fa-wallet"></i><span>Budget</span></a>
                 <a href="#" class="nav-item" id="navInsights"><i class="fas fa-lightbulb"></i><span>Insights</span></a>
-                <a href="#" class="nav-item" id="navCalculators"><i class="fas fa-calculator"></i><span>Calculators</span></a>
+                <a href="#" class="nav-item" id="navCalculators"><i
+                        class="fas fa-calculator"></i><span>Calculators</span></a>
             </nav>
 
             <div class="sidebar-footer">
                 <a href="#" class="nav-item search-item">
-                    <i class="fas fa-search"></i> <span style="font-weight: 500;">Search</span>
+                    <i class="fas fa-search"></i> <span class="fw-500">Search</span>
                 </a>
-                <div class="profile-section" style="margin-top: 16px; display: flex; flex-direction: row; align-items: center; justify-content: space-between; padding: 12px; background: var(--border-light); border-radius: 12px;">
-                    <div class="profile-name" style="margin-bottom: 0; font-weight: 600; font-size: 15px; color: var(--text-primary);">
+                <div class="profile-section">
+                    <div class="profile-name">
                         {% if username and ' ' in username %}
                         {{ username.split(' ')[0] | capitalize }}
                         {% else %}
                         {{ username | capitalize }}
                         {% endif %}
                     </div>
-                    <div class="profile-actions" style="margin: 0; padding: 0;">
-                        <div class="settings-container" style="position: relative;">
+                    <div class="profile-actions">
+                        <div class="settings-container">
                             <button class="beautiful-settings-btn" id="settingsBtn" title="Settings">
                                 <i class="fas fa-cog"></i>
                             </button>
-                            <!-- Settings Dropdown -->
-                            <div class="sidebar-dropdown" id="settingsDropdown" style="bottom: 120%; top: auto; right: 0;">
-                                <a href="#" class="dropdown-item" id="profileBtn"><i class="fas fa-user-circle"></i> Profile</a>
-                                <a href="#" class="dropdown-item" id="themeToggleBtn"><i class="fas fa-moon"></i> Theme Toggle</a>
+                            <div class="sidebar-dropdown" id="settingsDropdown">
+                                <a href="#" class="dropdown-item" id="profileBtn"><i class="fas fa-user-circle"></i>
+                                    Profile</a>
+                                <a href="#" class="dropdown-item" id="themeToggleBtn"><i class="fas fa-moon"></i> Theme
+                                    Toggle</a>
                                 <div class="dropdown-divider"></div>
-                                <a href="#" class="dropdown-item text-danger" id="dropdownLogoutBtn"><i class="fas fa-sign-out-alt"></i> Log Out</a>
+                                <a href="#" class="dropdown-item text-danger" id="dropdownLogoutBtn"><i
+                                        class="fas fa-sign-out-alt"></i> Log Out</a>
                             </div>
                         </div>
                     </div>
-                </div>  </div>
+                </div>
+            </div>
         </aside>
 
-        <!-- Main -->
         <div class="main-wrapper">
 
-            <!-- Content -->
             <main class="main-content">
 
                 <div class="dashboard-header-simple">
                     <h2 id="dashboardHeaderTitle">{{ username|title }}</h2>
                 </div>
 
-                <!-- Main View: Home Categories -->
                 <div id="mainView" class="animate-fade-in">
                     <div class="welcome-hero">
                         <div class="hero-content">
                             <h1 id="dynamicGreeting">Good Evening, {{ username.split(' ')[0]|capitalize }}</h1>
                             <p>Here's what's happening with your finances today.</p>
-                            
+
                             <div class="hero-stats-row">
                                 <div class="hero-stat-card premium-glass">
-                                    <div class="stat-icon" style="background: rgba(99, 102, 241, 0.1); color: var(--primary-600);">
+                                    <div class="stat-icon market-pulse">
                                         <i class="fas fa-chart-line"></i>
                                     </div>
                                     <div class="stat-info">
                                         <span class="stat-label">Market Pulse</span>
-                                        <span class="stat-value" style="color: #10B981;">+2.4% <i class="fas fa-arrow-up"></i></span>
+                                        <span class="stat-value positive-text">+2.4% <i class="fas fa-arrow-up"></i></span>
                                     </div>
                                 </div>
                                 <div class="hero-stat-card premium-glass">
-                                    <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10B981;">
+                                    <div class="stat-icon ai-intel">
                                         <i class="fas fa-robot"></i>
                                     </div>
                                     <div class="stat-info">
@@ -115,7 +115,7 @@
                                     </div>
                                 </div>
                                 <div class="hero-stat-card premium-glass">
-                                    <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: #F59E0B;">
+                                    <div class="stat-icon alerts">
                                         <i class="fas fa-bell"></i>
                                     </div>
                                     <div class="stat-info">
@@ -132,20 +132,27 @@
                     </div>
 
                     <div class="cards-grid">
-                        <div class="action-card category-card" data-target="cardsSubView" data-title="Cards"><i class="fas fa-credit-card"></i><span>Cards</span></div>
-                        <div class="action-card category-card" data-target="loansSubView" data-title="Loans"><i class="fas fa-hand-holding-usd"></i><span>Loans</span></div>
-                        <div class="action-card category-card" data-target="stocksSubView" data-title="Stock Market"><i class="fas fa-chart-line"></i><span>Stock Market</span></div>
-                        <div class="action-card category-card" data-target="investSubView" data-title="Investment"><i class="fas fa-chart-pie"></i><span>Investment</span></div>
-                        <div class="action-card category-card" data-target="insureSubView" data-title="Insurance"><i class="fas fa-shield-alt"></i><span>Insurance</span></div>
-                        <div class="action-card category-card" data-target="mortgageSubView" data-title="Mortgages"><i class="fas fa-house-user"></i><span>Mortgages</span></div>
-                        <div class="action-card category-card" data-target="cryptoSubView" data-title="Crypto"><i class="fab fa-bitcoin"></i><span>Crypto</span></div>
-                        <div class="action-card category-card" data-target="savingsSubView" data-title="Savings"><i class="fas fa-piggy-bank"></i><span>Savings</span></div>
-                        <div class="action-card category-card" id="homeCalculatorsCard" data-title="Calculators"><i class="fas fa-calculator"></i><span>Calculators</span></div>
+                        <div class="action-card category-card" data-target="cardsSubView" data-title="Cards"><i
+                                class="fas fa-credit-card"></i><span>Cards</span></div>
+                        <div class="action-card category-card" data-target="loansSubView" data-title="Loans"><i
+                                class="fas fa-hand-holding-usd"></i><span>Loans</span></div>
+                        <div class="action-card category-card" data-target="stocksSubView" data-title="Stock Market"><i
+                                class="fas fa-chart-line"></i><span>Stock Market</span></div>
+                        <div class="action-card category-card" data-target="investSubView" data-title="Investment"><i
+                                class="fas fa-chart-pie"></i><span>Investment</span></div>
+                        <div class="action-card category-card" data-target="insureSubView" data-title="Insurance"><i
+                                class="fas fa-shield-alt"></i><span>Insurance</span></div>
+                        <div class="action-card category-card" data-target="mortgageSubView" data-title="Mortgages"><i
+                                class="fas fa-house-user"></i><span>Mortgages</span></div>
+                        <div class="action-card category-card" data-target="cryptoSubView" data-title="Crypto"><i
+                                class="fab fa-bitcoin"></i><span>Crypto</span></div>
+                        <div class="action-card category-card" data-target="savingsSubView" data-title="Savings"><i
+                                class="fas fa-piggy-bank"></i><span>Savings</span></div>
+                        <div class="action-card category-card" id="homeCalculatorsCard" data-title="Calculators"><i
+                                class="fas fa-calculator"></i><span>Calculators</span></div>
                     </div>
                 </div>
 
-                <!-- Sub View Containers -->
-                <!-- Cards -->
                 <div id="cardsSubView" class="hidden sub-view-grid">
                     <div class="cards-grid">
                         <div class="action-card"><i class="fas fa-credit-card"></i><span>Debit Cards</span></div>
@@ -155,7 +162,6 @@
                     </div>
                 </div>
 
-                <!-- Loans -->
                 <div id="loansSubView" class="hidden sub-view-grid">
                     <div class="cards-grid">
                         <div class="action-card"><i class="fas fa-user-tag"></i><span>Personal Loan</span></div>
@@ -165,7 +171,6 @@
                     </div>
                 </div>
 
-                <!-- Stock Market -->
                 <div id="stocksSubView" class="hidden sub-view-grid">
                     <div class="cards-grid">
                         <div class="action-card"><i class="fas fa-briefcase"></i><span>Portfolios</span></div>
@@ -175,17 +180,16 @@
                     </div>
                 </div>
 
-                <!-- Investment -->
                 <div id="investSubView" class="hidden sub-view-grid">
                     <div class="cards-grid">
-                        <div class="action-card"><i class="fas fa-hand-holding-heart"></i><span>Mutual Funds</span></div>
+                        <div class="action-card"><i class="fas fa-hand-holding-heart"></i><span>Mutual Funds</span>
+                        </div>
                         <div class="action-card"><i class="fas fa-file-contract"></i><span>Bonds</span></div>
                         <div class="action-card"><i class="fas fa-building"></i><span>Real Estate</span></div>
                         <div class="action-card"><i class="fas fa-chart-area"></i><span>ETFs</span></div>
                     </div>
                 </div>
 
-                <!-- Insurance -->
                 <div id="insureSubView" class="hidden sub-view-grid">
                     <div class="cards-grid">
                         <div class="action-card"><i class="fas fa-heartbeat"></i><span>Health</span></div>
@@ -195,12 +199,9 @@
                     </div>
                 </div>
 
-                <!-- Calculators View -->
                 <div id="calculatorsView" class="hidden">
-                    <!-- This will be populated by JS -->
-                </div>
+                    </div>
 
-                <!-- Mortgages -->
                 <div id="mortgageSubView" class="hidden sub-view-grid">
                     <div class="cards-grid">
                         <div class="action-card"><i class="fas fa-sync-alt"></i><span>Refinance</span></div>
@@ -210,7 +211,6 @@
                     </div>
                 </div>
 
-                <!-- Crypto -->
                 <div id="cryptoSubView" class="hidden sub-view-grid">
                     <div class="cards-grid">
                         <div class="action-card"><i class="fas fa-wallet"></i><span>Wallets</span></div>
@@ -220,7 +220,6 @@
                     </div>
                 </div>
 
-                <!-- Savings -->
                 <div id="savingsSubView" class="hidden sub-view-grid">
                     <div class="cards-grid">
                         <div class="action-card"><i class="fas fa-level-up-alt"></i><span>High-Yield</span></div>
@@ -230,32 +229,26 @@
                     </div>
                 </div>
 
-                <!-- Provider Selection View -->
                 <div id="providerSelectionView" class="hidden sub-view-grid">
                     <div class="sub-view-header">
                         <h3 id="providerSelectionSubtitle">Select Provider</h3>
                         <p>Choose a bank or financial institution to browse their offerings.</p>
                     </div>
                     <div class="cards-grid" id="providerGrid">
-                        <!-- Populated dynamically via JS -->
-                    </div>
+                        </div>
                 </div>
 
-                <!-- Product Selection View -->
                 <div id="productSelectionView" class="hidden sub-view-grid">
                     <div class="sub-view-header">
                         <h3 id="productSelectionSubtitle">Select Products</h3>
                         <p>Pick the specific product you want to explore in detail.</p>
                     </div>
                     <div class="cards-grid" id="productGrid">
-                        <!-- Populated dynamically via JS -->
-                    </div>
+                        </div>
                 </div>
 
-                <!-- Product Detail View -->
                 <div id="productDetailView" class="hidden">
                     <div class="product-detail-container">
-                        <!-- Product Hero -->
                         <div class="product-hero">
                             <div class="product-hero-icon" id="productDetailIcon">
                                 <i class="fas fa-credit-card"></i>
@@ -266,116 +259,104 @@
                             </div>
                         </div>
 
-                        <!-- Tabs -->
                         <div class="detail-tabs">
-                            <div class="detail-tab active" data-tab="overview" onclick="switchDetailTab('overview')">Overview</div>
-                            <div class="detail-tab" data-tab="benefits" onclick="switchDetailTab('benefits')">Benefits</div>
-                            <div class="detail-tab" data-tab="fees" onclick="switchDetailTab('fees')">Fees & Charges</div>
-                            <div class="detail-tab" data-tab="eligibility" onclick="switchDetailTab('eligibility')">Eligibility</div>
-                            <div class="detail-tab" data-tab="verdict" onclick="switchDetailTab('verdict')">AI Verdict</div>
-                        </div>
-
-                        <!-- Content Card -->
-                        <div class="detail-content-card" id="detailContent">
-                            <!-- Populated dynamically via JS -->
-                            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; gap: 20px;">
-                                <i class="fas fa-spinner fa-spin" style="font-size: 40px; color: var(--primary-500);"></i>
-                                <p style="color: var(--text-secondary); font-size: 16px;">Analyzing product documents and extracting details...</p>
+                            <div class="detail-tab active" data-tab="overview" onclick="switchDetailTab('overview')">
+                                Overview</div>
+                            <div class="detail-tab" data-tab="benefits" onclick="switchDetailTab('benefits')">Benefits
+                            </div>
+                            <div class="detail-tab" data-tab="fees" onclick="switchDetailTab('fees')">Fees & Charges
+                            </div>
+                            <div class="detail-tab" data-tab="eligibility" onclick="switchDetailTab('eligibility')">
+                                Eligibility</div>
+                            <div class="detail-tab" data-tab="verdict" onclick="switchDetailTab('verdict')">AI Verdict
                             </div>
                         </div>
 
-                        <!-- AI Verdict (Always visible or toggleable) -->
-                        <div id="verdictSection" class="hidden">
-                            <!-- This will be populated separately or appended -->
+                        <div class="detail-content-card" id="detailContent">
+                            <div class="detail-loading-wrapper">
+                                <i class="fas fa-spinner fa-spin detail-loading-icon"></i>
+                                <p class="detail-loading-text">Analyzing product documents
+                                    and extracting details...</p>
+                            </div>
                         </div>
+
+                        <div id="verdictSection" class="hidden">
+                            </div>
                     </div>
                 </div>
 
                 <div id="compareView" class="hidden">
                     <div class="compare-header">
                         <div class="header-left">
-                            <h3 style="margin-bottom: 8px;">Smart Comparison</h3>
-                            <p style="color: var(--text-secondary); font-size: 14px;">Analyze and compare the best financial options tailored for you.</p>
+                            <h3>Smart Comparison</h3>
+                            <p>Analyze and compare the best financial options tailored for you.</p>
                         </div>
                         <div class="compare-controls">
                             <div class="compare-search-wrapper">
                                 <i class="fas fa-search"></i>
-                                <input type="text" id="productSearch" placeholder="Search product to add (e.g. HDFC, Axis)...">
+                                <input type="text" id="productSearch"
+                                    placeholder="Search product to add (e.g. HDFC, Axis)...">
                                 <div class="search-results-dropdown" id="searchSuggestions">
-                                    <!-- Suggestions populated by JS -->
-                                </div>
+                                    </div>
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="compare-empty-state" id="compareEmptyState">
                         <div class="empty-icon"><i class="fas fa-balance-scale"></i></div>
                         <h4>Select a category to start comparing</h4>
                         <p>Choose a financial area below to browse and add products for a side-by-side comparison.</p>
-                        
-                        <div class="cards-grid" id="compareCategoryGrid" style="margin-top: 30px; width: 100%;">
-                            <!-- Populated by JS to match Home tab -->
-                        </div>
+
+                        <div class="cards-grid" id="compareCategoryGrid">
+                            </div>
                     </div>
 
-                    <!-- Provider Multi-Selection View -->
                     <div id="compareProviderMultiSelectView" class="hidden compare-subview">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; position: relative; min-height: 60px; padding: 0 10px;">
-                            <div style="z-index: 2;">
-                                <button class="btn-outline" onclick="clearSelection()" style="padding: 8px 16px !important; width: auto !important; min-width: 80px !important; border-radius: 10px !important; font-size: 13px !important; display: flex; align-items: center; gap: 8px;">
+                        <div class="compare-multi-header">
+                            <div class="z-index-2">
+                                <button class="btn-outline btn-back-compare" onclick="clearSelection()">
                                     <i class="fas fa-arrow-left"></i> Back
                                 </button>
                             </div>
-                            <div style="position: absolute; width: 100%; left: 0; text-align: center; pointer-events: none;">
-                                <h3 id="compareProviderSubtitle" style="margin: 0; font-size: 20px; font-weight: 700; color: var(--primary-600);">Select Providers</h3>
-                                <p style="color: var(--text-secondary); font-size: 13px; margin: 2px 0 0 0; opacity: 0.7;">Compare up to 4 items</p>
+                            <div class="compare-multi-title-wrapper">
+                                <h3 id="compareProviderSubtitle">Select Providers</h3>
+                                <p class="compare-subtitle-desc">Compare up to 4 items</p>
                             </div>
-                            <div style="z-index: 2;">
-                                <button class="btn-primary" id="continueToCompareBtn" style="padding: 10px 24px !important; width: auto !important; min-width: 120px !important; max-width: 160px !important; border-radius: 30px !important; font-weight: 600 !important; font-size: 14px !important; display: inline-flex !important; align-items: center !important; gap: 10px !important; background: linear-gradient(135deg, var(--primary-600) 0%, #4f46e5 100%) !important; border: none !important; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;">
+                            <div class="z-index-2">
+                                <button class="btn-primary btn-continue-compare" id="continueToCompareBtn">
                                     Continue <i class="fas fa-arrow-right"></i>
                                 </button>
                             </div>
                         </div>
                         <div class="cards-grid" id="providerMultiGrid">
-                            <!-- Populated dynamically via JS -->
-                        </div>
+                            </div>
                     </div>
 
                     <div class="compare-grid" id="compareGrid">
-                        <!-- Selection cards (Optional preview, might be removed in favor of table headers) -->
-                    </div>
+                        </div>
 
                     <div class="compare-table-container" id="compareTableContainer">
-                        <!-- Dynamically filled by JS -->
-                    </div>
+                        </div>
                 </div>
 
-                <!-- What Changed View -->
                 <div id="whatChangedView" class="hidden">
                     <div class="changed-header">
                         <h3>What's Changed?</h3>
                         <p>Track updates and modifications in the financial landscape.</p>
                     </div>
                     <div class="timeline-container" id="timelineContainer">
-                        <!-- Populated dynamically via JS -->
-                    </div>
+                        </div>
                 </div>
 
-                <!-- Chat widget removed from here and placed as fixed overlay -->
+                </main>
 
-            </main>
-
-            <!-- Floating Chat Widget -->
             <div class="chat-widget" id="chatWidget">
-                <!-- Chat Toggle Button -->
-                <button class="chat-widget-toggle" id="chatToggleBtn">
+                <button class="chat-widget-toggle" id="chatToggleBtn" aria-label="Open chat">
                     <i class="fas fa-comment-dots"></i>
                 </button>
 
-                <!-- Chat Window -->
                 <div class="chat-widget-window" id="chatWindow">
 
-                    <!-- Chat History Sidebar -->
                     <div class="chat-history-sidebar">
                         <div class="history-header">
                             <button class="chat-widget-close" id="chatCloseBtn" title="Back to Dashboard">
@@ -386,11 +367,9 @@
                             </button>
                         </div>
                         <div class="history-list">
-                            <!-- History items will be dynamically added here -->
-                        </div>
+                            </div>
                     </div>
 
-                    <!-- Chat Main Area -->
                     <div class="chat-main-area">
                         <div class="chat-widget-header">
                             <div class="chat-widget-title">
@@ -401,14 +380,13 @@
                         <div class="chat-widget-body">
                             <div class="chat-container">
                                 <div class="new-chat-area" id="newChatArea">
-                                    <p
-                                        style="text-align: center; color: var(--text-secondary); margin-bottom: 12px; font-size: 14px;">
+                                    <p class="new-chat-prompt-text">
                                         Ask me anything about your finances</p>
                                     <div class="quick-prompts">
-                                        <button class="prompt-btn">💰 Budget Analysis</button>
-                                        <button class="prompt-btn">📊 Spending Trends</button>
-                                        <button class="prompt-btn">🎯 Financial Goals</button>
-                                        <button class="prompt-btn">💡 Money Tips</button>
+                                        <button class="prompt-btn">腸 Budget Analysis</button>
+                                        <button class="prompt-btn">投 Spending Trends</button>
+                                        <button class="prompt-btn">識 Financial Goals</button>
+                                        <button class="prompt-btn">庁 Money Tips</button>
                                     </div>
                                 </div>
                                 <div class="chat-messages" id="chatMessages"></div>
@@ -418,7 +396,9 @@
                         <div class="chat-widget-footer">
                             <div class="chat-input-wrapper">
                                 <input type="text" id="chatInput" placeholder="Ask something about your finances...">
-                                <button id="sendBtn"><i class="fas fa-paper-plane"></i></button>
+                                <button id="sendBtn" aria-label="Send message">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -427,7 +407,6 @@
 
         </div>
 
-        <!-- Comparison Selection Tray (Floating Bar) -->
         <div class="comparison-tray" id="comparisonTray">
             <div class="tray-content">
                 <div class="tray-left">
@@ -435,8 +414,8 @@
                     <div class="selected-items-preview" id="trayPreviews"></div>
                 </div>
                 <div class="tray-actions">
-                    <button class="btn-outline" onclick="clearSelection()" style="width: auto; padding: 10px 20px; border-color: white; color: white;">Clear</button>
-                    <button class="btn-primary" id="trayCompareBtn" style="width: auto; padding: 10px 32px; background: white; color: var(--primary-600); border: none;">Compare Now</button>
+                    <button class="btn-outline tray-clear-btn" onclick="clearSelection()">Clear</button>
+                    <button class="btn-primary tray-compare-btn" id="trayCompareBtn">Compare Now</button>
                 </div>
             </div>
         </div>
@@ -444,7 +423,6 @@
     </div>
 
 
-    <!-- 🔥 SUPABASE INIT (IMPORTANT) -->
     <script type="module">
         import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
@@ -456,17 +434,16 @@
         window.supabase = supabase;
     </script>
 
-    <!-- Profile Settings Modal -->
     <div class="modal-overlay" id="profileModal">
         <div class="profile-modal-card">
-            <!-- Header -->
             <div class="modal-header">
                 <h3>Profile Settings</h3>
-                <button class="close-modal-btn" id="closeProfileBtn"><i class="fas fa-times"></i></button>
+                <button class="close-modal-btn" id="closeProfileBtn" aria-label="Close profile modal">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
 
             <div class="modal-body">
-                <!-- Profile Section -->
                 <div class="profile-info-section">
                     <div class="avatar-circle" id="profileAvatar">
                         ?
@@ -477,39 +454,36 @@
                     </div>
                 </div>
 
-                <!-- Account Info Section -->
                 <div class="settings-section">
                     <h5>Account Info</h5>
                     <form id="updateProfileForm">
                         <div class="input-group">
-                            <label>Username</label>
+                            <label for="editUsername">Username</label>
                             <input type="text" id="editUsername" required>
                         </div>
                         <div class="input-group">
-                            <label>Email</label>
+                            <label for="editEmail">Email</label>
                             <input type="email" id="editEmail" required>
                         </div>
                         <button type="submit" class="btn-primary" id="saveProfileBtn">Save Changes</button>
                     </form>
                 </div>
 
-                <!-- Security Section -->
                 <div class="settings-section">
                     <h5>Security</h5>
                     <form id="changePasswordForm">
-                        <div class="input-group" id="currentPasswordGroup" style="display: none;">
-                            <label>Current Password</label>
+                        <div class="input-group" id="currentPasswordGroup">
+                            <label for="currentPassword">Current Password</label>
                             <input type="password" id="currentPassword">
                         </div>
                         <div class="input-group">
-                            <label>New Password</label>
+                            <label for="newPassword">New Password</label>
                             <input type="password" id="newPassword" required>
                         </div>
                         <button type="submit" class="btn-outline" id="changePasswordBtn">Change Password</button>
                     </form>
                 </div>
 
-                <!-- Subscription Section -->
                 <div class="settings-section subscription-section">
                     <div class="subscription-details">
                         <span class="plan-badge">Free Plan</span>
@@ -519,14 +493,13 @@
                 </div>
             </div>
 
-            <!-- Footer / Logout -->
             <div class="modal-footer">
-                <button class="btn-danger-outline" id="profileLogoutBtn"><i class="fas fa-sign-out-alt"></i> Log Out</button>
+                <button class="btn-danger-outline" id="profileLogoutBtn"><i class="fas fa-sign-out-alt"></i> Log
+                    Out</button>
             </div>
         </div>
     </div>
 
-    <!-- Logout Confirm Modal -->
     <div class="modal-overlay" id="logoutModal">
         <div class="confirm-modal">
             <div class="modal-icon"><i class="fas fa-sign-out-alt"></i></div>
@@ -539,26 +512,24 @@
         </div>
     </div>
 
-    <!-- Delete Chat Confirmation Modal -->
     <div id="deleteChatModal" class="modal-overlay">
         <div class="modal-card">
             <div class="modal-header">
-                <h3 style="color: #ef4444;"><i class="fas fa-trash-alt"></i> Delete Chat</h3>
+                <h3><i class="fas fa-trash-alt"></i> Delete Chat</h3>
                 <button class="close-modal" id="cancelDeleteBtn">&times;</button>
             </div>
             <div class="modal-body">
                 <p>Are you sure you want to delete this conversation? This action cannot be undone.</p>
             </div>
             <div class="modal-footer">
-                <button class="btn-outline" id="cancelDeleteBtn2" style="width: auto !important; padding: 10px 20px !important; margin: 0 !important;">Cancel</button>
-                <button class="btn-primary" id="confirmDeleteBtn" style="width: auto !important; padding: 10px 20px !important; background: #ef4444 !important; border-color: #ef4444 !important; margin: 0 !important;">Delete Forever</button>
+                <button class="btn-outline modal-cancel-btn" id="cancelDeleteBtn2">Cancel</button>
+                <button class="btn-primary modal-delete-btn" id="confirmDeleteBtn">Delete Forever</button>
             </div>
         </div>
     </div>
 
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- MAIN JS -->
     <script>
         // Force aggressive cache bust
         const script = document.createElement('script');
@@ -567,19 +538,17 @@
     </script>
 
 
-    <!-- 🔥 SMALL SAFE UI SCRIPT ONLY -->
     <script>
         function handleGuestUI() {
             const area = document.getElementById("newChatArea");
 
             if (window.currentUserData && window.currentUserData.isGuest && area) {
                 area.innerHTML = `
-                <div style="text-align:center;padding:40px;">
-                    <i class="fas fa-lock" style="font-size:48px;margin-bottom:20px;"></i>
+                <div class="guest-ui-wrapper">
+                    <i class="fas fa-lock guest-ui-icon"></i>
                     <h2>Login Required</h2>
                     <p>Please sign in to use AI Assistant</p>
-                    <button onclick="window.location.href='/login'"
-                        style="padding:10px 20px;margin-top:15px;">
+                    <button class="login-button guest-ui-btn" onclick="window.location.href='/login'">
                         Sign In
                     </button>
                 </div>

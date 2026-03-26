@@ -152,8 +152,10 @@ function setupChatInput() {
 // ============================================
 // Logic for sending messages and handling AI interaction.
 
+// ============================================
+// SEND MESSAGE (Bulletproof Streaming)
+// ============================================
 async function sendMessage() {
-
     if (window.currentUserData && window.currentUserData.isGuest) {
         alert("Please log in to use the AI Assistant");
         window.location.href = '/login';
@@ -168,7 +170,6 @@ async function sendMessage() {
     const message = chatInput.value.trim();
     if (!message) return;
 
-    const chatIdAtStart = currentChatId;
     appendMessage(message, "user");
 
     const welcomeSubtitle = document.getElementById('welcomeSubtitle');
@@ -182,13 +183,8 @@ async function sendMessage() {
     const loaderId = appendLoader();
 
     try {
-        // Maintain local history state
         currentConversation.push({ role: "user", content: message });
 
-        console.log("[CHAT DEBUG] Sending payload (STREAM):", { 
-            message: message,
-            history: currentConversation.slice(-30)
-        });
         const response = await fetch('/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -210,12 +206,12 @@ async function sendMessage() {
             throw new Error(`Server error: ${response.status}`);
         }
 
-        // --- STREAM HANDLING ---
+        // --- BULLETPROOF STREAM HANDLING ---
         const reader = response.body.getReader();
-        const decoder = new TextDecoder();
+        const decoder = new TextDecoder("utf-8");
         let fullReply = "";
+        let buffer = ""; // This holds incomplete chunks
         
-        // Remove loader and prepare AI bubble
         removeLoader(loaderId);
         const aiMessageDiv = document.createElement('div');
         aiMessageDiv.className = `chat-message ai`;
@@ -229,27 +225,35 @@ async function sendMessage() {
             const { done, value } = await reader.read();
             if (done) break;
 
-            const text = decoder.decode(value);
-            const lines = text.split('\n');
+            // decode with stream: true to prevent splitting multi-byte characters
+            buffer += decoder.decode(value, { stream: true });
+            
+            // Split by newline to process complete events
+            let lines = buffer.split('\n');
+            
+            // The last item might be incomplete, keep it in the buffer for the next loop
+            buffer = lines.pop(); 
             
             for (const line of lines) {
-                if (line.startsWith('data: ')) {
+                const trimmedLine = line.trim();
+                if (trimmedLine.startsWith('data: ')) {
+                    const jsonStr = trimmedLine.substring(6);
+                    if (jsonStr === "[DONE]") continue; // Standard SSE close tag
+                    
                     try {
-                        const data = JSON.parse(line.substring(6));
+                        const data = JSON.parse(jsonStr);
                         if (data.chunk) {
                             fullReply += data.chunk;
-                            // Update UI (strip marks internally until final render)
                             aiBubble.innerHTML = window.marked ? marked.parse(fullReply) : fullReply;
                             scrollToBottom();
                         }
                     } catch (e) {
-                        console.error("Error parsing stream chunk:", e);
+                        console.warn("Incomplete JSON chunk caught and bypassed:", e, jsonStr);
                     }
                 }
             }
         }
 
-        console.log("[CHAT DEBUG] Stream complete. Final length:", fullReply.length);
         let reply = fullReply || "No response from AI.";
         
         // Final Post-processing (Memory extraction)
@@ -272,7 +276,6 @@ async function sendMessage() {
         
         currentConversation.push({ role: "assistant", content: reply });
         saveLocalChats();
-
 
     } catch (error) {
         removeLoader(loaderId);

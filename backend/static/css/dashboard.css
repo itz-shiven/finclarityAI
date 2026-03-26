@@ -127,8 +127,8 @@ body {
 /* Premium Glass Utility */
 .premium-glass {
     background: var(--glass-bg);
-    backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
     box-shadow: var(--glass-shadow);
 }
@@ -141,8 +141,8 @@ body {
     grid-column: 1;
     grid-row: 1 / -1;
     background: var(--sidebar-bg);
-    backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
     border-right: 1px solid var(--glass-border);
     box-shadow: var(--glass-shadow);
     display: flex;
@@ -376,8 +376,8 @@ body {
     flex-direction: column;
     padding: 12px;
     background: var(--glass-bg) !important;
-    backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
     border: 1px solid var(--glass-border) !important;
     border-radius: 16px !important;
     box-shadow: var(--shadow-sm);
@@ -1086,8 +1086,8 @@ body {
 /* Chat Window */
 .chat-widget-window {
     background: var(--chat-window-bg);
-    backdrop-filter: blur(30px);
     -webkit-backdrop-filter: blur(30px);
+    backdrop-filter: blur(30px);
     display: flex;
     flex-direction: row;
     overflow: hidden;
@@ -1233,12 +1233,13 @@ body {
 
 /* Modal Styles */
 .modal-overlay {
-    position: fixed;
+  position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.5);
+    -webkit-backdrop-filter: blur(5px);
     backdrop-filter: blur(5px);
     z-index: 9999;
     display: none;
@@ -2015,6 +2016,7 @@ body {
 
 .sub-view-grid .action-card {
     background: var(--glass-bg);
+    -webkit-backdrop-filter: var(--glass-blur);
     backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
     border-radius: 20px;
@@ -2079,6 +2081,7 @@ body {
 
 .product-hero {
     background: var(--glass-bg);
+    -webkit-backdrop-filter: var(--glass-blur);
     backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
     border-radius: 24px;
@@ -2170,6 +2173,7 @@ body {
 
 .detail-content-card {
     background: var(--glass-bg);
+    -webkit-backdrop-filter: var(--glass-blur);
     backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
     border-radius: 24px;
@@ -2603,12 +2607,14 @@ body {
 
 /* Apply subtle glassmorphism to cards if needed */
 
-@supports (backdrop-filter: blur(10px)) {
+@supports (-webkit-backdrop-filter: blur(10px)) or (backdrop-filter: blur(10px)) {
     .action-card {
+        -webkit-backdrop-filter: blur(2px);
         backdrop-filter: blur(2px);
     }
 
     .chat-panel {
+        -webkit-backdrop-filter: blur(2px);
         backdrop-filter: blur(2px);
     }
 }
@@ -3134,8 +3140,8 @@ input:focus-visible {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
 }
 
 .compare-card::before {
@@ -3869,6 +3875,7 @@ input:focus-visible {
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.6);
+    -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
@@ -3939,4 +3946,207 @@ input:focus-visible {
     display: flex;
     justify-content: flex-end;
     gap: 12px;
+}
+
+/* ============================================
+   EXTRACTED INLINE STYLES & OVERRIDES
+   ============================================ */
+
+/* Utility Classes */
+.fw-500 { font-weight: 500; }
+.z-index-2 { z-index: 2; }
+.positive-text { color: #10B981; }
+
+/* Profile Overrides */
+.profile-section {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    background: var(--border-light) !important;
+    border-radius: 12px !important;
+    box-shadow: none; 
+}
+
+.profile-name {
+    margin-bottom: 0;
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    transition: opacity 0.2s ease, width 0.2s ease;
+}
+
+.profile-actions {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+}
+
+#settingsDropdown {
+    bottom: 120%;
+    top: auto;
+    right: 0;
+    left: auto;
+}
+
+#currentPasswordGroup { 
+    display: none; 
+}
+
+/* Stat Card Modifiers */
+.stat-icon.market-pulse { background: rgba(99, 102, 241, 0.1); color: var(--primary-600); }
+.stat-icon.ai-intel { background: rgba(16, 185, 129, 0.1); color: #10B981; }
+.stat-icon.alerts { background: rgba(245, 158, 11, 0.1); color: #F59E0B; }
+
+/* Compare View Overrides */
+.compare-header h3 { margin-bottom: 8px; }
+.compare-header p { color: var(--text-secondary); font-size: 14px; }
+
+#compareCategoryGrid { margin-top: 30px; width: 100%; }
+
+.compare-multi-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 30px;
+    position: relative;
+    min-height: 60px;
+    padding: 0 10px;
+}
+
+.compare-multi-title-wrapper {
+    position: absolute;
+    width: 100%;
+    left: 0;
+    text-align: center;
+    pointer-events: none;
+}
+
+#compareProviderSubtitle {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--primary-600);
+}
+
+.compare-subtitle-desc {
+    color: var(--text-secondary);
+    font-size: 13px;
+    margin: 2px 0 0 0;
+    opacity: 0.7;
+}
+
+/* Specific Extracted Buttons */
+.btn-back-compare {
+    padding: 8px 16px !important;
+    width: auto !important;
+    min-width: 80px !important;
+    border-radius: 10px !important;
+    font-size: 13px !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-continue-compare {
+    padding: 10px 24px !important;
+    width: auto !important;
+    min-width: 120px !important;
+    max-width: 160px !important;
+    border-radius: 30px !important;
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    background: linear-gradient(135deg, var(--primary-600) 0%, #4f46e5 100%) !important;
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
+}
+
+.tray-clear-btn {
+    width: auto;
+    padding: 10px 20px;
+    border-color: white;
+    color: white;
+}
+
+.tray-compare-btn {
+    width: auto;
+    padding: 10px 32px;
+    background: white;
+    color: var(--primary-600);
+    border: none;
+}
+
+.modal-cancel-btn {
+    width: auto !important;
+    padding: 10px 20px !important;
+    margin: 0 !important;
+}
+
+.modal-delete-btn {
+    width: auto !important;
+    padding: 10px 20px !important;
+    background: #ef4444 !important;
+    border-color: #ef4444 !important;
+    margin: 0 !important;
+}
+
+/* Modals & States */
+#deleteChatModal h3 { 
+    color: #ef4444; 
+}
+
+.detail-loading-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    gap: 20px;
+}
+
+.detail-loading-icon {
+    font-size: 40px;
+    color: var(--primary-500);
+}
+
+.detail-loading-text {
+    color: var(--text-secondary);
+    font-size: 16px;
+}
+
+.new-chat-prompt-text {
+    text-align: center;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    font-size: 14px;
+}
+
+/* Guest UI JS Injection Styles */
+.guest-ui-wrapper {
+    text-align: center;
+    padding: 40px;
+}
+
+.guest-ui-icon {
+    font-size: 48px;
+    margin-bottom: 20px;
+    color: var(--text-secondary);
+}
+
+.guest-ui-btn {
+    padding: 10px 20px;
+    margin-top: 15px;
+    border: none;
+    cursor: pointer;
 }

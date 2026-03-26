@@ -8,10 +8,7 @@ Jinja2==3.1.6
 MarkupSafe==3.0.3
 Werkzeug==3.1.6
 requests==2.32.3
-gunicorn
-python-dotenv
-openai
-supabase
-sentence-transformers
-flask-cors
-
+gunicorn==21.2.0
+python-dotenv==1.0.1
+openai==1.40.0
+supabase==2.4.0
