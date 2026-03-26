@@ -111,7 +111,7 @@ finclarityAI/
 
 ## 📝 Build Process
 
-The commit history documents our hackathon journey from Day 1 to submission. A detailed log is available in [`build_process_commits.txt`](build_process_commits.txt).
+The commit history documents our hackathon journey from Day 1 to submission. A detailed log is available in [`build_process_commits.md`](build_process_commits.md).
 
 ---
 
