@@ -19,6 +19,7 @@ if (document.readyState === 'loading') {
 }
 
 let comparisonList = []; // Global comparison state
+let financeData = { todos: [] };
 
 
 async function checkSupabaseAuth() {
@@ -121,6 +122,7 @@ function initializeDashboard() {
     if (typeof setupHomePageSexyLogic === 'function') {
         setupHomePageSexyLogic();
     }
+    renderFinanceModuleViews();
 }
 
 
@@ -877,13 +879,18 @@ async function loadUserData() {
                             
                             localStorage.setItem(getUserKey('finclarityChats'), JSON.stringify(chats));
                             localStorage.setItem(getUserKey('finclarityMemory'), JSON.stringify(memory));
+                            financeData = sanitizeFinanceData(syncData.data.finance_data);
                             
                             // Re-load chats into the local state
                             if (typeof loadLocalChats === 'function') loadLocalChats();
+                            renderFinanceModuleViews();
                         }
                     } catch (e) {
                         console.error("Failed to load user data from backend", e);
                     }
+                } else {
+                    financeData = sanitizeFinanceData();
+                    renderFinanceModuleViews();
                 }
             }
         })
@@ -911,7 +918,7 @@ async function syncUserDataToBackend() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ chats, memory })
+            body: JSON.stringify({ chats, memory, finance_data: financeData })
         });
     } catch (e) {
         console.error("Failed to sync data to backend", e);
@@ -949,9 +956,8 @@ function setupNavigation() {
         'navHome': { view: 'mainView', title: 'Home', action: resetToHome },
         'navCompare': { view: 'compareView', title: 'Smart Comparison', action: () => { switchToView('compareView', 'Smart Comparison'); generateComparisonTable(); } },
         'navWhatChanged': { view: 'whatChangedView', title: "What's Changed?", action: () => { switchToView('whatChangedView', "What's Changed?"); populateWhatChangedView(); } },
-        'navPortfolio': { view: 'portfolioView', title: 'Investment Portfolio', action: () => showComingSoon('portfolioView', 'Investment Portfolio') },
-        'navBudget': { view: 'budgetView', title: 'Budget Planner', action: () => showComingSoon('budgetView', 'Budget Planner') },
-        'navInsights': { view: 'insightsView', title: 'Market Insights', action: () => showComingSoon('insightsView', 'Market Insights') },
+        'navTodo': { view: 'todoView', title: 'Financial To-Do List', action: () => openFinanceView('todoView', 'Financial To-Do List') },
+        'navSuggestions': { view: 'suggestionsView', title: 'Smart Suggestions', action: () => openFinanceView('suggestionsView', 'Smart Suggestions') },
         'navCalculators': { view: 'calculatorsView', title: 'Financial Calculators', action: renderCalculatorsHub }
     };
 
@@ -964,32 +970,6 @@ function setupNavigation() {
             });
         }
     });
-}
-
-function showComingSoon(viewId, title) {
-    // Create view container if it doesn't exist
-    let view = document.getElementById(viewId);
-    if (!view) {
-        view = document.createElement('div');
-        view.id = viewId;
-        view.className = 'hidden';
-        view.innerHTML = `
-            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 100px 40px; text-align: center; color: var(--text-tertiary);">
-                <i class="fas fa-tools" style="font-size: 64px; margin-bottom: 24px; color: var(--primary-600); opacity: 0.5;"></i>
-                <h2 style="color: var(--text-primary); margin-bottom: 12px;">${title}</h2>
-                <p>This feature is coming soon to your personal financial hub!</p>
-            </div>
-        `;
-        document.querySelector('.main-content').appendChild(view);
-    }
-    
-    switchToView(viewId, title);
-    
-    // Deactivate all nav items and activate current
-    document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-    const navId = 'nav' + viewId.replace('View', '').charAt(0).toUpperCase() + viewId.replace('View', '').slice(1);
-    const navEl = document.getElementById(navId);
-    if (navEl) navEl.classList.add('active');
 }
 
 function resetToHome() {
@@ -1031,15 +1011,400 @@ function switchToView(viewId, title) {
     });
 
     document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+    const navByView = {
+        compareView: 'navCompare',
+        whatChangedView: 'navWhatChanged',
+        todoView: 'navTodo',
+        suggestionsView: 'navSuggestions',
+        calculatorsView: 'navCalculators',
+        mainView: 'navHome'
+    };
+    const navId = navByView[viewId];
+    if (navId && document.getElementById(navId)) {
+        document.getElementById(navId).classList.add('active');
+    }
     if (viewId === 'compareView') {
-        const navCompare = document.getElementById('navCompare');
-        if (navCompare) navCompare.classList.add('active');
-        generateComparisonTable(); 
+        generateComparisonTable();
     }
-    if (viewId === 'whatChangedView') {
-        const navWhatChanged = document.getElementById('navWhatChanged');
-        if (navWhatChanged) navWhatChanged.classList.add('active');
+}
+
+function sanitizeFinanceData(raw = {}) {
+    return {
+        todos: Array.isArray(raw.todos) ? raw.todos : []
+    };
+}
+
+function formatINR(value) {
+    const safe = Number(value) || 0;
+    return `Rs ${safe.toLocaleString('en-IN')}`;
+}
+
+async function openFinanceView(viewId, title) {
+    renderFinanceModuleViews();
+    switchToView(viewId, title);
+}
+
+function showFinanceActionModal(options = {}) {
+    const {
+        title = 'Action',
+        message = 'Please review this action.',
+        confirmText = 'Continue',
+        cancelText = 'Cancel',
+        destructive = false,
+        hideCancel = false
+    } = options;
+
+    const modal = document.getElementById('financeActionModal');
+    const titleEl = document.getElementById('financeActionTitle');
+    const bodyEl = document.getElementById('financeActionBody');
+    const confirmBtn = document.getElementById('financeActionConfirmBtn');
+    const cancelBtn = document.getElementById('financeActionCancelBtn');
+    const closeBtn = document.getElementById('financeActionCloseBtn');
+    if (!modal || !titleEl || !bodyEl || !confirmBtn || !cancelBtn || !closeBtn) {
+        return Promise.resolve(true);
     }
+
+    titleEl.innerHTML = `<i class="fas ${destructive ? 'fa-triangle-exclamation' : 'fa-circle-info'}"></i> ${title}`;
+    bodyEl.textContent = message;
+    confirmBtn.textContent = confirmText;
+    cancelBtn.textContent = cancelText;
+    confirmBtn.classList.toggle('btn-danger', destructive);
+    confirmBtn.classList.toggle('btn-primary', !destructive);
+    cancelBtn.style.display = hideCancel ? 'none' : 'inline-flex';
+    modal.classList.add('show');
+
+    return new Promise(resolve => {
+        let done = false;
+        const cleanup = () => {
+            modal.classList.remove('show');
+            modal.removeEventListener('click', onOverlayClick);
+            confirmBtn.removeEventListener('click', onConfirm);
+            cancelBtn.removeEventListener('click', onCancel);
+            closeBtn.removeEventListener('click', onCancel);
+        };
+        const finish = (value) => {
+            if (done) return;
+            done = true;
+            cleanup();
+            resolve(value);
+        };
+        const onConfirm = () => finish(true);
+        const onCancel = () => finish(false);
+        const onOverlayClick = (event) => {
+            if (event.target === modal) finish(false);
+        };
+        confirmBtn.addEventListener('click', onConfirm);
+        cancelBtn.addEventListener('click', onCancel);
+        closeBtn.addEventListener('click', onCancel);
+        modal.addEventListener('click', onOverlayClick);
+    });
+}
+
+function renderFinanceModuleViews() {
+    renderTodoView();
+    renderSuggestionsView();
+}
+
+async function createTodoTask(payload) {
+    const res = await fetch('/api/finance_todos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.status !== 'success') throw new Error(data.message || 'Failed to add task');
+    financeData = sanitizeFinanceData(data.data);
+}
+
+async function updateTodoTask(taskId, payload) {
+    const res = await fetch(`/api/finance_todos/${taskId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (data.status !== 'success') throw new Error(data.message || 'Failed to update task');
+    financeData = sanitizeFinanceData(data.data);
+}
+
+async function deleteTodoTask(taskId) {
+    const res = await fetch(`/api/finance_todos/${taskId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+    });
+    const data = await res.json();
+    if (data.status !== 'success') throw new Error(data.message || 'Failed to delete task');
+    financeData = sanitizeFinanceData(data.data);
+}
+
+async function persistFinanceData() {
+    const res = await fetch('/api/finance_data', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(financeData)
+    });
+    const data = await res.json();
+    if (data.status !== 'success') throw new Error(data.message || 'Failed to save finance data');
+    financeData = sanitizeFinanceData(data.data);
+}
+
+function renderTodoView() {
+    const view = document.getElementById('todoView');
+    if (!view) return;
+    const tasks = financeData.todos || [];
+    const pendingCount = tasks.filter(task => !task.completed).length;
+    const completedCount = tasks.length - pendingCount;
+
+    view.innerHTML = `
+        <section class="finance-module-card">
+            <div class="finance-module-header">
+                <h3>Personalized Financial To-Do List</h3>
+                <p>Keep your tasks in sync securely across sessions.</p>
+                <p class="finance-module-hint">Need help with a specific task? Check the Smart Suggestions tab for focused tips.</p>
+            </div>
+            <div class="finance-kpi-row">
+                <div class="finance-kpi"><span>Pending</span><strong>${pendingCount}</strong></div>
+                <div class="finance-kpi"><span>Completed</span><strong>${completedCount}</strong></div>
+                <div class="finance-kpi"><span>Total</span><strong>${tasks.length}</strong></div>
+            </div>
+            <form id="todoForm" class="finance-form" autocomplete="off">
+                <input type="hidden" id="todoTaskId">
+                <input type="text" id="todoTitle" placeholder="Task title (e.g. Increase SIP by ₹2,000)" required autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+                <input type="date" id="todoDueDate" autocomplete="off">
+                <input type="text" id="todoNotes" placeholder="Notes (optional)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+                <button type="submit" class="btn-primary">Save Task</button>
+            </form>
+            <div class="finance-list">
+                ${tasks.length ? tasks.map(task => `
+                    <div class="finance-list-item ${task.completed ? 'done' : ''}">
+                        <label>
+                            <input type="checkbox" class="todo-toggle todo-circle-toggle" data-id="${task.id}" ${task.completed ? 'checked' : ''}>
+                            <span class="finance-list-title">${task.title}</span>
+                        </label>
+                        <span class="finance-list-meta">${task.dueDate ? `Due ${task.dueDate}` : 'No due date'}</span>
+                        <p>${task.notes || ''}</p>
+                        <div class="finance-list-actions">
+                            <button class="btn-outline todo-edit" data-id="${task.id}">Edit</button>
+                            <button class="btn-danger-outline todo-delete" data-id="${task.id}">Delete</button>
+                        </div>
+                    </div>
+                `).join('') : '<p class="finance-empty-state">No tasks yet. Add your first financial action.</p>'}
+            </div>
+        </section>
+    `;
+
+    const todoForm = document.getElementById('todoForm');
+    if (todoForm) {
+        todoForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const taskId = document.getElementById('todoTaskId').value;
+            const payload = {
+                title: document.getElementById('todoTitle').value.trim(),
+                dueDate: document.getElementById('todoDueDate').value,
+                notes: document.getElementById('todoNotes').value.trim()
+            };
+            if (!payload.title) return;
+            try {
+                if (taskId) {
+                    await updateTodoTask(taskId, payload);
+                } else {
+                    await createTodoTask(payload);
+                }
+                renderFinanceModuleViews();
+                showFinanceActionModal({
+                    title: 'Saved',
+                    message: 'Your task is saved and synced to your account.',
+                    confirmText: 'Okay',
+                    hideCancel: true
+                });
+            } catch (error) {
+                showFinanceActionModal({
+                    title: 'Save Failed',
+                    message: error.message || 'Unable to save task.',
+                    confirmText: 'Okay',
+                    hideCancel: true,
+                    destructive: true
+                });
+            }
+        });
+    }
+
+    view.querySelectorAll('.todo-toggle').forEach(toggle => {
+        toggle.addEventListener('change', async (e) => {
+            try {
+                await updateTodoTask(e.target.dataset.id, { completed: e.target.checked });
+                renderFinanceModuleViews();
+            } catch (error) {
+                showFinanceActionModal({
+                    title: 'Update Failed',
+                    message: error.message || 'Unable to update task.',
+                    confirmText: 'Okay',
+                    hideCancel: true,
+                    destructive: true
+                });
+            }
+        });
+    });
+
+    view.querySelectorAll('.todo-edit').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const task = (financeData.todos || []).find(item => item.id === e.target.dataset.id);
+            if (!task) return;
+            document.getElementById('todoTaskId').value = task.id;
+            document.getElementById('todoTitle').value = task.title || '';
+            document.getElementById('todoDueDate').value = task.dueDate || '';
+            document.getElementById('todoNotes').value = task.notes || '';
+            document.getElementById('todoTitle').focus();
+        });
+    });
+
+    view.querySelectorAll('.todo-delete').forEach(button => {
+        button.addEventListener('click', async (e) => {
+            const shouldDelete = await showFinanceActionModal({
+                title: 'Delete Task',
+                message: 'Are you sure you want to delete this task? This action cannot be undone.',
+                confirmText: 'Delete',
+                cancelText: 'Cancel',
+                destructive: true
+            });
+            if (!shouldDelete) return;
+            try {
+                await deleteTodoTask(e.target.dataset.id);
+                renderFinanceModuleViews();
+                showFinanceActionModal({
+                    title: 'Task Deleted',
+                    message: 'The task has been removed successfully.',
+                    confirmText: 'Okay',
+                    hideCancel: true
+                });
+            } catch (error) {
+                showFinanceActionModal({
+                    title: 'Delete Failed',
+                    message: error.message || 'Unable to delete task.',
+                    confirmText: 'Okay',
+                    hideCancel: true,
+                    destructive: true
+                });
+            }
+        });
+    });
+}
+
+function renderSuggestionsView() {
+    const view = document.getElementById('suggestionsView');
+    if (!view) return;
+    const suggestions = generateSmartSuggestions();
+    const highImpactCount = suggestions.filter(item => item.priority === 'High').length;
+    const quickWinsCount = suggestions.filter(item => item.priority === 'Quick Win').length;
+
+    view.innerHTML = `
+        <section class="finance-module-card">
+            <div class="finance-module-header">
+                <h3>Smart Suggestions</h3>
+                <p>Actionable moves generated from your to-do activity.</p>
+            </div>
+            <div class="smart-suggest-top">
+                <div class="smart-suggest-stat">
+                    <span>High Impact</span>
+                    <strong>${highImpactCount}</strong>
+                </div>
+                <div class="smart-suggest-stat">
+                    <span>Quick Win</span>
+                    <strong>${quickWinsCount}</strong>
+                </div>
+                <div class="smart-suggest-stat">
+                    <span>Total Moves</span>
+                    <strong>${suggestions.length}</strong>
+                </div>
+            </div>
+            <div class="smart-suggest-grid">
+                ${suggestions.map(item => `
+                    <article class="smart-suggest-card">
+                        <div class="smart-card-head">
+                            <span class="smart-priority smart-priority-${item.priority.toLowerCase().replace(/\s+/g, '-')}">${item.priority}</span>
+                            <h4>${item.title}</h4>
+                        </div>
+                        <p class="smart-insight">${item.tip}</p>
+                        <ul class="smart-steps">
+                            ${item.steps.map(step => `<li>${step}</li>`).join('')}
+                        </ul>
+                    </article>
+                `).join('')}
+            </div>
+        </section>
+    `;
+}
+
+function generateSmartSuggestions() {
+    const suggestions = [];
+    const todos = financeData.todos || [];
+    const pendingTodos = todos.filter(todo => !todo.completed);
+    const completedTodos = todos.filter(todo => todo.completed);
+
+    if (pendingTodos.length > 0) {
+        const nextTask = pendingTodos[0];
+        const dueSoon = pendingTodos
+            .filter(task => task.dueDate)
+            .map(task => ({ ...task, days: Math.ceil((new Date(task.dueDate) - new Date()) / (1000 * 60 * 60 * 24)) }))
+            .filter(task => task.days >= 0 && task.days <= 7)
+            .sort((a, b) => a.days - b.days);
+
+        suggestions.push({
+            title: 'Execution Sprint',
+            priority: 'Quick Win',
+            tip: `${pendingTodos.length} pending tasks. Start with "${nextTask.title}" for immediate momentum.`,
+            steps: [
+                'Spend 15 focused minutes on the first task only.',
+                'After completion, instantly mark it done here.',
+                'Then pick the next highest-impact pending task.'
+            ]
+        });
+
+        if (dueSoon.length > 0) {
+            suggestions.push({
+                title: 'Due Date Protection',
+                priority: 'High',
+                tip: `${dueSoon.length} task(s) are due within 7 days. Prevent last-minute stress.`,
+                steps: [
+                    `Start with "${dueSoon[0].title}" due in ${Math.max(0, dueSoon[0].days)} day(s).`,
+                    'Move low-urgency tasks to next week.',
+                    'Close at least one due task before tonight.'
+                ]
+            });
+        }
+    }
+
+    if (completedTodos.length > 0) {
+        const completionRate = Math.round((completedTodos.length / Math.max(1, todos.length)) * 100);
+        suggestions.push({
+            title: 'Consistency Booster',
+            priority: 'Quick Win',
+            tip: `Your task completion rate is ${completionRate}%. Maintain this streak for compounding discipline.`,
+            steps: [
+                'Keep daily target: close one financial task per day.',
+                'Batch easy tasks into a single 20-minute slot.',
+                'Review completed wins every weekend.'
+            ]
+        });
+    }
+
+    while (suggestions.length < 4) {
+        suggestions.push({
+            title: 'Foundation Move',
+            priority: 'Quick Win',
+            tip: 'Create one concrete money move now, then we will keep optimizing your plan.',
+            steps: [
+                'Add one to-do linked to a real account action.',
+                'Set a due date so it does not slip.',
+                'Return here to get your refreshed next-step strategy.'
+            ]
+        });
+    }
+
+    return suggestions.slice(0, 4);
 }
 
 const productsData = {
@@ -1914,6 +2279,10 @@ function setupActionCards() {
                 navigateTo(target, title);
             } else if (card.id === 'homeCalculatorsCard') {
                 renderCalculatorsHub();
+            } else if (card.id === 'homeTodoCard') {
+                openFinanceView('todoView', 'Financial To-Do List');
+            } else if (card.id === 'homeSuggestionsCard') {
+                openFinanceView('suggestionsView', 'Smart Suggestions');
             }
         });
     });
@@ -4348,3 +4717,5 @@ function updateCalcChart(type, invested, interest) {
         }
     });
 }
+
+

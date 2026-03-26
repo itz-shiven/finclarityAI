@@ -1,5 +1,7 @@
 import os
 import requests
+from datetime import datetime, timezone
+from uuid import uuid4
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -78,6 +80,74 @@ HEADERS = {
     "Authorization": f"Bearer {SUPABASE_KEY}",
     "Content-Type": "application/json"
 }
+
+
+def default_finance_data():
+    return {
+        "todos": [],
+        "goals": [],
+        "expenses": []
+    }
+
+
+def _extract_chat_and_finance(raw_chats):
+    if isinstance(raw_chats, dict):
+        chat_history = raw_chats.get("chat_history")
+        finance_data = raw_chats.get("finance_data")
+        if not isinstance(chat_history, list):
+            chat_history = []
+        if not isinstance(finance_data, dict):
+            finance_data = default_finance_data()
+        else:
+            base = default_finance_data()
+            for key in base:
+                if isinstance(finance_data.get(key), list):
+                    base[key] = finance_data[key]
+            finance_data = base
+        return chat_history, finance_data
+
+    if isinstance(raw_chats, list):
+        return raw_chats, default_finance_data()
+
+    return [], default_finance_data()
+
+
+def _build_chats_payload(chat_history, finance_data):
+    return {
+        "chat_history": chat_history if isinstance(chat_history, list) else [],
+        "finance_data": finance_data if isinstance(finance_data, dict) else default_finance_data()
+    }
+
+
+def _get_user_data_row(user_id):
+    res = supabase.table("user_data").select("chats, memory").eq("user_id", user_id).execute()
+    if res.data:
+        return res.data[0]
+    supabase.table("user_data").insert({
+        "user_id": user_id,
+        "chats": _build_chats_payload([], default_finance_data()),
+        "memory": []
+    }).execute()
+    return {"chats": [], "memory": []}
+
+
+def _get_finance_data_for_user(user_id):
+    row = _get_user_data_row(user_id)
+    _, finance_data = _extract_chat_and_finance(row.get("chats"))
+    return finance_data
+
+
+def _save_finance_data_for_user(user_id, finance_data):
+    row = _get_user_data_row(user_id)
+    chat_history, _ = _extract_chat_and_finance(row.get("chats"))
+    payload = _build_chats_payload(chat_history, finance_data)
+    update_res = supabase.table("user_data").update({"chats": payload}).eq("user_id", user_id).execute()
+    if not update_res.data:
+        supabase.table("user_data").insert({
+            "user_id": user_id,
+            "chats": payload,
+            "memory": []
+        }).execute()
 
 # -------------------------
 # ROUTES
@@ -253,7 +323,7 @@ def ensure_user_data(user_id, email, name):
         if not res.data:
             supabase.table("user_data").insert({
                 "user_id": user_id,
-                "chats": [],
+                "chats": _build_chats_payload([], default_finance_data()),
                 "memory": []
             }).execute()
             print(f"[DATABASE] Created new user_data row for ID: {user_id}")
@@ -269,10 +339,26 @@ def sync_userdata():
         data = request.get_json()
         chats = data.get("chats")
         memory = data.get("memory")
+        finance_data = data.get("finance_data")
         
         update_data = {}
-        if chats is not None: update_data["chats"] = chats
-        if memory is not None: update_data["memory"] = memory
+        row = _get_user_data_row(session['user_id'])
+        current_chat_history, current_finance_data = _extract_chat_and_finance(row.get("chats"))
+        if chats is not None:
+            current_chat_history = chats if isinstance(chats, list) else []
+        if finance_data is not None and isinstance(finance_data, dict):
+            merged_finance = default_finance_data()
+            for key in merged_finance:
+                if isinstance(finance_data.get(key), list):
+                    merged_finance[key] = finance_data[key]
+                else:
+                    merged_finance[key] = current_finance_data.get(key, [])
+            current_finance_data = merged_finance
+
+        if chats is not None or finance_data is not None:
+            update_data["chats"] = _build_chats_payload(current_chat_history, current_finance_data)
+        if memory is not None:
+            update_data["memory"] = memory
         
         if update_data:
             supabase.table("user_data").update(update_data).eq("user_id", session['user_id']).execute()
@@ -290,12 +376,124 @@ def get_userdata():
     res = supabase.table("user_data").select("chats, memory").eq("user_id", session['user_id']).execute()
     
     if res.data:
+        chats, finance_data = _extract_chat_and_finance(res.data[0].get("chats"))
         return jsonify({
             "status": "success",
-            "data": res.data[0]
+            "data": {
+                "chats": chats,
+                "memory": res.data[0].get("memory", []),
+                "finance_data": finance_data
+            }
         })
         
-    return jsonify({"status": "success", "data": {"chats": [], "memory": []}})
+    return jsonify({
+        "status": "success",
+        "data": {
+            "chats": [],
+            "memory": [],
+            "finance_data": default_finance_data()
+        }
+    })
+
+
+@app.route("/api/finance_data", methods=["GET"])
+def get_finance_data():
+    if 'user_id' not in session:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    ensure_user_data(session['user_id'], session.get('user_email'), session.get('user_name'))
+    finance_data = _get_finance_data_for_user(session['user_id'])
+    return jsonify({"status": "success", "data": finance_data})
+
+
+@app.route("/api/finance_todos", methods=["POST"])
+def create_finance_todo():
+    if 'user_id' not in session:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    data = request.get_json() or {}
+    title = (data.get("title") or "").strip()
+    notes = (data.get("notes") or "").strip()
+    due_date = (data.get("dueDate") or "").strip()
+
+    if not title:
+        return jsonify({"status": "error", "message": "Task title is required"}), 400
+
+    finance_data = _get_finance_data_for_user(session['user_id'])
+    task = {
+        "id": str(uuid4()),
+        "title": title,
+        "notes": notes,
+        "dueDate": due_date,
+        "completed": bool(data.get("completed", False)),
+        "createdAt": datetime.now(timezone.utc).isoformat()
+    }
+    finance_data["todos"].append(task)
+    _save_finance_data_for_user(session['user_id'], finance_data)
+
+    return jsonify({"status": "success", "task": task, "data": finance_data})
+
+
+@app.route("/api/finance_todos/<task_id>", methods=["PUT"])
+def update_finance_todo(task_id):
+    if 'user_id' not in session:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    data = request.get_json() or {}
+    finance_data = _get_finance_data_for_user(session['user_id'])
+
+    updated_task = None
+    for task in finance_data["todos"]:
+        if task.get("id") == task_id:
+            if "title" in data:
+                task["title"] = (data.get("title") or "").strip() or task.get("title", "Untitled Task")
+            if "notes" in data:
+                task["notes"] = (data.get("notes") or "").strip()
+            if "dueDate" in data:
+                task["dueDate"] = (data.get("dueDate") or "").strip()
+            if "completed" in data:
+                task["completed"] = bool(data.get("completed"))
+            task["updatedAt"] = datetime.now(timezone.utc).isoformat()
+            updated_task = task
+            break
+
+    if not updated_task:
+        return jsonify({"status": "error", "message": "Task not found"}), 404
+
+    _save_finance_data_for_user(session['user_id'], finance_data)
+    return jsonify({"status": "success", "task": updated_task, "data": finance_data})
+
+
+@app.route("/api/finance_todos/<task_id>", methods=["DELETE"])
+def delete_finance_todo(task_id):
+    if 'user_id' not in session:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    finance_data = _get_finance_data_for_user(session['user_id'])
+    original_count = len(finance_data["todos"])
+    finance_data["todos"] = [task for task in finance_data["todos"] if task.get("id") != task_id]
+
+    if len(finance_data["todos"]) == original_count:
+        return jsonify({"status": "error", "message": "Task not found"}), 404
+
+    _save_finance_data_for_user(session['user_id'], finance_data)
+    return jsonify({"status": "success", "data": finance_data})
+
+
+@app.route("/api/finance_data", methods=["PUT"])
+def update_finance_data():
+    if 'user_id' not in session:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    payload = request.get_json() or {}
+    finance_data = _get_finance_data_for_user(session['user_id'])
+
+    for key in ["goals", "expenses", "todos"]:
+        if key in payload and isinstance(payload.get(key), list):
+            finance_data[key] = payload[key]
+
+    _save_finance_data_for_user(session['user_id'], finance_data)
+    return jsonify({"status": "success", "data": finance_data})
 
 @app.route("/api/guest-login", methods=["POST"])
 def guest_login():

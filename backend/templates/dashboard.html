@@ -41,10 +41,8 @@
                 <a href="#" class="nav-item" id="navWhatChanged"><i class="fas fa-history"></i><span>What
                         Changed</span></a>
                 <div class="nav-divider"></div>
-                <a href="#" class="nav-item" id="navPortfolio"><i
-                        class="fas fa-chart-pie"></i><span>Portfolio</span></a>
-                <a href="#" class="nav-item" id="navBudget"><i class="fas fa-wallet"></i><span>Budget</span></a>
-                <a href="#" class="nav-item" id="navInsights"><i class="fas fa-lightbulb"></i><span>Insights</span></a>
+                <a href="#" class="nav-item" id="navTodo"><i class="fas fa-list-check"></i><span>To-Do List</span></a>
+                <a href="#" class="nav-item" id="navSuggestions"><i class="fas fa-lightbulb"></i><span>Smart Suggestions</span></a>
                 <a href="#" class="nav-item" id="navCalculators"><i
                         class="fas fa-calculator"></i><span>Calculators</span></a>
             </nav>
@@ -149,6 +147,19 @@
                                 class="fas fa-piggy-bank"></i><span>Savings</span></div>
                         <div class="action-card category-card" id="homeCalculatorsCard" data-title="Calculators"><i
                                 class="fas fa-calculator"></i><span>Calculators</span></div>
+                    </div>
+
+                    <div class="section-divider">
+                        <span>My Finance Hub</span>
+                    </div>
+
+                    <div class="cards-grid service-grid">
+                        <div class="action-card category-card" id="homeTodoCard" data-title="Financial To-Do List">
+                            <i class="fas fa-list-check"></i><span>Financial To-Do List</span>
+                        </div>
+                        <div class="action-card category-card" id="homeSuggestionsCard" data-title="Smart Suggestions">
+                            <i class="fas fa-robot"></i><span>Smart Suggestions</span>
+                        </div>
                     </div>
                 </div>
 
@@ -349,6 +360,9 @@
                         </div>
                 </div>
 
+                <div id="todoView" class="hidden finance-module-view"></div>
+                <div id="suggestionsView" class="hidden finance-module-view"></div>
+
                 </main>
 
             <div class="chat-widget" id="chatWidget">
@@ -525,6 +539,22 @@
             <div class="modal-footer">
                 <button class="btn-outline modal-cancel-btn" id="cancelDeleteBtn2">Cancel</button>
                 <button class="btn-primary modal-delete-btn" id="confirmDeleteBtn">Delete Forever</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="financeActionModal" class="modal-overlay">
+        <div class="modal-card finance-action-modal">
+            <div class="modal-header">
+                <h3 id="financeActionTitle"><i class="fas fa-circle-info"></i> Action</h3>
+                <button class="close-modal" id="financeActionCloseBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="financeActionBody">Please review this action.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-outline modal-cancel-btn" id="financeActionCancelBtn">Cancel</button>
+                <button class="btn-primary modal-delete-btn" id="financeActionConfirmBtn">Continue</button>
             </div>
         </div>
     </div>
