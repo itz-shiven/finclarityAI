@@ -1,73 +1,120 @@
-# FinclarityAI - GenAI Hackathon 🚀
+# FinclarityAI — ET AI Hackathon 2026 🚀
 
-FinclarityAI is an intelligent financial tracking and analysis dashboard built specifically for the **GenAI Hackathon, ET**. It empowers users to monitor their financial metrics while leveraging a powerful GenAI chat interface to gain personalized insights from their data.
+> An AI-powered financial clarity dashboard that leverages Generative AI to help users understand, compare, and plan their finances intelligently.
 
-## 🌟 Hackathon Focus: Generative AI Integration
-At the core of FinclarityAI is our OpenAI-powered intelligent assistant. It doesn't just display numbers; it interprets them. The AI agent:
-- Understands complex financial queries using advanced NLP.
-- Persistently remembers user context and chat history across sessions.
-- Helps users uncover trends, summarize their spending, and offer tailored financial clarity.
+---
 
-## 🛠️ Build Architecture & Tech Stack
+## 🧠 What is FinclarityAI?
 
-This project was developed rapidly during the hackathon using:
-- **Backend**: Flask (Python) with RESTful API endpoints.
-- **AI Engine**: OpenAI API for generative conversational logic.
-- **Database & Auth**: Supabase (PostgreSQL) for secure Email/Password & Google OAuth authentication, and persistent user chat memory.
-- **Frontend**: Vanilla HTML/JS with responsive CSS, featuring dynamic view transitions for a seamless user experience.
+FinclarityAI is a full-stack web application built during the **ET AI Hackathon 2026**. It combines a modern financial dashboard with an OpenAI-powered conversational assistant that understands financial queries, remembers past context, and delivers personalized insights — all in real time.
 
-## 📝 Build Process & Git History
+---
 
-The development journey for this hackathon is documented in the commit history to demonstrate our systematic build process:
+## ✨ Key Features
 
-1. **Ideation & Setup**: Initialized the project structure and Flask foundation.
-2. **Authentication**: Integrated Supabase to handle secure user signups and seamless Google OAuth.
-3. **GenAI Integration**: Connected the OpenAI API, building the core intelligence of the financial assistant.
-4. **Data Persistence**: Set up Supabase tables to ensure the AI remembers past conversations and user memory.
-5. **UI/UX Polish**: Designed the intuitive dashboard and chat interface.
-6. **Finalization**: Prepped the platform for the hackathon submission.
+| Feature | Description |
+|---|---|
+| **AI Financial Assistant** | GPT-4 powered chatbot that answers financial queries with persistent memory |
+| **Smart Product Comparison** | Side-by-side comparison of financial products across 8 categories |
+| **Financial Calculators** | SIP, Lumpsum, EMI, PPF, NPS, CAGR, GST, Income Tax and more |
+| **Secure Auth** | Email/Password + Google OAuth via Supabase |
+| **Guest Mode** | Try the app without signing up |
+| **Real-time Scraping** | Live financial data fetched via custom scraper |
+| **Persistent Memory** | Chat history and user preferences synced to Supabase |
 
-*(See `build_process_commits.txt` for the detailed commit log).*
+---
+
+## 🛠️ Tech Stack
+
+- **Backend**: Python 3 / Flask
+- **AI Engine**: OpenAI GPT-4 API
+- **Database & Auth**: Supabase (PostgreSQL + Auth)
+- **Frontend**: HTML5 / Vanilla JS / CSS3 (Glassmorphism UI)
+- **Data**: Custom web scraper (`scrapper.py`)
+
+---
+
+## 👥 Team
+
+| Member | Role |
+|---|---|
+| **Shiven** (it-shiven) | Backend, Flask Architecture, Deployment |
+| **Abhi** | Auth Integration, Chat Memory, Supabase |
+| **Varun Arora** | Dashboard UI, LLM Integration, Frontend |
+| **Yuvish** | Google OAuth, Scraper, Database Setup |
+
+---
 
 ## ⚙️ Setup Instructions
 
 ### Prerequisites
 - Python 3.8+
-- [Supabase](https://supabase.com/) Account & Project
-- OpenAI API Key
+- A [Supabase](https://supabase.com/) project (URL + API keys)
+- An [OpenAI](https://platform.openai.com/) API key
 
-### Installation
+### 1. Clone & Enter Project
+```bash
+git clone https://github.com/itz-shiven/finclarityAI.git
+cd finclarityAI
+```
 
-1. **Clone the repository:**
-   ```bash
-   git clone <repository-url>
-   cd finclarityAI
-   ```
+### 2. Create Virtual Environment
+```bash
+python -m venv venv
+# Windows
+venv\Scripts\activate
+# macOS/Linux
+source venv/bin/activate
+```
 
-2. **Setup Virtual Environment:**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows use: venv\Scripts\activate
-   ```
+### 3. Install Dependencies
+```bash
+cd backend
+pip install -r requirements.txt
+```
 
-3. **Install Dependencies:**
-   ```bash
-   cd backend
-   pip install -r requirements.txt
-   ```
+### 4. Configure Environment
+Create a `.env` file inside `backend/`:
+```env
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+SECRET_KEY=your_flask_secret_key
+OPENAI_API_KEY=your_openai_api_key
+```
 
-4. **Environment Variables:**
-   Create a `.env` file in the `backend` directory with the following variables:
-   ```env
-   SUPABASE_URL=your_supabase_project_url
-   SUPABASE_KEY=your_supabase_anon_key
-   SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-   SECRET_KEY=your_flask_secret_key
-   OPENAI_API_KEY=your_openai_api_key
-   ```
+### 5. Run the App
+```bash
+python app.py
+```
+Open **http://127.0.0.1:5000/** in your browser.
 
-5. **Run the Application:**
-   ```bash
-   python app.py
-   ```
-   The application will be available at `http://127.0.0.1:5000/`.
+---
+
+## 📁 Project Structure
+
+```
+finclarityAI/
+├── backend/
+│   ├── app.py              # Flask app, routes, auth, Supabase client
+│   ├── chat.py             # AI chat blueprint (OpenAI integration)
+│   ├── scrapper.py         # Financial data scraper
+│   ├── requirements.txt    # Python dependencies
+│   ├── templates/          # HTML templates (index, login, dashboard)
+│   └── static/             # CSS, JS, assets
+├── .env                    # Environment variables (not committed)
+├── .gitignore
+└── README.md
+```
+
+---
+
+## 📝 Build Process
+
+The commit history documents our hackathon journey from Day 1 to submission. A detailed log is available in [`build_process_commits.txt`](build_process_commits.txt).
+
+---
+
+## 📜 License
+
+Built for the **ET AI Hackathon 2026**. All rights reserved by the team.
