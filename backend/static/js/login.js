@@ -3,12 +3,35 @@ document.addEventListener("DOMContentLoaded", () => {
     const container = document.getElementById("container");
     if (!container) return;
 
+    // 🔥 DEBUG: Log all social containers and their content
+    console.log("=== LOGIN PAGE LOADED ===");
+    const socialContainers = document.querySelectorAll(".social-container");
+    console.log(`Total social containers: ${socialContainers.length}`);
+    
+    socialContainers.forEach((socialContainer, index) => {
+        const links = socialContainer.querySelectorAll("a");
+        console.log(`Social Container ${index}:`);
+        console.log(`  Total links: ${links.length}`);
+        links.forEach((link, linkIndex) => {
+            const textContent = link.textContent.trim();
+            const innerText = link.innerText;
+            const innerHtml = link.innerHTML;
+            console.log(`  Link ${linkIndex}:`);
+            console.log(`    textContent: "${textContent}"`);
+            console.log(`    innerText: "${innerText}"`);
+            console.log(`    innerHTML: ${innerHtml}`);
+            console.log(`    classes: ${link.className}`);
+        });
+    });
+
     const signUpButton = document.getElementById("signUp");
     const signInButton = document.getElementById("signIn");
     const signupForm = document.getElementById("signupForm");
     const loginForm = document.getElementById("loginForm");
     const guestLink = document.getElementById("guestLink");
     const googleBtns = document.querySelectorAll(".fa-google");
+    
+    console.log(`Found ${googleBtns.length} Google buttons`);
 
     // PANEL TOGGLE
     if (signUpButton) {
@@ -237,6 +260,24 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     setupAuthStateChange();
     setupNotifications(); // Initialize custom notifications
+    
+    // 🔥 DEBUG: Watch for dynamic changes to social containers
+    socialContainers.forEach((socialContainer, index) => {
+        const observer = new MutationObserver((mutations) => {
+            console.log(`⚠️ Social Container ${index} CHANGED:`, mutations);
+            const links = socialContainer.querySelectorAll("a");
+            console.log(`  New link count: ${links.length}`);
+            links.forEach((link, linkIndex) => {
+                console.log(`  Link ${linkIndex}:`, link.textContent, link.innerHTML);
+            });
+        });
+        observer.observe(socialContainer, { 
+            childList: true, 
+            subtree: true, 
+            characterData: true,
+            attributes: true
+        });
+    });
 });
 
 function setupNotifications() {

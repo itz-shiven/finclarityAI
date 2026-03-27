@@ -1917,21 +1917,29 @@ function renderCompareProviderGrid(categoryKey, title) {
         `;
 
         card.addEventListener('click', (e) => {
+            console.log("🔥 Provider card clicked:", providerName);
+            console.log("Current selectedCompareProviders:", selectedCompareProviders);
+            
             // If they clicked the minus button specifically
             if (e.target.closest('.remove-instance-btn')) {
+                console.log("Remove button clicked");
                 const idx = selectedCompareProviders.lastIndexOf(providerName);
                 if (idx !== -1) {
                     selectedCompareProviders.splice(idx, 1);
                 }
                 renderCompareProviderGridUpdateCounts();
                 updateContinueBtn();
+                console.log("After remove:", selectedCompareProviders);
                 return;
             }
 
             const count = selectedCompareProviders.filter(p => p === providerName).length;
             const totalCount = selectedCompareProviders.length;
+            
+            console.log(`Count for ${providerName}: ${count}, Total: ${totalCount}`);
 
             if (totalCount >= 4 && count === 0) {
+                console.log("Limit reached");
                 showFinanceActionModal({
                     title: 'Limit Reached',
                     message: 'You can compare a maximum of 4 items at once. Remove one to add another.',
@@ -1944,12 +1952,15 @@ function renderCompareProviderGrid(categoryKey, title) {
             }
 
             selectedCompareProviders.push(providerName);
+            console.log("After push:", selectedCompareProviders);
+            
             if (selectedCompareProviders.length > 4) {
                 selectedCompareProviders.shift();
             }
 
             renderCompareProviderGridUpdateCounts();
             updateContinueBtn();
+            console.log("Final state:", selectedCompareProviders);
         });
 
         grid.appendChild(card);
@@ -1976,12 +1987,15 @@ function renderCompareProviderGrid(categoryKey, title) {
 }
 
 function renderCompareProviderGridUpdateCounts() {
+    console.log("🔄 Updating counts, selectedCompareProviders:", selectedCompareProviders);
     document.querySelectorAll('.provider-card').forEach(card => {
         const name = card.querySelector('span').textContent.split(' (')[0];
         const count = selectedCompareProviders.filter(p => p === name).length;
         const check = card.querySelector('.check-indicator');
         const removeBtn = card.querySelector('.remove-instance-btn');
         const span = card.querySelector('span');
+
+        console.log(`  Card: ${name}, Count: ${count}`);
 
         if (count > 0) {
             card.style.borderColor = 'var(--primary-600)';
@@ -1991,6 +2005,7 @@ function renderCompareProviderGridUpdateCounts() {
             check.textContent = count;
             check.style.opacity = '1';
             if (removeBtn) removeBtn.style.display = 'flex';
+            console.log(`    ✅ Updated styling`);
         } else {
             card.style.borderColor = 'var(--border-color)';
             card.style.background = 'var(--card-bg)';

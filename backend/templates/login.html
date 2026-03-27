@@ -9,8 +9,9 @@
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
-    <script src="{{ url_for('static', filename='js/theme-toggle.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}?v=1">
+    <script src="{{ url_for('static', filename='js/theme-toggle.js') }}?v=1"></script>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 </head>
 
 <body>
@@ -31,7 +32,9 @@
                     <i class="fab fa-google"></i>
                 </a>
 
-                <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                <a href="#">
+                    <i class="fab fa-windows"></i>
+                </a>
             </div>
 
             <span>or use your email</span>
@@ -63,7 +66,9 @@
                     <i class="fab fa-google"></i>
                 </a>
 
-                <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                <a href="#">
+                    <i class="fab fa-windows"></i>
+                </a>
             </div>
 
             <span>or use your account</span>

@@ -53,6 +53,16 @@ ALLOWED_ORIGINS = [
 CORS(app, supports_credentials=True, origins=ALLOWED_ORIGINS)
 
 # -------------------------
+# DISABLE CACHING FOR ALL RESPONSES
+# -------------------------
+@app.after_request
+def disable_cache(response):
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, public, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
+# -------------------------
 # GLOBAL ERROR HANDLER
 # -------------------------
 @app.errorhandler(Exception)
