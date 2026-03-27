@@ -516,15 +516,40 @@ def update_profile():
         return jsonify({"status": "error", "message": "Guest accounts cannot update profile"})
 
     try:
-        data = request.get_json()
-        new_name = data.get("name")
-        new_email = data.get("email")
+        payload = request.get_json() or {}
+        new_name = (payload.get("name") or "").strip()
+        new_email = (payload.get("email") or "").strip()
 
-        session['user_name'] = new_name
-        session['user_email'] = new_email
-        
-        return jsonify({"status": "success"})
+        if not new_name and not new_email:
+            return jsonify({"status": "error", "message": "Name or email cannot be empty."}), 400
+
+        update_payload = {}
+        if new_email:
+            update_payload["email"] = new_email
+
+        metadata = {}
+        if new_name:
+            metadata["full_name"] = new_name
+        if metadata:
+            update_payload["user_metadata"] = metadata
+
+        if not update_payload:
+            return jsonify({"status": "error", "message": "Nothing to update."}), 400
+
+        supabase.auth.admin.update_user(session['user_id'], update_payload)
+
+        if new_name:
+            session['user_name'] = new_name
+        if new_email:
+            session['user_email'] = new_email
+
+        return jsonify({
+            "status": "success",
+            "name": session['user_name'],
+            "email": session['user_email']
+        })
     except Exception as e:
+        print(f"[UPDATE PROFILE ERROR] {str(e)}")
         return jsonify({"status": "error", "message": str(e)})
 
 @app.route("/change_password", methods=["POST"])

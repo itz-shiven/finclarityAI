@@ -117,6 +117,7 @@ function initializeDashboard() {
     setupNavigation();
     setupChatPanel();
     setupChatInput();
+    ensureCalculatorInFinanceHub();
     setupActionCards();
     setupComparisonFeature();
     setupResponsive();
@@ -2319,6 +2320,49 @@ function setupChatPanel() {
         });
     });
 }
+function findFinanceHubGrid() {
+    const dedicatedGrid = document.querySelector('.finance-hub-grid');
+    if (dedicatedGrid) return dedicatedGrid;
+
+    const hubDivider = Array.from(document.querySelectorAll('.section-divider span'))
+        .find(span => span.textContent.trim() === 'My Finance Hub');
+
+    if (!hubDivider) return null;
+
+    const section = hubDivider.closest('.section-divider');
+    const candidate = section ? section.nextElementSibling : null;
+    if (candidate && candidate.classList.contains('cards-grid')) {
+        candidate.classList.add('finance-hub-grid');
+        return candidate;
+    }
+
+    return null;
+}
+
+function ensureCalculatorInFinanceHub() {
+    const financeHubGrid = findFinanceHubGrid();
+    if (!financeHubGrid) return;
+
+    let calculatorCard = document.getElementById('homeCalculatorsCard');
+    if (calculatorCard && financeHubGrid.contains(calculatorCard)) return;
+
+    if (!calculatorCard) {
+        calculatorCard = document.querySelector('.service-grid #homeCalculatorsCard');
+    }
+
+    if (!calculatorCard) {
+        const newCard = document.createElement('div');
+        newCard.className = 'action-card category-card';
+        newCard.id = 'homeCalculatorsCard';
+        newCard.setAttribute('data-title', 'Calculators');
+        newCard.innerHTML = `<i class="fas fa-calculator"></i><span>Calculators</span>`;
+        financeHubGrid.appendChild(newCard);
+        return;
+    }
+
+    financeHubGrid.appendChild(calculatorCard);
+}
+
 function setupActionCards() {
     console.log("Finclarity AI: Setting up Category and Sub-category cards...");
 
@@ -2544,66 +2588,6 @@ function setupProfileModal() {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && profileModal.classList.contains('show')) closeModal();
     });
-
-    // Handle Update Profile Form
-    const updateProfileForm = document.getElementById('updateProfileForm');
-    if (updateProfileForm) {
-        updateProfileForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const btn = document.getElementById('saveProfileBtn');
-            const originalText = btn.textContent;
-            btn.textContent = 'Saving...';
-            btn.disabled = true;
-
-            const name = document.getElementById('editUsername').value;
-            const email = document.getElementById('editEmail').value;
-
-            try {
-                const res = await fetch('/update_profile', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ name, email })
-                });
-
-                const data = await res.json();
-                if (data.status === 'success') {
-                    // Update local details
-                    if (window.currentUserData) {
-                        window.currentUserData.name = name;
-                        window.currentUserData.email = email;
-                    }
-
-                    document.getElementById('displayUsername').textContent = name;
-                    document.getElementById('displayEmail').textContent = email;
-
-                    const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-                    document.getElementById('profileAvatar').textContent = initials;
-
-                    // Update main screen username displays
-                    const headerNames = document.querySelectorAll('.dashboard-header-simple h2, .profile-name');
-                    headerNames.forEach(el => { el.textContent = name; });
-
-                    btn.textContent = 'Saved!';
-                    btn.style.background = '#4caf50';
-                    setTimeout(() => {
-                        btn.textContent = originalText;
-                        btn.style.background = '';
-                        btn.disabled = false;
-                    }, 2000);
-                } else {
-                    alert(data.message || 'Error updating profile');
-                    btn.textContent = originalText;
-                    btn.disabled = false;
-                }
-            } catch (err) {
-                console.error(err);
-                alert('Connection error');
-                btn.textContent = originalText;
-                btn.disabled = false;
-            }
-        });
-    }
 
     // Handle Change Password Form
     const changePasswordForm = document.getElementById('changePasswordForm');
