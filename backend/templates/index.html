@@ -10,9 +10,9 @@
 
     <title>FinClarity</title>
 
+    <link rel="stylesheet" href="https://unpkg.com/simplebar@latest/dist/simplebar.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
-    <link rel="stylesheet" href="https://unpkg.com/simplebar@latest/dist/simplebar.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="{{ url_for('static', filename='js/theme-toggle.js') }}"></script>
 
@@ -33,10 +33,11 @@
                 <div class="logo">FinClarity</div>
 
                 <nav class="nav-links">
-                    <a href="#">Home</a>
-                    <a href="#">Features</a>
-                    <a href="#">Service</a>
-                    <a href="#">Testimonial</a>
+                    <a href="#home">Home</a>
+                    <a href="#features">Features</a>
+                    <a href="#service">How It Works</a>
+                    <a href="#why-finclarify">Why Us</a>
+                    <a href="#contact">Contact</a>
                 </nav>
 
                 <div class="hero-buttons">
@@ -48,6 +49,7 @@
                     </button>
 
                     <button href="#" class="theme-toggle"><i class="fas fa-moon"></i></button>
+
                 </div>
 
             </div>
@@ -56,7 +58,7 @@
 
 
 
-        <section class="hero">
+        <section class="hero" id="home">
 
             <video autoplay muted playsinline class="hero-video" id="heroVideo">
                 <source src="{{ url_for('static', filename='images/bg_light_video.mp4') }}" type="video/mp4">
@@ -134,7 +136,7 @@ C1380 780 1480 580 1700 675.329
 
 
 
-        <section class="features">
+        <section class="features" id="features">
 
             <div class="container">
 
@@ -167,6 +169,27 @@ C1380 780 1480 580 1700 675.329
                         </p>
                     </div>
 
+                    <div class="feature-card">
+                        <h3>Real-time Alerts</h3>
+                        <p>
+                            Get instant notifications on rate changes, new loan offers, and market updates relevant to your profile.
+                        </p>
+                    </div>
+
+                    <div class="feature-card">
+                        <h3>Risk Assessment</h3>
+                        <p>
+                            AI-powered analysis of loan terms and investment risks with personalized recommendations.
+                        </p>
+                    </div>
+
+                    <div class="feature-card">
+                        <h3>Investment Recommendations</h3>
+                        <p>
+                            Discover optimal investment products tailored to your financial goals and risk tolerance.
+                        </p>
+                    </div>
+
                 </div>
 
             </div>
@@ -175,37 +198,113 @@ C1380 780 1480 580 1700 675.329
 
 
 
-        <section class="engine">
+        <section class="engine how-it-works" id="service">
 
             <div class="container">
 
-                <h2 style="font-size: 0.9cm;">Advanced Banking Intelligence Engine</h2>
+                <h2 style="font-size: 0.9cm;">How It Works</h2>
 
                 <p class="subtitle" style="font-size: 0.56cm;">
-                    Our platform transforms raw web data into actionable financial intelligence using LLM processing.
+                    Our intelligent engine transforms raw banking data into instant, actionable financial recommendations.
                 </p>
 
 
                 <div class="engine-grid">
 
                     <div class="engine-card">
-                        <h3>Real-time Scraping</h3>
-                        <p>We use Firecrawl to gather the latest banking data directly from official portals.</p>
+                        <h3>Real-time Data Scraping</h3>
+                        <p>Uses Firecrawl to continuously gather latest banking data, interest rates, and product updates from official sources.</p>
                     </div>
 
                     <div class="engine-card">
-                        <h3>Visual Analytics</h3>
-                        <p>View financial trends through modern interactive charts.</p>
+                        <h3>AI-Powered Processing</h3>
+                        <p>Advanced LLM models process and understand complex financial information in natural language.</p>
                     </div>
 
                     <div class="engine-card">
-                        <h3>Data Refinement</h3>
-                        <p>AI cleans and structures the scraped data.</p>
+                        <h3>Data Refinement & Validation</h3>
+                        <p>Intelligent cleaning, normalization, and cross-validation ensures accuracy and reliability of all financial data.</p>
                     </div>
 
                     <div class="engine-card">
-                        <h3>Instant Comparison</h3>
-                        <p>Evaluate multiple loan and credit card offers instantly.</p>
+                        <h3>Smart Analytics</h3>
+                        <p>Interactive dashboards and visualizations transform complex data into actionable financial insights.</p>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <section class="benefits" id="why-finclarify" style="background: var(--bg-features); padding: 60px 0;">
+
+            <div class="container">
+
+                <h2 style="font-size: 0.9cm;">Why Choose FinClarity</h2>
+
+                <p class="subtitle" style="font-size: 0.56cm;">
+                    Make confident financial decisions with AI-powered insights and real-time market data.
+                </p>
+
+                <div class="engine-grid">
+
+                    <div class="engine-card">
+                        <h3>⚡ Instant Results</h3>
+                        <p>Get personalized financial recommendations in seconds, not hours. No waiting, no complexity.</p>
+                    </div>
+
+                    <div class="engine-card">
+                        <h3>🔐 Data Privacy</h3>
+                        <p>Your financial information stays secure. We never store sensitive banking credentials.</p>
+                    </div>
+
+                    <div class="engine-card">
+                        <h3>🏦 Multi-Bank Support</h3>
+                        <p>Access rates and products from all major banks and financial institutions in one platform.</p>
+                    </div>
+
+                    <div class="engine-card">
+                        <h3>📊 Unbiased Comparisons</h3>
+                        <p>AI-driven analysis ensures fair product comparisons without any bank preferences.</p>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <section class="contact-section" id="contact">
+
+            <div class="container">
+
+                <div class="contact-header">
+                    <h2 class="contact-title">Get In Touch</h2>
+                    <p class="contact-subtitle">Have questions? Our team is here to help you make smarter financial decisions.</p>
+                </div>
+
+                <div class="contact-cards-wrapper">
+
+                    <div class="contact-card contact-card-email">
+                        <div class="contact-card-icon">📧</div>
+                        <h3>Email</h3>
+                        <p class="contact-text">Drop us a line</p>
+                        <a href="mailto:finclarityai7@gmail.com" class="contact-link">finclarityai7@gmail.com</a>
+                    </div>
+
+                    <div class="contact-card contact-card-started">
+                        <div class="contact-card-icon">🚀</div>
+                        <h3>Get Started</h3>
+                        <p class="contact-text">Ready to transform?</p>
+                        <button class="contact-cta-btn" onclick="window.location.href=`{{ url_for('login_page') }}`">Sign Up Now</button>
+                    </div>
+
+                    <div class="contact-card contact-card-phone">
+                        <div class="contact-card-icon">&#128222;</div>
+                        <h3>Contact Number</h3>
+                        <p class="contact-text">Call our team directly</p>
+                        <a href="#" class="contact-link">+91 XXXXX XXXXX</a>
                     </div>
 
                 </div>
@@ -326,6 +425,80 @@ C1380 780 1480 580 1700 675.329
             container.addEventListener('mousemove', show);
             container.addEventListener('mouseleave', hide);
         })();
+
+        // Smooth scroll for anchor links with SimpleBar - wait for SimpleBar to initialize
+        setTimeout(function () {
+            console.log('Initializing smooth scroll...');
+            
+            const container = document.querySelector('[data-simplebar]');
+            console.log('Container:', container);
+            
+            if (!container) {
+                console.error('No container found!');
+                return;
+            }
+
+            // Get SimpleBar's actual scrollable element
+            const scrollableElement = container.querySelector('.simplebar-content-wrapper');
+            console.log('Scrollable element:', scrollableElement);
+
+            // Get all nav links
+            const navLinks = document.querySelectorAll('.nav-links a');
+            console.log('Nav links found:', navLinks.length);
+
+            navLinks.forEach(link => {
+                console.log('Adding click listener to:', link.getAttribute('href'));
+                
+                link.addEventListener('click', function (e) {
+                    const href = this.getAttribute('href');
+                    console.log('Link clicked:', href);
+                    
+                    // Only handle anchor links
+                    if (href && href.startsWith('#')) {
+                        e.preventDefault();
+                        console.log('Preventing default, target ID:', href.substring(1));
+                        
+                        const targetId = href.substring(1);
+                        const targetElement = document.getElementById(targetId);
+                        console.log('Target element:', targetElement);
+                        
+                        if (targetElement && scrollableElement) {
+                            // Use scrollableElement for SimpleBar
+                            const startPosition = scrollableElement.scrollTop;
+                            const targetPosition = targetElement.offsetTop - 80; // 80px offset from top for navbar
+                            const distance = targetPosition - startPosition;
+                            const duration = 1000; // milliseconds
+                            let start = null;
+
+                            console.log('Scrollable element scroll top:', startPosition);
+                            console.log('Target element offset top:', targetElement.offsetTop);
+                            console.log('Target position:', targetPosition);
+                            console.log('Distance:', distance);
+
+                            const animation = (currentTime) => {
+                                if (start === null) start = currentTime;
+                                const timeElapsed = currentTime - start;
+                                const progress = Math.min(timeElapsed / duration, 1);
+                                
+                                // Ease-out cubic for smooth acceleration
+                                const easeOut = 1 - Math.pow(1 - progress, 3);
+                                
+                                scrollableElement.scrollTop = startPosition + distance * easeOut;
+                                console.log('Scrolling... progress:', progress.toFixed(2), 'position:', scrollableElement.scrollTop);
+                                
+                                if (timeElapsed < duration) {
+                                    requestAnimationFrame(animation);
+                                }
+                            };
+
+                            requestAnimationFrame(animation);
+                        } else {
+                            console.error('Target element or scrollable element not found');
+                        }
+                    }
+                });
+            });
+        }, 500);
     </script>
 </body>
 
