@@ -38,7 +38,10 @@
 
             <input type="text" id="signupName" placeholder="Name" required>
             <input type="email" id="signupEmail" placeholder="Email" required>
-            <input type="password" id="signupPassword" placeholder="Password" required>
+            <div class="password-field">
+                <input type="password" id="signupPassword" placeholder="Password" required>
+                <i class="fas fa-eye toggle-password" data-target="signupPassword" aria-label="Show password"></i>
+            </div>
 
             <button type="submit">Sign Up</button>
 
@@ -66,7 +69,10 @@
             <span>or use your account</span>
 
             <input type="email" id="loginEmail" placeholder="Email" required>
-            <input type="password" id="loginPassword" placeholder="Password" required>
+            <div class="password-field">
+                <input type="password" id="loginPassword" placeholder="Password" required>
+                <i class="fas fa-eye toggle-password" data-target="loginPassword" aria-label="Show password"></i>
+            </div>
 
             <a href="#">Forgot password?</a>
 

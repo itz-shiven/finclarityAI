@@ -137,6 +137,27 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    const passwordToggles = document.querySelectorAll(".toggle-password");
+    passwordToggles.forEach(toggle => {
+        const targetId = toggle.dataset.target;
+        const input = document.getElementById(targetId);
+        if (!input) return;
+
+        toggle.addEventListener("click", () => {
+            const isHidden = input.type === "password";
+            input.type = isHidden ? "text" : "password";
+            if (isHidden) {
+                toggle.classList.remove("fa-eye");
+                toggle.classList.add("fa-eye-slash");
+                toggle.setAttribute("aria-label", "Hide password");
+            } else {
+                toggle.classList.remove("fa-eye-slash");
+                toggle.classList.add("fa-eye");
+                toggle.setAttribute("aria-label", "Show password");
+            }
+        });
+    });
+
     // GOOGLE LOGIN
     googleBtns.forEach(btn => {
         btn.parentElement.addEventListener("click", async (e) => {

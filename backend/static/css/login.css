@@ -98,6 +98,31 @@ border-color: var(--input-focus);
 box-shadow:0 0 0 2px rgba(102,126,234,0.15);
 }
 
+.password-field {
+  position: relative;
+  width: 100%;
+  margin: 8px 0;
+}
+
+.password-field input {
+  padding-right: 45px;
+}
+
+.password-field .toggle-password {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 18px;
+  transition: color 0.2s ease;
+}
+
+.password-field .toggle-password:hover {
+  color: var(--input-focus);
+}
+
 /* BUTTONS */
 
 button{

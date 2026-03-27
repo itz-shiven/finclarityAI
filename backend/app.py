@@ -27,15 +27,11 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 backend_key = SUPABASE_SERVICE_ROLE_KEY or SUPABASE_KEY
 supabase: Client = create_client(SUPABASE_URL, backend_key)
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-USER_DATA_DIR = os.path.join(BASE_DIR, "user_data")
-os.makedirs(USER_DATA_DIR, exist_ok=True)
-
 app = Flask(__name__)
 
 app.secret_key = os.getenv("SECRET_KEY", "change-this-in-production")
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SECURE'] = False
+app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # -------------------------
@@ -47,10 +43,10 @@ app.register_blueprint(chat_bp)
 # SECURE CORS SETUP
 # -------------------------
 ALLOWED_ORIGINS = [
-    "http://localhost:3000",       
-    "[http://127.0.0.1:5000](http://127.0.0.1:5000)",       
-    "http://localhost:5000",       
-    "[https://your-future-domain.com](https://your-future-domain.com)" 
+    "http://localhost:3000",
+    "http://127.0.0.1:5000",
+    "http://localhost:5000",
+    "https://finclarityai.onrender.com"
 ]
 
 CORS(app, supports_credentials=True, origins=ALLOWED_ORIGINS)
@@ -553,4 +549,6 @@ def page_logout():
 # RUN SERVER
 # -------------------------
 if __name__ == "__main__":
-    app.run(debug=True)
+    debug_mode = os.environ.get("FLASK_DEBUG", "false").lower() in {"1", "true", "yes"}
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=debug_mode)
