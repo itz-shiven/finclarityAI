@@ -114,6 +114,7 @@ function initializeDashboard() {
     setupNavigation();
     setupChatPanel();
     setupChatInput();
+    ensureCalculatorInFinanceHub();
     setupActionCards();
     setupComparisonFeature();
     setupResponsive();
@@ -2277,6 +2278,49 @@ function setupChatPanel() {
         });
     });
 }
+function findFinanceHubGrid() {
+    const dedicatedGrid = document.querySelector('.finance-hub-grid');
+    if (dedicatedGrid) return dedicatedGrid;
+
+    const hubDivider = Array.from(document.querySelectorAll('.section-divider span'))
+        .find(span => span.textContent.trim() === 'My Finance Hub');
+
+    if (!hubDivider) return null;
+
+    const section = hubDivider.closest('.section-divider');
+    const candidate = section ? section.nextElementSibling : null;
+    if (candidate && candidate.classList.contains('cards-grid')) {
+        candidate.classList.add('finance-hub-grid');
+        return candidate;
+    }
+
+    return null;
+}
+
+function ensureCalculatorInFinanceHub() {
+    const financeHubGrid = findFinanceHubGrid();
+    if (!financeHubGrid) return;
+
+    let calculatorCard = document.getElementById('homeCalculatorsCard');
+    if (calculatorCard && financeHubGrid.contains(calculatorCard)) return;
+
+    if (!calculatorCard) {
+        calculatorCard = document.querySelector('.service-grid #homeCalculatorsCard');
+    }
+
+    if (!calculatorCard) {
+        const newCard = document.createElement('div');
+        newCard.className = 'action-card category-card';
+        newCard.id = 'homeCalculatorsCard';
+        newCard.setAttribute('data-title', 'Calculators');
+        newCard.innerHTML = `<i class="fas fa-calculator"></i><span>Calculators</span>`;
+        financeHubGrid.appendChild(newCard);
+        return;
+    }
+
+    financeHubGrid.appendChild(calculatorCard);
+}
+
 function setupActionCards() {
     console.log("Finclarity AI: Setting up Category and Sub-category cards...");
 
