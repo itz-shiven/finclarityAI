@@ -477,11 +477,40 @@ function removeLoader(loaderId) {
 function scrollToBottom() {
     const chatContainer = document.querySelector('.chat-container');
     if (chatContainer) {
-        // With scroll-behavior: smooth in CSS, this will animate automatically
-        chatContainer.scrollTop = chatContainer.scrollHeight;
+        requestAnimationFrame(() => {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        });
     }
 }
 // ============================================
+
+function isMobileChatViewport() {
+    return window.innerWidth <= 1024;
+}
+
+function updateMobileChatViewport() {
+    if (!isMobileChatViewport()) {
+        document.documentElement.style.removeProperty('--chat-mobile-height');
+        return;
+    }
+
+    const viewportHeight = window.visualViewport
+        ? Math.round(window.visualViewport.height)
+        : window.innerHeight;
+
+    document.documentElement.style.setProperty('--chat-mobile-height', `${viewportHeight}px`);
+}
+
+function syncChatBodyScrollLock() {
+    const chatWindow = document.getElementById('chatWindow');
+    const shouldLock = Boolean(
+        chatWindow &&
+        chatWindow.classList.contains('open') &&
+        isMobileChatViewport()
+    );
+
+    document.body.classList.toggle('chat-mobile-open', shouldLock);
+}
 
 function setupSettings() {
 
@@ -551,6 +580,13 @@ function setupSettings() {
 let chatHistories = [];
 let currentChatId = null;
 let currentConversation = [];
+
+function closeMobileChatHistory() {
+    const chatWindow = document.getElementById('chatWindow');
+    if (chatWindow && window.innerWidth <= 1024) {
+        chatWindow.classList.remove('show-history');
+    }
+}
 
 function getUserKey(baseKey) {
     const user = window.currentUserData;
@@ -687,6 +723,7 @@ function loadChat(chatId) {
     }
 
     updateActiveHistoryItem();
+    closeMobileChatHistory();
 }
 
 function updateActiveHistoryItem() {
@@ -855,6 +892,7 @@ function startNewChat() {
     }
 
     updateActiveHistoryItem();
+    closeMobileChatHistory();
 }
 
 // ============================================
@@ -2293,26 +2331,82 @@ function setupChatPanel() {
     const chatToggleBtn = document.getElementById('chatToggleBtn');
     const chatWindow = document.getElementById('chatWindow');
     const chatCloseBtn = document.getElementById('chatCloseBtn');
+    const chatInput = document.getElementById('chatInput');
+
+    const applyChatViewportState = () => {
+        updateMobileChatViewport();
+        syncChatBodyScrollLock();
+    };
 
     if (chatToggleBtn && chatWindow) {
         chatToggleBtn.addEventListener('click', () => {
             const isOpen = chatWindow.classList.contains('open');
             if (isOpen) {
                 chatWindow.classList.remove('open');
+                chatWindow.classList.remove('show-history');
                 chatToggleBtn.classList.remove('active');
+                chatInput?.blur();
             } else {
                 chatWindow.classList.add('open');
+                chatWindow.classList.remove('show-history');
                 chatToggleBtn.classList.add('active');
+                setTimeout(() => {
+                    updateMobileChatViewport();
+                    scrollToBottom();
+                    chatInput?.focus();
+                }, 180);
             }
+
+            applyChatViewportState();
         });
     }
 
     if (chatCloseBtn && chatWindow) {
         chatCloseBtn.addEventListener('click', () => {
+            if (window.innerWidth <= 1024 && chatWindow.classList.contains('show-history')) {
+                chatWindow.classList.remove('show-history');
+                return;
+            }
+
             chatWindow.classList.remove('open');
+            chatWindow.classList.remove('show-history');
             if (chatToggleBtn) chatToggleBtn.classList.remove('active');
+            chatInput?.blur();
+            applyChatViewportState();
         });
     }
+
+    if (chatInput) {
+        chatInput.addEventListener('focus', () => {
+            if (!isMobileChatViewport()) return;
+
+            document.body.classList.add('chat-mobile-open');
+            setTimeout(() => {
+                updateMobileChatViewport();
+                scrollToBottom();
+            }, 250);
+        });
+
+        chatInput.addEventListener('blur', () => {
+            if (!isMobileChatViewport()) return;
+
+            setTimeout(() => {
+                applyChatViewportState();
+            }, 150);
+        });
+    }
+
+    const viewportResizeHandler = () => {
+        applyChatViewportState();
+        if (chatWindow?.classList.contains('open')) {
+            scrollToBottom();
+        }
+    };
+
+    window.addEventListener('resize', viewportResizeHandler);
+    window.addEventListener('orientationchange', viewportResizeHandler);
+    window.visualViewport?.addEventListener('resize', viewportResizeHandler);
+    applyChatViewportState();
 
     // New Chat Button
     const newChatSidebarBtn = document.getElementById('newChatSidebarBtn');
@@ -4771,5 +4865,3 @@ function updateCalcChart(type, invested, interest) {
         }
     });
 }
-
-

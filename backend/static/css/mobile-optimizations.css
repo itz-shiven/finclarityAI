@@ -1,0 +1,343 @@
+/* ============================================
+   FINCLARITY AI - Mobile Optimizations
+   (Affects only screens < 1024px)
+   ============================================ */
+
+:root {
+    --chat-mobile-height: 100vh;
+}
+
+body.chat-mobile-open {
+    overflow: hidden;
+    overscroll-behavior: none;
+}
+
+/* Global hidden states for mobile-only elements on desktop */
+.mobile-only, .mobile-overlay, .mobile-chat-nav-btn {
+    display: none;
+}
+
+@media (max-width: 1024px) {
+    /* 1. LOGIN PAGE OPTIMIZATIONS */
+    .container {
+        width: 95% !important;
+        min-height: auto !important;
+        height: auto !important;
+        margin: 20px auto;
+        border-radius: 12px !important;
+        display: block !important;
+    }
+
+    .form-container {
+        position: relative !important;
+        width: 100% !important;
+        height: auto !important;
+        opacity: 1 !important;
+        transform: none !important;
+        padding: 40px 20px !important;
+    }
+
+    .sign-up-container {
+        display: none; /* Hide signup by default on mobile, can be toggled if needed */
+    }
+
+    .container.right-panel-active .sign-up-container {
+        display: block;
+    }
+
+    .container.right-panel-active .sign-in-container {
+        display: none;
+    }
+
+    .overlay-container {
+        display: none !important;
+    }
+
+    .logo-text {
+        position: relative !important;
+        top: 0 !important;
+        left: 0 !important;
+        text-align: center;
+        margin-bottom: 20px;
+        font-size: 24px !important;
+    }
+
+    .theme-toggle {
+        top: 15px !important;
+        right: 15px !important;
+    }
+
+    /* 2. DASHBOARD LAYOUT OPTIMIZATIONS */
+    .dashboard-container {
+        display: block !important;
+    }
+
+    .sidebar {
+        position: fixed !important;
+        left: -280px !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        width: 280px !important;
+        z-index: 11000 !important; /* Above chat */
+        transition: transform 0.3s ease !important;
+        background: var(--bg-primary) !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    .sidebar.mobile-active {
+        transform: translateX(280px) !important;
+    }
+
+    /* Force show text in sidebar on mobile even if .collapsed class is present */
+    .sidebar .nav-item span {
+        display: inline-block !important;
+        width: auto !important;
+        opacity: 1 !important;
+        margin-left: 10px !important;
+    }
+
+    .sidebar .logo-text {
+        display: inline-block !important;
+        width: auto !important;
+        opacity: 1 !important;
+    }
+
+    .sidebar-toggle-btn {
+        display: none !important;
+    }
+
+    .main-content {
+        padding: 60px 15px 20px !important;
+        width: 100% !important;
+    }
+
+    /* Mobile Header/Top Bar */
+    .dashboard-header-simple {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        height: 60px !important;
+        background: var(--bg-primary) !important;
+        z-index: 8000 !important;
+        padding: 0 15px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        border-bottom: 1px solid var(--border-color) !important;
+        box-shadow: var(--shadow-sm) !important;
+    }
+
+    #mobileMenuBtn {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 44px !important;
+        height: 44px !important;
+        border: 1px solid var(--primary-300) !important;
+        background: white !important;
+        color: var(--primary-600) !important;
+        border-radius: 10px !important;
+        font-size: 22px !important;
+        cursor: pointer !important;
+        z-index: 12000 !important; /* Above everything */
+    }
+    
+    #mobileMenuBtn i {
+        display: block !important;
+    }
+
+    .mobile-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 10500; /* Above chat, below sidebar */
+        backdrop-filter: blur(4px);
+    }
+
+    .mobile-overlay.active {
+        display: block;
+    }
+
+    /* 3. COMPONENT OPTIMIZATIONS */
+    .hero-stats-row {
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+
+    .hero-stat-card {
+        width: 100% !important;
+    }
+
+    .cards-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+    }
+
+    @media (max-width: 480px) {
+        .cards-grid {
+            grid-template-columns: 1fr !important;
+        }
+    }
+
+    /* Finance Hub Fixes */
+    .finance-hub-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Chat Widget Mobile Fixes */
+    .chat-widget {
+        bottom: 15px !important;
+        right: 15px !important;
+        overscroll-behavior: contain !important;
+    }
+
+    .chat-widget-window {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        height: var(--chat-mobile-height) !important;
+        min-height: var(--chat-mobile-height) !important;
+        max-height: none !important;
+        border-radius: 0 !important;
+        z-index: 10000 !important;
+        overflow: hidden !important;
+        overscroll-behavior: none !important;
+    }
+
+    .chat-main-area {
+        position: relative !important;
+        width: 100% !important;
+    }
+
+    .chat-history-sidebar {
+        display: flex !important;
+        flex-direction: column !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: min(85vw, 320px) !important;
+        height: 100% !important;
+        z-index: 10001 !important;
+        background: var(--bg-primary) !important;
+        border-right: 1px solid var(--border-color) !important;
+        box-shadow: 20px 0 40px rgba(15, 23, 42, 0.18) !important;
+        transform: translateX(-100%) !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        transition: transform 0.25s ease, opacity 0.25s ease !important;
+    }
+
+    .chat-widget-window.show-history .chat-history-sidebar {
+        transform: translateX(0) !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+    }
+
+    .chat-widget-window.show-history .chat-main-area::after {
+        content: "" !important;
+        position: absolute !important;
+        inset: 0 !important;
+        background: rgba(15, 23, 42, 0.18) !important;
+        backdrop-filter: blur(2px) !important;
+        z-index: 10000 !important;
+    }
+
+    .mobile-chat-nav-btn {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 44px !important;
+        height: 44px !important;
+        background: rgba(67, 56, 202, 0.08) !important;
+        border: 1px solid rgba(67, 56, 202, 0.18) !important;
+        color: #4338ca !important;
+        border-radius: 12px !important;
+        font-size: 18px !important;
+        cursor: pointer !important;
+        flex-shrink: 0 !important;
+    }
+
+    .mobile-chat-nav-btn i {
+        display: block !important;
+    }
+
+    .chat-widget-header {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        gap: 12px !important;
+        padding: calc(env(safe-area-inset-top, 0px) + 8px) 12px 12px !important;
+        min-height: 68px !important;
+    }
+
+    .chat-widget-title {
+        flex: 1 !important;
+        justify-content: center !important;
+        font-size: 18px !important;
+        font-weight: 700 !important;
+        text-align: center !important;
+    }
+
+    .chat-widget-body,
+    .chat-main-area,
+    .chat-container,
+    .chat-messages {
+        min-height: 0 !important;
+    }
+
+    .chat-container {
+        padding: 12px !important;
+        overscroll-behavior: contain !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    .chat-messages {
+        gap: 14px !important;
+        padding: 8px 0 24px !important;
+    }
+
+    .chat-message {
+        max-width: 100% !important;
+    }
+
+    .message-bubble {
+        max-width: min(100%, 32rem) !important;
+    }
+
+    .message-actions {
+        opacity: 1 !important;
+    }
+
+    .chat-widget-footer {
+        padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+
+    .chat-input-wrapper {
+        padding: 10px 12px !important;
+        border-radius: 18px !important;
+        min-height: 56px !important;
+    }
+
+    #chatInput {
+        font-size: 16px !important; /* Prevent iOS zoom */
+        line-height: 1.4 !important;
+    }
+
+    /* Modals */
+    .modal-card, .profile-modal-card {
+        width: 95% !important;
+        max-height: 90vh !important;
+        margin: 20px auto !important;
+    }
+}

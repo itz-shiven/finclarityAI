@@ -15,10 +15,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-optimizations.css') }}?v=3">
     <script src="{{ url_for('static', filename='js/theme-toggle.js') }}"></script>
-</head>
-
-<body>
+<body class="dashboard-body">
+    <div class="mobile-overlay"></div>
     <div class="dashboard-container">
 
         <aside class="sidebar">
@@ -81,6 +81,9 @@
             <main class="main-content">
 
                 <div class="dashboard-header-simple">
+                    <button id="mobileMenuBtn" class="mobile-only" aria-label="Open menu">
+                        <i class="fas fa-bars"></i>
+                    </button>
                     <h2 id="dashboardHeaderTitle">Home</h2>
                 </div>
                 <div id="mainView" class="animate-fade-in">
@@ -383,12 +386,18 @@
                             </div>
                     </div>
 
-                    <div class="chat-main-area">
-                        <div class="chat-widget-header">
-                            <div class="chat-widget-title">
-                                Finclarity AI <i class="fas fa-robot"></i>
+                        <div class="chat-main-area">
+                            <div class="chat-widget-header">
+                                <button class="mobile-chat-nav-btn" id="mobileChatHistoryBtn" title="Recent chats" aria-label="Show recent chats">
+                                    <i class="fas fa-history"></i>
+                                </button>
+                                <div class="chat-widget-title">
+                                    Finclarity AI <i class="fas fa-robot"></i>
+                                </div>
+                                <button class="mobile-chat-nav-btn" id="mobileChatCloseBtn" title="Close chat" aria-label="Close chat">
+                                    <i class="fas fa-times"></i>
+                                </button>
                             </div>
-                        </div>
 
                         <div class="chat-widget-body">
                             <div class="chat-container">
@@ -556,10 +565,14 @@
         const script = document.createElement('script');
         script.src = "{{ url_for('static', filename='js/dashboard.js') }}?v=" + new Date().getTime();
         document.body.appendChild(script);
+
+        // Mobile optimizations script
+        const mobileScript = document.createElement('script');
+        mobileScript.src = "{{ url_for('static', filename='js/mobile-optimizations.js') }}";
+        document.body.appendChild(mobileScript);
     </script>
 </body>
 
 </html>
-
 
 
