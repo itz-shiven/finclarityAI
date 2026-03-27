@@ -44,14 +44,15 @@ async function checkSupabaseAuth() {
             const user = session.user;
 
             try {
-                const res = await fetch("/api/google-login", {
+                const res = await fetch("/api/social-login", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     credentials: "include",
                     body: JSON.stringify({
                         id: user.id,
-                        name: user.user_metadata?.full_name || "User",
-                        email: user.email
+                        name: user.user_metadata?.full_name || user.user_metadata?.name || "User",
+                        email: user.email,
+                        provider: session.provider_token ? 'Social' : 'Sync'
                     })
                 });
 

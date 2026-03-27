@@ -412,6 +412,34 @@ margin-top:10px;
     box-shadow: 0 6px 15px rgba(99, 102, 241, 0.4);
 }
 
+/* LOGO AND SOCIAL THEME FIXES */
+.logo-text {
+    color: var(--text-main);
+}
+
+.microsoft-btn:hover {
+    background: #00a4ef !important;
+    border-color: #00a4ef !important;
+}
+
+.guest-p {
+    color: var(--text-muted);
+}
+
+.guest-link {
+    color: #7a4fb5;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+[data-theme="dark"] .guest-link {
+    color: #a78bfa;
+}
+
+.guest-link:hover {
+    text-decoration: underline;
+}
+
 /* Specific Types */
 .notification-box.success .notification-icon { color: #10b981; }
 .notification-box.error .notification-icon { color: #ef4444; }
