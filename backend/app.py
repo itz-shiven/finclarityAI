@@ -31,8 +31,15 @@ app = Flask(__name__)
 
 app.secret_key = os.getenv("SECRET_KEY", "change-this-in-production")
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SECURE'] = True
+# Only require SECURE in production (HTTPS), allow HTTP for localhost
+app.config['SESSION_COOKIE_SECURE'] = not os.getenv("FLASK_ENV") == "development"
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+# Increase session timeout to 30 days
+app.config['PERMANENT_SESSION_LIFETIME'] = 2592000
+
+@app.before_request
+def make_session_permanent():
+    session.permanent = True
 
 # -------------------------
 # REGISTER BLUEPRINTS
@@ -277,16 +284,28 @@ def social_login():
         user_email = data.get("email")
         provider = data.get("provider", "Social")
 
-        if not user_email or not user_id:
-            return jsonify({"status": "error", "message": "User data missing"})
+        print(f"[SOCIAL LOGIN] Provider: {provider}, ID: {user_id}, Email: {user_email}, Name: {user_name}")
+
+        if not user_id:
+            return jsonify({"status": "error", "message": "User ID missing"})
+
+        # Email might be missing from some providers (Facebook)
+        if not user_email:
+            user_email = f"{provider}_{user_id}@finclarityai.local"
+            print(f"[SOCIAL LOGIN] Email generated: {user_email}")
 
         session['user_id'] = user_id
         session['user_name'] = user_name or f"{provider} User"
         session['user_email'] = user_email
         
-        ensure_user_data(user_id, user_email, session['user_name'])
+        print(f"[SOCIAL LOGIN] Session set for {user_email}")
         
-        print(f"DEBUG: Session successfully created for {user_email}!")
+        try:
+            ensure_user_data(user_id, user_email, session['user_name'])
+            print(f"✅ [SOCIAL LOGIN] User data ensured")
+        except Exception as db_error:
+            print(f"⚠️ [SOCIAL LOGIN] Database error (non-fatal): {str(db_error)}")
+            # Continue anyway - session is set
 
         return jsonify({
             "status": "success",
@@ -294,35 +313,54 @@ def social_login():
         })
 
     except Exception as e:
-        print(f"🚨 SOCIAL LOGIN ERROR ({provider}): {str(e)}")
+        import traceback
+        print(f"🚨 SOCIAL LOGIN ERROR: {str(e)}")
+        traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)})
 
 @app.route("/api/facebook-login", methods=["POST"])
 def facebook_login():
+    """Facebook login handler - just add provider and call unified handler"""
     try:
         data = request.get_json()
+        data['provider'] = 'facebook'
+        
+        # Just handle it here directly
         user_id = data.get("id")
         user_name = data.get("name")
         user_email = data.get("email")
+        
+        print(f"[FACEBOOK LOGIN] ID: {user_id}, Email: {user_email}, Name: {user_name}")
 
-        if not user_email or not user_id:
-            return jsonify({"status": "error", "message": "User data missing"})
+        if not user_id:
+            return jsonify({"status": "error", "message": "User ID missing"})
+
+        # Email might be missing from Facebook
+        if not user_email:
+            user_email = f"facebook_{user_id}@finclarityai.local"
+            print(f"[FACEBOOK LOGIN] Email generated: {user_email}")
 
         session['user_id'] = user_id
         session['user_name'] = user_name or "Facebook User"
         session['user_email'] = user_email
         
-        ensure_user_data(user_id, user_email, session['user_name'])
+        print(f"[FACEBOOK LOGIN] Session set for {user_email}")
         
-        print(f"DEBUG: Session successfully created for Facebook user {user_email}!")
+        try:
+            ensure_user_data(user_id, user_email, session['user_name'])
+            print(f"✅ [FACEBOOK LOGIN] User data ensured")
+        except Exception as db_error:
+            print(f"⚠️ [FACEBOOK LOGIN] Database error (non-fatal): {str(db_error)}")
 
         return jsonify({
             "status": "success",
             "redirect": "/dashboard"
         })
-
+        
     except Exception as e:
         print(f"🚨 FACEBOOK LOGIN ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)})
 
 @app.route("/api/user", methods=["GET"])

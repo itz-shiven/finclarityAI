@@ -404,11 +404,6 @@ margin-top:10px;
     color: var(--text-main);
 }
 
-.microsoft-btn:hover {
-    background: #00a4ef !important;
-    border-color: #00a4ef !important;
-}
-
 .guest-p {
     color: var(--text-muted);
 }

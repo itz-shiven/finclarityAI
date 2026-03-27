@@ -237,16 +237,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 options: options
             });
 
-                if (error) {
-                    console.error("OAuth error:", error);
-                    showNotification("Google login failed: " + (error.message || "Unknown error"), "error");
-                }
-            } catch (err) {
-                console.error("OAuth crash:", err);
-                showNotification("Google login error. Please try again.", "error");
+            if (error) {
+                console.error("OAuth error:", error);
+                showNotification(provider.charAt(0).toUpperCase() + provider.slice(1) + " login failed: " + (error.message || "Unknown error"), "error");
             }
-        });
-    });
+        } catch (err) {
+            console.error("OAuth crash:", err);
+            showNotification(provider.charAt(0).toUpperCase() + provider.slice(1) + " login error. Please try again.", "error");
+        }
+    }
 
     // FACEBOOK LOGIN
     const facebookBtns = document.querySelectorAll(".fab fa-facebook-f") || [];
@@ -308,19 +307,15 @@ document.addEventListener("DOMContentLoaded", () => {
                     console.log(`Auth event: ${event}, Provider: ${provider}`);
                     
                     try {
-                        let endpoint = "/api/google-login";
-                        if (provider === 'facebook') {
-                            endpoint = "/api/facebook-login";
-                        }
-                        
-                        const response = await fetch(endpoint, {
+                        // Use unified social-login endpoint for all providers
+                        const response = await fetch("/api/social-login", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             credentials: "include",
                             body: JSON.stringify({
                                 id: user.id,
                                 name: user.user_metadata?.full_name || user.user_metadata?.name || "User",
-                                email: user.email,
+                                email: user.email || null, // Email might be null from some providers
                                 provider: provider
                             })
                         });
@@ -331,17 +326,18 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (data.status === "success") {
                             localStorage.setItem("currentUser", JSON.stringify({
                                 name: user.user_metadata?.full_name || user.user_metadata?.name || "User",
-                                email: user.email,
+                                email: user.email || `${provider}_user`,
                                 isGuest: false
                             }));
                             console.log("🚀 Redirecting to dashboard...");
                             window.location.href = "/dashboard";
                         } else {
                             console.error("❌ Backend sync failed:", data.message);
-                            showNotification("System error during login sync. Please try again.", "error");
+                            showNotification("Login error: " + (data.message || "Unknown error"), "error");
                         }
                     } catch (err) {
                         console.error("🚨 Backend sync crash:", err);
+                        showNotification("Network error during login. Please try again.", "error");
                     }
                 }
             });
