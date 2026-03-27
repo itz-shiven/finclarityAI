@@ -2332,11 +2332,27 @@ function setupChatPanel() {
     const chatToggleBtn = document.getElementById('chatToggleBtn');
     const chatWindow = document.getElementById('chatWindow');
     const chatCloseBtn = document.getElementById('chatCloseBtn');
+    const chatHeaderCloseBtn = document.getElementById('chatHeaderCloseBtn');
     const chatInput = document.getElementById('chatInput');
 
     const applyChatViewportState = () => {
         updateMobileChatViewport();
         syncChatBodyScrollLock();
+    };
+
+    const closeChatWindow = () => {
+        if (!chatWindow) return;
+
+        if (window.innerWidth <= 1024 && chatWindow.classList.contains('show-history')) {
+            chatWindow.classList.remove('show-history');
+            return;
+        }
+
+        chatWindow.classList.remove('open');
+        chatWindow.classList.remove('show-history');
+        if (chatToggleBtn) chatToggleBtn.classList.remove('active');
+        chatInput?.blur();
+        applyChatViewportState();
     };
 
     if (chatToggleBtn && chatWindow) {
@@ -2363,18 +2379,11 @@ function setupChatPanel() {
     }
 
     if (chatCloseBtn && chatWindow) {
-        chatCloseBtn.addEventListener('click', () => {
-            if (window.innerWidth <= 1024 && chatWindow.classList.contains('show-history')) {
-                chatWindow.classList.remove('show-history');
-                return;
-            }
+        chatCloseBtn.addEventListener('click', closeChatWindow);
+    }
 
-            chatWindow.classList.remove('open');
-            chatWindow.classList.remove('show-history');
-            if (chatToggleBtn) chatToggleBtn.classList.remove('active');
-            chatInput?.blur();
-            applyChatViewportState();
-        });
+    if (chatHeaderCloseBtn && chatWindow) {
+        chatHeaderCloseBtn.addEventListener('click', closeChatWindow);
     }
 
     if (chatInput) {
@@ -2980,12 +2989,11 @@ function renderBreadcrumb() {
 
     const headerContainer = dashboardHeaderTitle.closest('.dashboard-header-simple');
     if (headerContainer) {
-        headerContainer.style.display = navStack.length > 1 ? 'flex' : 'none';
+        headerContainer.style.display = window.innerWidth <= 1024 || navStack.length > 1 ? 'flex' : 'none';
     }
 
     if (navStack.length <= 1) {
-        const user = window.currentUserData;
-        dashboardHeaderTitle.textContent = user && user.name ? user.name : "Home";
+        dashboardHeaderTitle.textContent = "Home";
         return;
     }
 

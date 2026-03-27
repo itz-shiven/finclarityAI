@@ -12,6 +12,14 @@ body.chat-mobile-open {
     overscroll-behavior: none;
 }
 
+body.mobile-sidebar-open {
+    overflow: hidden;
+}
+
+:root {
+    --mobile-sidebar-gap: 16px;
+}
+
 /* Global hidden states for mobile-only elements on desktop */
 .mobile-only, .mobile-overlay, .mobile-chat-nav-btn {
     display: none;
@@ -19,6 +27,18 @@ body.chat-mobile-open {
 
 @media (max-width: 1024px) {
     /* 1. LOGIN PAGE OPTIMIZATIONS */
+    html, body {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    .dashboard-body,
+    .dashboard-container,
+    .main-wrapper,
+    .main-content {
+        max-width: 100%;
+    }
+
     .container {
         width: 95% !important;
         min-height: auto !important;
@@ -74,19 +94,29 @@ body.chat-mobile-open {
 
     .sidebar {
         position: fixed !important;
-        left: -280px !important;
+        left: 0 !important;
         top: 0 !important;
         bottom: 0 !important;
-        width: 280px !important;
+        width: min(320px, calc(100vw - var(--mobile-sidebar-gap))) !important;
+        max-width: calc(100vw - var(--mobile-sidebar-gap)) !important;
         z-index: 11000 !important; /* Above chat */
         transition: transform 0.3s ease !important;
         background: var(--bg-primary) !important;
         overflow-y: auto !important;
         -webkit-overflow-scrolling: touch !important;
+        transform: translate3d(calc(-100% - 12px), 0, 0) !important;
+        box-shadow: 20px 0 40px rgba(15, 23, 42, 0.18) !important;
+        will-change: transform !important;
+    }
+
+    .sidebar.collapsed {
+        width: min(320px, calc(100vw - var(--mobile-sidebar-gap))) !important;
+        max-width: calc(100vw - var(--mobile-sidebar-gap)) !important;
+        transform: translate3d(calc(-100% - 12px), 0, 0) !important;
     }
 
     .sidebar.mobile-active {
-        transform: translateX(280px) !important;
+        transform: translate3d(0, 0, 0) !important;
     }
 
     /* Force show text in sidebar on mobile even if .collapsed class is present */
@@ -95,12 +125,50 @@ body.chat-mobile-open {
         width: auto !important;
         opacity: 1 !important;
         margin-left: 10px !important;
+        pointer-events: auto !important;
     }
 
     .sidebar .logo-text {
         display: inline-block !important;
         width: auto !important;
         opacity: 1 !important;
+        margin: 0 !important;
+        pointer-events: auto !important;
+    }
+
+    .sidebar.collapsed .logo,
+    .sidebar.collapsed .nav-item,
+    .sidebar.collapsed .profile-actions {
+        justify-content: flex-start !important;
+    }
+
+    .sidebar.collapsed .nav-item {
+        padding: 12px 16px !important;
+    }
+
+    .sidebar.collapsed .profile-name,
+    .sidebar.collapsed .search-item span {
+        width: auto !important;
+        opacity: 1 !important;
+        margin: 0 0 8px 0 !important;
+        pointer-events: auto !important;
+    }
+
+    .sidebar.collapsed .profile-section,
+    .sidebar.collapsed .search-item {
+        padding: 12px !important;
+        justify-content: flex-start !important;
+    }
+
+    .sidebar-footer,
+    .profile-section,
+    .profile-name {
+        min-width: 0 !important;
+    }
+
+    .profile-name {
+        white-space: normal !important;
+        word-break: break-word !important;
     }
 
     .sidebar-toggle-btn {
@@ -108,8 +176,9 @@ body.chat-mobile-open {
     }
 
     .main-content {
-        padding: 60px 15px 20px !important;
+        padding: 76px 15px 24px !important;
         width: 100% !important;
+        overflow-x: hidden !important;
     }
 
     /* Mobile Header/Top Bar */
@@ -127,6 +196,13 @@ body.chat-mobile-open {
         justify-content: space-between !important;
         border-bottom: 1px solid var(--border-color) !important;
         box-shadow: var(--shadow-sm) !important;
+    }
+
+    .dashboard-header-simple h2 {
+        min-width: 0 !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
     }
 
     #mobileMenuBtn {
@@ -148,6 +224,31 @@ body.chat-mobile-open {
     
     #mobileMenuBtn i {
         display: block !important;
+    }
+
+    .mobile-header-actions {
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        flex-shrink: 0 !important;
+    }
+
+    .mobile-header-close-btn {
+        display: none !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 40px !important;
+        height: 40px !important;
+        border: 1px solid rgba(255, 255, 255, 0.14) !important;
+        background: rgba(255, 255, 255, 0.06) !important;
+        color: var(--text-primary) !important;
+        border-radius: 10px !important;
+        font-size: 16px !important;
+        cursor: pointer !important;
+    }
+
+    .mobile-header-close-btn.is-visible {
+        display: flex !important;
     }
 
     .mobile-overlay {
@@ -177,8 +278,23 @@ body.chat-mobile-open {
     }
 
     .cards-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
         gap: 12px !important;
+    }
+
+    .action-card,
+    .provider-card,
+    .category-card {
+        min-width: 0 !important;
+        min-height: 120px !important;
+        padding: 16px 14px !important;
+        overflow: hidden !important;
+    }
+
+    .action-card span,
+    .provider-card span {
+        word-break: break-word !important;
+        text-align: center !important;
     }
 
     @media (max-width: 480px) {
@@ -190,6 +306,14 @@ body.chat-mobile-open {
     /* Finance Hub Fixes */
     .finance-hub-grid {
         grid-template-columns: 1fr !important;
+    }
+
+    .sub-view-grid .cards-grid,
+    #providerGrid,
+    #productGrid,
+    #providerMultiGrid,
+    #compareCategoryGrid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     }
 
     /* Chat Widget Mobile Fixes */
@@ -268,6 +392,14 @@ body.chat-mobile-open {
         flex-shrink: 0 !important;
     }
 
+    .chat-header-actions-left,
+    .chat-header-actions-right {
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        min-width: fit-content !important;
+    }
+
     .mobile-chat-nav-btn i {
         display: block !important;
     }
@@ -287,6 +419,7 @@ body.chat-mobile-open {
         font-size: 18px !important;
         font-weight: 700 !important;
         text-align: center !important;
+        min-width: 0 !important;
     }
 
     .chat-widget-body,
@@ -339,5 +472,236 @@ body.chat-mobile-open {
         width: 95% !important;
         max-height: 90vh !important;
         margin: 20px auto !important;
+    }
+
+    .modal-card,
+    .profile-modal-card,
+    .confirm-modal {
+        max-width: min(95vw, 520px) !important;
+    }
+
+    .modal-body,
+    .profile-modal-card .modal-body {
+        padding: 18px !important;
+    }
+
+    .modal-footer,
+    .profile-modal-card .modal-footer,
+    .modal-actions {
+        flex-wrap: wrap !important;
+    }
+
+    .modal-footer button,
+    .modal-actions button,
+    .profile-modal-card .btn-outline,
+    .profile-modal-card .btn-danger-outline {
+        width: 100% !important;
+    }
+
+    .profile-info-section {
+        align-items: flex-start !important;
+        flex-direction: column !important;
+    }
+
+    .compare-header,
+    .changed-header {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 14px !important;
+    }
+
+    .compare-controls,
+    .compare-search-wrapper {
+        width: 100% !important;
+    }
+
+    .compare-search-wrapper input {
+        width: 100% !important;
+    }
+
+    .compare-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .compare-table-container,
+    .compare-matrix-wrapper,
+    .compare-table-wrapper {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    .compare-multi-header {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+        padding: 0 !important;
+    }
+
+    .compare-multi-title-wrapper {
+        position: static !important;
+        width: auto !important;
+        text-align: left !important;
+        pointer-events: auto !important;
+    }
+
+    .btn-back-compare,
+    .btn-continue-compare {
+        width: 100% !important;
+        max-width: none !important;
+        justify-content: center !important;
+    }
+
+    .comparison-tray {
+        left: 0 !important;
+        right: 0 !important;
+        padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px)) !important;
+        border-radius: 20px 20px 0 0 !important;
+    }
+
+    .tray-content,
+    .tray-left,
+    .tray-actions {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+    }
+
+    .selected-items-preview {
+        flex-wrap: wrap !important;
+    }
+
+    .tray-actions button {
+        width: 100% !important;
+    }
+
+    .product-hero {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 16px !important;
+    }
+
+    .product-hero-info h1 {
+        font-size: 28px !important;
+    }
+
+    .detail-tabs {
+        width: 100% !important;
+        overflow-x: auto !important;
+        white-space: nowrap !important;
+        gap: 8px !important;
+        padding: 6px !important;
+        scrollbar-width: none !important;
+    }
+
+    .detail-tabs::-webkit-scrollbar {
+        display: none !important;
+    }
+
+    .detail-tab {
+        flex: 0 0 auto !important;
+        padding: 10px 16px !important;
+    }
+
+    .detail-content-card {
+        padding: 18px !important;
+        min-height: 280px !important;
+    }
+
+    .info-grid {
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+    }
+
+    .finance-module-view {
+        padding: 10px 2px 20px !important;
+        min-height: auto !important;
+    }
+}
+
+@media (max-width: 640px) {
+    :root {
+        --mobile-sidebar-gap: 10px;
+    }
+
+    .sub-view-grid .cards-grid,
+    #providerGrid,
+    #productGrid,
+    #providerMultiGrid,
+    #compareCategoryGrid,
+    .cards-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .dashboard-header-simple {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+
+    .dashboard-header-simple h2 {
+        font-size: 16px !important;
+    }
+
+    .mobile-header-actions {
+        gap: 8px !important;
+    }
+
+    .mobile-header-close-btn,
+    #mobileMenuBtn {
+        width: 38px !important;
+        height: 38px !important;
+    }
+
+    .chat-widget-header {
+        gap: 8px !important;
+    }
+
+    .chat-header-actions-left,
+    .chat-header-actions-right {
+        gap: 6px !important;
+    }
+
+    .mobile-chat-nav-btn {
+        width: 40px !important;
+        height: 40px !important;
+        border-radius: 10px !important;
+    }
+
+    .chat-widget-title {
+        font-size: 16px !important;
+    }
+
+    .hero-content h1,
+    #dynamicGreeting {
+        font-size: 28px !important;
+        line-height: 1.15 !important;
+    }
+}
+
+@media (max-width: 520px) {
+    :root {
+        --mobile-sidebar-gap: 0px;
+    }
+
+    .sidebar,
+    .sidebar.collapsed {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        transform: translate3d(-100vw, 0, 0) !important;
+    }
+
+    .sidebar.mobile-active {
+        transform: translate3d(0, 0, 0) !important;
+    }
+
+    .dashboard-header-simple {
+        z-index: 12050 !important;
+    }
+
+    #mobileMenuBtn {
+        position: relative !important;
+        z-index: 12060 !important;
     }
 }

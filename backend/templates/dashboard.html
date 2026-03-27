@@ -81,9 +81,14 @@
             <main class="main-content">
 
                 <div class="dashboard-header-simple">
-                    <button id="mobileMenuBtn" class="mobile-only" aria-label="Open menu">
-                        <i class="fas fa-bars"></i>
-                    </button>
+                    <div class="mobile-header-actions">
+                        <button id="mobileMenuBtn" class="mobile-only" aria-label="Open menu">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                        <button id="mobileChatHeaderCloseBtn" class="mobile-only mobile-header-close-btn" aria-label="Close chatbot">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
                     <h2 id="dashboardHeaderTitle">Home</h2>
                 </div>
                 <div id="mainView" class="animate-fade-in">
@@ -388,15 +393,22 @@
 
                         <div class="chat-main-area">
                             <div class="chat-widget-header">
-                                <button class="mobile-chat-nav-btn" id="mobileChatHistoryBtn" title="Recent chats" aria-label="Show recent chats">
-                                    <i class="fas fa-history"></i>
-                                </button>
+                                <div class="chat-header-actions-left">
+                                    <button class="mobile-chat-nav-btn" id="mobileChatHistoryBtn" title="Recent chats" aria-label="Show recent chats">
+                                        <i class="fas fa-history"></i>
+                                    </button>
+                                    <button class="mobile-chat-nav-btn mobile-chat-close-left" id="mobileChatCloseBtn" title="Close chat" aria-label="Close chat">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
                                 <div class="chat-widget-title">
                                     Finclarity AI <i class="fas fa-robot"></i>
                                 </div>
-                                <button class="mobile-chat-nav-btn" id="mobileChatCloseBtn" title="Close chat" aria-label="Close chat">
-                                    <i class="fas fa-times"></i>
-                                </button>
+                                <div class="chat-header-actions-right">
+                                    <button class="chat-header-close-btn" id="chatHeaderCloseBtn" title="Close chat" aria-label="Close chat">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
                             </div>
 
                         <div class="chat-widget-body">
@@ -574,5 +586,3 @@
 </body>
 
 </html>
-
-
