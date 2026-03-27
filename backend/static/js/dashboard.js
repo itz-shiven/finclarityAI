@@ -9,6 +9,7 @@ async function runInitialization() {
     setupSettingsAndLogout();
     setupProfileModal();
     setupComparisonFeature();
+    setupAutoHideScrollbars();
 }
 
 // FIX: If script is loaded dynamically after DOMContentLoaded, the listener won't fire.
@@ -2790,6 +2791,31 @@ function setupProfileModal() {
             }
         });
     }
+}
+
+function setupAutoHideScrollbars() {
+    const mainContent = document.querySelector('.main-content');
+    if (!mainContent) return;
+
+    let hideTimer;
+
+    const showScrollbar = () => {
+        mainContent.classList.add('show-scrollbar');
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => {
+            mainContent.classList.remove('show-scrollbar');
+        }, 1200);
+    };
+
+    const hideScrollbar = () => {
+        clearTimeout(hideTimer);
+        mainContent.classList.remove('show-scrollbar');
+    };
+
+    mainContent.addEventListener('scroll', showScrollbar);
+    mainContent.addEventListener('mousemove', showScrollbar);
+    mainContent.addEventListener('mouseenter', showScrollbar);
+    mainContent.addEventListener('mouseleave', hideScrollbar);
 }
 
 // ============================================

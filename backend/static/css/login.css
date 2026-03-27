@@ -12,6 +12,7 @@
   --btn-shadow: 0 6px 18px rgba(102, 126, 234, 0.35);
   --btn-hover: linear-gradient(135deg, #764ba2, #667eea);
   --overlay-bg: #0f172a;
+  --brand-title-color: #020617;
 }
 
 [data-theme="dark"] {
@@ -23,6 +24,7 @@
   --border-light: #334155;
   --input-bg: #1e293b;
   --overlay-bg: #020617; 
+  --brand-title-color: #ffffff;
 }
 /* RESET */
 
@@ -39,6 +41,17 @@ display:flex;
 justify-content:center;
 align-items:center;
 height:100vh;
+}
+
+.brand-title{
+position:absolute;
+top:30px;
+left:40px;
+font-size:32px;
+font-weight:700;
+color: var(--brand-title-color);
+letter-spacing:0.5px;
+text-shadow: 0 4px 10px rgba(0,0,0,0.4);
 }
 
 /* CONTAINER */
@@ -402,11 +415,6 @@ margin-top:10px;
 /* LOGO AND SOCIAL THEME FIXES */
 .logo-text {
     color: var(--text-main);
-}
-
-.microsoft-btn:hover {
-    background: #00a4ef !important;
-    border-color: #00a4ef !important;
 }
 
 .guest-p {

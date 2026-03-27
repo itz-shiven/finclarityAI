@@ -238,14 +238,55 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             if (error) {
-                console.error(`${provider} OAuth error:`, error);
-                showNotification(`${provider} login failed: ` + (error.message || "Unknown error"), "error");
+                console.error("OAuth error:", error);
+                showNotification(provider.charAt(0).toUpperCase() + provider.slice(1) + " login failed: " + (error.message || "Unknown error"), "error");
             }
         } catch (err) {
-            console.error(`${provider} OAuth crash:`, err);
-            showNotification(`${provider} login error. Please try again.`, "error");
+            console.error("OAuth crash:", err);
+            showNotification(provider.charAt(0).toUpperCase() + provider.slice(1) + " login error. Please try again.", "error");
         }
     }
+
+    // FACEBOOK LOGIN
+    const facebookBtns = document.querySelectorAll(".fab fa-facebook-f") || [];
+    document.querySelectorAll(".social-container a").forEach(link => {
+        const icon = link.querySelector("i");
+        if (icon && icon.className.includes("fa-facebook")) {
+            link.addEventListener("click", async (e) => {
+                e.preventDefault();
+                console.log("Facebook clicked");
+
+                // Wait for Supabase to load
+                let attempts = 0;
+                while (!window.supabase && attempts < 10) {
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    attempts++;
+                }
+
+                if (!window.supabase) {
+                    showNotification("Authentication service not loaded. Please refresh and try again.", "error");
+                    return;
+                }
+
+                try {
+                    const { error } = await window.supabase.auth.signInWithOAuth({
+                        provider: "facebook",
+                        options: {
+                            redirectTo: `${window.location.origin}/login`
+                        }
+                    });
+
+                    if (error) {
+                        console.error("Facebook OAuth error:", error);
+                        showNotification("Facebook login failed: " + (error.message || "Unknown error"), "error");
+                    }
+                } catch (err) {
+                    console.error("Facebook OAuth crash:", err);
+                    showNotification("Facebook login error. Please try again.", "error");
+                }
+            });
+        }
+    });
 
     // Handle Supabase Auth State Change
     const setupAuthStateChange = async () => {
@@ -261,12 +302,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session && session.user) {
                     const user = session.user;
-                    console.log("👤 User authenticated:", user.email);
+                    const provider = session.user.app_metadata?.provider || 'unknown';
+                    
+                    console.log(`Auth event: ${event}, Provider: ${provider}`);
                     
                     try {
-                        const provider = user.app_metadata?.provider || (session.provider_token ? (session.provider_token.includes('google') ? 'Google' : 'Microsoft') : 'Social');
-                        console.log("📡 Syncing with backend, provider:", provider);
-
+                        // Use unified social-login endpoint for all providers
                         const response = await fetch("/api/social-login", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
@@ -274,7 +315,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             body: JSON.stringify({
                                 id: user.id,
                                 name: user.user_metadata?.full_name || user.user_metadata?.name || "User",
-                                email: user.email,
+                                email: user.email || null, // Email might be null from some providers
                                 provider: provider
                             })
                         });
@@ -285,17 +326,18 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (data.status === "success") {
                             localStorage.setItem("currentUser", JSON.stringify({
                                 name: user.user_metadata?.full_name || user.user_metadata?.name || "User",
-                                email: user.email,
+                                email: user.email || `${provider}_user`,
                                 isGuest: false
                             }));
                             console.log("🚀 Redirecting to dashboard...");
                             window.location.href = "/dashboard";
                         } else {
                             console.error("❌ Backend sync failed:", data.message);
-                            showNotification("System error during login sync. Please try again.", "error");
+                            showNotification("Login error: " + (data.message || "Unknown error"), "error");
                         }
                     } catch (err) {
                         console.error("🚨 Backend sync crash:", err);
+                        showNotification("Network error during login. Please try again.", "error");
                     }
                 }
             });

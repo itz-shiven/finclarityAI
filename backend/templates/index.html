@@ -301,6 +301,32 @@ C1380 780 1480 580 1700 675.329
             heroVideo.play().catch(e => console.log('Auto-resume failed:', e));
         });
     </script>
+    <script>
+        (function () {
+            const container = document.querySelector('[data-simplebar]');
+            if (!container) return;
+
+            let hideTimer;
+
+            const show = () => {
+                container.classList.add('show-main-scrollbar');
+                clearTimeout(hideTimer);
+                hideTimer = setTimeout(() => {
+                    container.classList.remove('show-main-scrollbar');
+                }, 1200);
+            };
+
+            const hide = () => {
+                clearTimeout(hideTimer);
+                container.classList.remove('show-main-scrollbar');
+            };
+
+            container.addEventListener('scroll', show);
+            container.addEventListener('mouseenter', show);
+            container.addEventListener('mousemove', show);
+            container.addEventListener('mouseleave', hide);
+        })();
+    </script>
 </body>
 
 </html>
