@@ -110,6 +110,9 @@ function initializeDashboard() {
         mainView.style.display = 'block';
     }
 
+    // NEW: Check for guest access and update UI
+    if (typeof checkGuestAccess === 'function') checkGuestAccess();
+
     setupSidebarCollapse();
     setupNavigation();
     setupChatPanel();
@@ -818,7 +821,7 @@ function executeDelete(chatId) {
         currentChatId = null;
         currentConversation = [];
         document.getElementById('chatMessages').innerHTML = '';
-        document.getElementById('newChatArea').style.display = 'flex';
+        document.getElementById('newChatArea').style.display = 'block';
     }
     saveLocalChats();
     loadLocalChats();
@@ -895,14 +898,53 @@ async function loadUserData() {
             }
         })
         .catch(err => {
-            console.error('Error loading user data:', err);
+            console.warn('Error loading user data, checking localStorage:', err);
 
             const localUser = localStorage.getItem('currentUser');
             if (localUser) {
                 window.currentUserData = JSON.parse(localUser);
-                console.log("User data loaded from localStorage:", window.currentUserData);
+                console.log("Using local user data:", window.currentUserData);
+                // Also render finance view for local data if guest
+                if (window.currentUserData.isGuest) {
+                    financeData = sanitizeFinanceData();
+                    renderFinanceModuleViews();
+                }
+            } else {
+                // Default to guest
+                window.currentUserData = { isGuest: true, name: "Guest" };
+                financeData = sanitizeFinanceData();
+                renderFinanceModuleViews();
             }
         });
+}
+
+/**
+ * Handle UI for guest users
+ */
+function checkGuestAccess() {
+    if (window.currentUserData && window.currentUserData.isGuest) {
+        const area = document.getElementById("newChatArea");
+        if (area) {
+            area.innerHTML = `
+                <div class="guest-ui-wrapper" style="text-align: center; padding: 40px 20px; background: rgba(255,255,255,0.02); border-radius: 20px; border: 1px dashed var(--border-color);">
+                    <i class="fas fa-lock" style="font-size: 48px; color: var(--primary-600); margin-bottom: 20px; display: block;"></i>
+                    <h2 style="margin-bottom: 10px; color: var(--text-primary);">Login Required</h2>
+                    <p style="color: var(--text-secondary); margin-bottom: 24px;">Please sign in to use AI Assistant</p>
+                    <button class="btn-primary" onclick="window.location.href='/login'" style="padding: 12px 32px; border-radius: 12px; cursor: pointer; border: none; font-weight: 600;">
+                        Sign In
+                    </button>
+                </div>
+            `;
+            // Also disable input to prevent accidents
+            const input = document.getElementById('chatInput');
+            const sendBtn = document.getElementById('sendBtn');
+            if (input) {
+                input.disabled = true;
+                input.placeholder = "Login to chat with AI...";
+            }
+            if (sendBtn) sendBtn.disabled = true;
+        }
+    }
 }
 
 // ============================================

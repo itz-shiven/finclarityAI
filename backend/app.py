@@ -46,7 +46,8 @@ ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:5000",
     "http://localhost:5000",
-    "https://finclarityai.onrender.com"
+    "https://finclarityai.onrender.com",
+    "https://finclarityai-giqz.onrender.com"
 ]
 
 CORS(app, supports_credentials=True, origins=ALLOWED_ORIGINS)

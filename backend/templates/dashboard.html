@@ -499,13 +499,6 @@
                     </form>
                 </div>
 
-                <div class="settings-section subscription-section">
-                    <div class="subscription-details">
-                        <span class="plan-badge">Free Plan</span>
-                        <span class="usage-text">23/100 predictions used</span>
-                    </div>
-                    <button type="button" class="btn-upgrade">Upgrade to Pro</button>
-                </div>
             </div>
 
             <div class="modal-footer">
@@ -567,29 +560,6 @@
         script.src = "{{ url_for('static', filename='js/dashboard.js') }}?v=" + new Date().getTime();
         document.body.appendChild(script);
     </script>
-
-
-    <script>
-        function handleGuestUI() {
-            const area = document.getElementById("newChatArea");
-
-            if (window.currentUserData && window.currentUserData.isGuest && area) {
-                area.innerHTML = `
-                <div class="guest-ui-wrapper">
-                    <i class="fas fa-lock guest-ui-icon"></i>
-                    <h2>Login Required</h2>
-                    <p>Please sign in to use AI Assistant</p>
-                    <button class="login-button guest-ui-btn" onclick="window.location.href='/login'">
-                        Sign In
-                    </button>
-                </div>
-            `;
-            }
-        }
-
-        setTimeout(handleGuestUI, 500);
-    </script>
-
 </body>
 
 </html>
