@@ -2615,16 +2615,83 @@ function setupSettingsAndLogout() {
     console.log("Setting up settings and logout listeners");
     const settingsBtn = document.getElementById('settingsBtn');
     const settingsMenu = document.getElementById('settingsDropdown');
+    const sidebar = document.querySelector('.sidebar');
 
     if (settingsBtn && settingsMenu) {
+        const originalSettingsMenuParent = settingsMenu.parentElement;
+        const originalSettingsMenuNextSibling = settingsMenu.nextSibling;
+
+        const restoreSettingsMenuParent = () => {
+            if (!originalSettingsMenuParent || settingsMenu.parentElement === originalSettingsMenuParent) {
+                return;
+            }
+
+            if (originalSettingsMenuNextSibling) {
+                originalSettingsMenuParent.insertBefore(settingsMenu, originalSettingsMenuNextSibling);
+            } else {
+                originalSettingsMenuParent.appendChild(settingsMenu);
+            }
+        };
+
+        const resetSettingsMenuPosition = () => {
+            restoreSettingsMenuParent();
+            settingsMenu.classList.remove('floating');
+            settingsMenu.style.left = '';
+            settingsMenu.style.top = '';
+        };
+
+        const positionSettingsMenu = () => {
+            if (settingsMenu.parentElement !== document.body) {
+                document.body.appendChild(settingsMenu);
+            }
+
+            settingsMenu.classList.add('floating');
+
+            const btnRect = settingsBtn.getBoundingClientRect();
+            const menuRect = settingsMenu.getBoundingClientRect();
+            const gap = 12;
+            const viewportPadding = 16;
+
+            const left = Math.min(
+                btnRect.right + gap,
+                window.innerWidth - menuRect.width - viewportPadding
+            );
+            const top = Math.max(
+                viewportPadding,
+                Math.min(
+                    btnRect.top - menuRect.height - gap,
+                    window.innerHeight - menuRect.height - viewportPadding
+                )
+            );
+
+            settingsMenu.style.left = `${left}px`;
+            settingsMenu.style.top = `${top}px`;
+        };
+
         settingsBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            const willShow = !settingsMenu.classList.contains('show');
             settingsMenu.classList.toggle('show');
+
+            if (willShow) {
+                positionSettingsMenu();
+            } else {
+                resetSettingsMenuPosition();
+            }
         });
 
         document.addEventListener('click', (e) => {
             if (!settingsBtn.contains(e.target) && !settingsMenu.contains(e.target)) {
                 settingsMenu.classList.remove('show');
+                resetSettingsMenuPosition();
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            if (settingsMenu.classList.contains('show')) {
+                positionSettingsMenu();
+            } else {
+                resetSettingsMenuPosition();
             }
         });
     } else {

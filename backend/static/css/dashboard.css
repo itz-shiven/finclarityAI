@@ -167,6 +167,8 @@ body::-webkit-scrollbar-thumb:hover {
    ============================================ */
 
 .sidebar {
+    position: relative;
+    overflow: visible;
     grid-column: 1;
     grid-row: 1 / -1;
     background: var(--sidebar-bg);
@@ -439,9 +441,28 @@ body::-webkit-scrollbar-thumb:hover {
     justify-content: center;
 }
 
+.sidebar.collapsed .sidebar-footer {
+    padding: 0 10px 24px 10px;
+    align-items: center;
+}
+
+.sidebar.collapsed .profile-section {
+    width: 100%;
+    max-width: 56px;
+    min-height: 56px;
+    padding: 10px 0;
+    margin-inline: auto;
+    overflow: visible;
+}
+
 .sidebar.collapsed .profile-actions {
     justify-content: center;
+    width: auto;
+}
+
+.sidebar.collapsed .settings-container {
     width: 100%;
+    justify-content: center;
 }
 
 .profile-actions {
@@ -1251,15 +1272,27 @@ body::-webkit-scrollbar-thumb:hover {
     /* matching reference image */
     border-radius: 8px;
     padding: 8px 0;
+    width: 220px;
     min-width: 220px;
+    max-width: 220px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     display: none;
-    flex-direction: column;
+    overflow: hidden;
+    box-sizing: border-box;
     z-index: 1000;
 }
 
+.sidebar-dropdown.floating {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: auto;
+    transform: none;
+    z-index: 3000;
+}
+
 .sidebar-dropdown.show {
-    display: flex;
+    display: block;
     animation: slideUpFade 0.2s ease;
 }
 
@@ -4274,8 +4307,18 @@ input:focus-visible {
 #settingsDropdown {
     bottom: 120%;
     top: auto;
-    right: 0;
+    right: -12px;
     left: auto;
+}
+
+#settingsDropdown.floating {
+    right: auto;
+    bottom: auto;
+    left: 0;
+    top: 0;
+    width: 220px;
+    min-width: 220px;
+    max-width: 220px;
 }
 
 #currentPasswordGroup { 
