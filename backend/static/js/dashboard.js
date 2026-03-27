@@ -1865,11 +1865,11 @@ function renderCompareProviderGrid(categoryKey, title) {
         card.innerHTML = `
             <i class="fas fa-building" style="font-size: 24px; color: var(--primary-600); margin-bottom: 12px; display: block;"></i>
             <span style="font-weight: 600; color: var(--text-primary); transition: color 0.2s;">${providerName}</span>
-            <div class="check-indicator" style="position: absolute; top: -10px; right: -10px; display: none; color: white; background: var(--primary-600); border-radius: 50%; width: 24px; height: 24px; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; border: 2px solid white; z-index: 5;">
+            <div class="check-indicator" style="position: absolute; top: 8px; right: 8px; display: flex; color: white; background: var(--primary-600); border-radius: 50%; width: 32px; height: 32px; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; border: 3px solid white; z-index: 5; opacity: 0; transition: opacity 0.2s; box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);">
                 0
             </div>
-            <div class="remove-instance-btn" style="position: absolute; top: -10px; left: -10px; display: none; color: white; background: #ef4444; border-radius: 50%; width: 24px; height: 24px; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; transition: all 0.2s; z-index: 6; border: 2px solid white;">
-                <i class="fas fa-minus"></i>
+            <div class="remove-instance-btn" style="position: absolute; top: 8px; left: 8px; display: none; color: white; background: #ef4444; border-radius: 50%; width: 32px; height: 32px; align-items: center; justify-content: center; font-size: 18px; line-height: 1; cursor: pointer; transition: all 0.2s; z-index: 6; border: 3px solid white; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);">
+                ×
             </div>
         `;
 
@@ -1889,7 +1889,14 @@ function renderCompareProviderGrid(categoryKey, title) {
             const totalCount = selectedCompareProviders.length;
 
             if (totalCount >= 4 && count === 0) {
-                alert('You can compare a maximum of 4 items at once.');
+                showFinanceActionModal({
+                    title: 'Limit Reached',
+                    message: 'You can compare a maximum of 4 items at once. Remove one to add another.',
+                    confirmText: 'OK',
+                    cancelText: 'Cancel',
+                    destructive: true,
+                    hideCancel: true
+                });
                 return;
             }
 
@@ -1908,12 +1915,17 @@ function renderCompareProviderGrid(categoryKey, title) {
     // Ensure continue button listener is correctly bound
     const btn = document.getElementById('continueToCompareBtn');
     if (btn) {
-        btn.onclick = () => {
+        // Remove all previous listeners to prevent duplicate event handlers
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        
+        const refreshedBtn = document.getElementById('continueToCompareBtn');
+        refreshedBtn.addEventListener('click', () => {
             console.log("Continue clicked, providers:", selectedCompareProviders);
             if (selectedCompareProviders.length > 0) {
                 renderCompareMatrixView();
             }
-        };
+        });
     }
 
     updateContinueBtn();
@@ -1933,15 +1945,15 @@ function renderCompareProviderGridUpdateCounts() {
             card.style.background = 'rgba(102, 126, 234, 0.15)';
             span.style.color = 'var(--primary-600)';
             span.textContent = count > 1 ? `${name} (${count})` : name;
-            check.style.display = 'flex';
             check.textContent = count;
+            check.style.opacity = '1';
             if (removeBtn) removeBtn.style.display = 'flex';
         } else {
             card.style.borderColor = 'var(--border-color)';
             card.style.background = 'var(--card-bg)';
             span.style.color = 'var(--text-primary)';
             span.textContent = name;
-            check.style.display = 'none';
+            check.style.opacity = '0';
             if (removeBtn) removeBtn.style.display = 'none';
         }
     });
@@ -2029,16 +2041,16 @@ function renderCompareMatrixView() {
         </div>
         
         <div class="compare-matrix-wrapper" style="overflow-x: auto; padding-bottom: 20px;">
-            <div class="compare-matrix-grid" style="display: grid; grid-template-columns: 220px repeat(${selectedCompareProviders.length}, minmax(280px, 1fr)); gap: 0; border: 1px solid var(--border-color); border-radius: 16px; overflow: hidden; background: var(--card-bg); box-shadow: var(--shadow-lg);">
+            <div class="compare-matrix-grid" style="display: grid; grid-template-columns: 180px repeat(${selectedCompareProviders.length}, minmax(200px, 1fr)); gap: 0; border: 1px solid var(--border-color); border-radius: 16px; overflow: hidden; background: var(--card-bg); box-shadow: var(--shadow-lg);">
                 
                 <!-- Label Column -->
                 <div class="compare-labels-col" style="background: var(--bg-secondary); border-right: 1px solid var(--border-color); display: flex; flex-direction: column;">
-                    <div style="height: 180px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; padding: 24px; background: var(--bg-tertiary);">
-                        <span style="font-weight: 700; color: var(--text-tertiary); font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Features</span>
+                    <div style="height: 140px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; padding: 16px; background: var(--bg-tertiary);">
+                        <span style="font-weight: 700; color: var(--text-tertiary); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">Features</span>
                     </div>
                     ${masterKeys.map(key => `
-                        <div class="label-row" style="height: 120px; padding: 20px 24px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center;">
-                            <span style="font-weight: 600; font-size: 13px; color: var(--text-secondary); line-height: 1.3;">${key}</span>
+                        <div class="label-row" style="height: 100px; padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center;">
+                            <span style="font-weight: 600; font-size: 12px; color: var(--text-secondary); line-height: 1.3;">${key}</span>
                         </div>
                     `).join('')}
                     <div style="flex: 1; background: var(--bg-tertiary);"></div>
@@ -2054,24 +2066,24 @@ function renderCompareMatrixView() {
                     <i class="fas fa-times"></i>
                 </button>
                 
-                <div class="compare-col-header" style="height: 180px; padding: 24px; border-bottom: 1px solid var(--border-color); text-align: center; background: var(--card-bg); display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px;">
-                    <div style="width: 44px; height: 44px; background: var(--primary-100); color: var(--primary-600); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-                        <i class="fas fa-building" style="font-size: 20px;"></i>
+                <div class="compare-col-header" style="height: 140px; padding: 16px 12px; border-bottom: 1px solid var(--border-color); text-align: center; background: var(--card-bg); display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px;">
+                    <div style="width: 36px; height: 36px; background: var(--primary-100); color: var(--primary-600); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-building" style="font-size: 18px;"></i>
                     </div>
-                    <h4 style="margin: 0; font-size: 16px; font-weight: 700;">${provider}</h4>
-                    <select class="product-dropdown" onchange="fetchProductDetails(this.value, '${provider}', ${idx})" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-family: 'Poppins'; font-size: 13px; cursor: pointer; outline: none; transition: all 0.2s;">
-                        <option value="" disabled selected>Select product...</option>
+                    <h4 style="margin: 0; font-size: 14px; font-weight: 700;">${provider}</h4>
+                    <select class="product-dropdown" onchange="fetchProductDetails(this.value, '${provider}', ${idx})" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-family: 'Poppins'; font-size: 11px; cursor: pointer; outline: none; transition: all 0.2s;">
+                        <option value="" disabled selected>Select...</option>
                         ${prodList.map(p => `<option value="${p.id || p.name}">${p.name}</option>`).join('')}
                     </select>
                 </div>
                 <div class="compare-col-body" id="compare-body-${idx}" style="display: flex; flex-direction: column;">
                     ${masterKeys.map(() => `
-                        <div class="feature-row placeholder" style="height: 120px; padding: 20px 24px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.01);">
+                        <div class="feature-row placeholder" style="height: 100px; padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.01);">
                             <div style="width: 40%; height: 8px; background: var(--border-color); border-radius: 4px; opacity: 0.3;"></div>
                         </div>
                     `).join('')}
-                    <div style="flex: 1; padding: 40px 24px; text-align: center; color: var(--text-tertiary); font-size: 13px; font-style: italic;">
-                        Select a product to see details
+                    <div style="flex: 1; padding: 30px 16px; text-align: center; color: var(--text-tertiary); font-size: 12px; font-style: italic;">
+                        Select a product
                     </div>
                 </div>
             </div>
@@ -2149,16 +2161,16 @@ async function fetchProductDetails(productId, providerName, colIndex) {
         let contentHtml = '';
         if (Object.keys(features).length === 0) {
             contentHtml = `
-                <div style="height: 100%; padding: 40px 24px; text-align: center; background: rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px;">
-                    <i class="fas fa-exclamation-triangle" style="font-size: 24px; color: #f59e0b; opacity: 0.7;"></i>
-                    <p style="font-size: 13px; color: var(--text-tertiary); margin: 0;">No data found for this specific product.</p>
+                <div style="height: 100%; padding: 30px 16px; text-align: center; background: rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 20px; color: #f59e0b; opacity: 0.7;"></i>
+                    <p style="font-size: 12px; color: var(--text-tertiary); margin: 0;">No data found</p>
                 </div>
             `;
         } else {
             contentHtml = masterKeys.map(key => {
                 const val = features[key] || "Not Available";
                 return `
-                    <div class="feature-row" style="height: 120px; padding: 20px 24px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; line-height: 1.5; font-size: 14px; font-weight: 500; color: var(--text-primary); text-align: justify; hyphens: auto;">
+                    <div class="feature-row" style="height: 100px; padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; line-height: 1.4; font-size: 12px; font-weight: 500; color: var(--text-primary); text-align: center; word-break: break-word;">
                         ${val}
                     </div>
                 `;

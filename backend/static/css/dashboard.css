@@ -2137,13 +2137,11 @@ body {
     font-size: 32px;
     font-weight: 800;
     margin-bottom: 8px;
-    background: linear-gradient(to right, var(--primary-800), var(--primary-500));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: var(--text-primary);
 }
 
 [data-theme="dark"] .product-hero-info h1 {
-    background: linear-gradient(to right, #ffffff, #a5b4fc);
+    color: #ffffff;
 }
 
 .product-hero-info p {
@@ -2313,6 +2311,33 @@ body {
 @media (max-width: 1440px) {
     .cards-grid {
         grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* Better compare table handling at high zoom */
+    .compare-table th, .compare-table td {
+        padding: 12px 14px;
+        font-size: 12px;
+    }
+
+    .compare-table {
+        table-layout: auto;
+    }
+
+    .compare-col-header {
+        padding: 12px 10px !important;
+        gap: 8px !important;
+    }
+
+    .label-row {
+        padding: 12px 10px !important;
+        min-height: 70px;
+        font-size: 12px;
+    }
+
+    .feature-row {
+        padding: 12px 10px !important;
+        min-height: 70px;
+        font-size: 12px;
     }
 }
 
@@ -3777,22 +3802,26 @@ input:focus-visible {
 .compare-table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: fixed;
+    table-layout: auto;
+    min-width: 100%;
 }
 
 .compare-table th, .compare-table td {
-    padding: 20px 24px;
-    text-align: justify; /* Justify text as requested */
+    padding: 14px 16px;
+    text-align: center;
     border-bottom: 1px solid var(--border-color);
+    font-size: 13px;
+    word-wrap: break-word;
 }
 
 .compare-table th {
     background: var(--bg-secondary);
     color: var(--text-tertiary);
-    font-size: 13px;
+    font-size: 12px;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     font-weight: 600;
+    white-space: normal;
 }
 
 .compare-table tr:last-child td {
@@ -3800,10 +3829,12 @@ input:focus-visible {
 }
 
 .compare-table .row-label {
-    width: 20%;
+    min-width: 160px;
     font-weight: 600;
     color: var(--text-primary);
     background: var(--bg-tertiary);
+    word-wrap: break-word;
+    white-space: normal;
 }
 
 .compare-table .product-col {
@@ -3849,6 +3880,97 @@ input:focus-visible {
 .compare-table .check-no {
     color: #ef4444;
     font-size: 18px;
+}
+
+.compare-table-wrapper {
+    overflow-x: auto;
+    margin-top: 20px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+    -webkit-overflow-scrolling: touch;
+}
+
+.compare-table-wrapper::-webkit-scrollbar {
+    height: 6px;
+}
+
+.compare-table-wrapper::-webkit-scrollbar-track {
+    background: var(--bg-tertiary);
+    border-radius: 10px;
+}
+
+.compare-table-wrapper::-webkit-scrollbar-thumb {
+    background: var(--primary-300);
+    border-radius: 10px;
+}
+
+.compare-table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-400);
+}
+
+.compare-matrix-wrapper {
+    overflow-x: auto;
+    margin-top: 20px;
+    border-radius: 12px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.compare-matrix-grid {
+    display: grid !important;
+    gap: 0 !important;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--card-bg);
+    box-shadow: var(--shadow-lg);
+}
+
+.compare-labels-col {
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border-color);
+}
+
+.compare-col-header {
+    padding: 16px 12px !important;
+    text-align: center;
+    background: var(--card-bg);
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 10px !important;
+    min-height: fit-content;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.compare-col-body {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.label-row {
+    padding: 16px 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    border-bottom: 1px solid var(--border-color);
+    min-height: 100px;
+    font-size: 12px;
+}
+
+.feature-row {
+    padding: 16px 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    border-bottom: 1px solid var(--border-color);
+    min-height: 100px;
+    text-align: center;
+    font-size: 12px;
+    word-break: break-word;
+}
+
+.product-dropdown {
+    max-width: 100%;
+    font-size: 12px !important;
 }
 
 /* Checkbox/Select Button on Action Cards */
