@@ -266,21 +266,22 @@ def login():
         })
 
 # -------------------------
-# GOOGLE LOGIN API
+# SOCIAL LOGIN SYNC API (Google/Microsoft)
 # -------------------------
-@app.route("/api/google-login", methods=["POST"])
-def google_login():
+@app.route("/api/social-login", methods=["POST"])
+def social_login():
     try:
         data = request.get_json()
         user_id = data.get("id")
         user_name = data.get("name")
         user_email = data.get("email")
+        provider = data.get("provider", "Social")
 
         if not user_email or not user_id:
             return jsonify({"status": "error", "message": "User data missing"})
 
         session['user_id'] = user_id
-        session['user_name'] = user_name or "Google User"
+        session['user_name'] = user_name or f"{provider} User"
         session['user_email'] = user_email
         
         ensure_user_data(user_id, user_email, session['user_name'])
@@ -293,7 +294,7 @@ def google_login():
         })
 
     except Exception as e:
-        print(f"🚨 GOOGLE LOGIN ERROR: {str(e)}")
+        print(f"🚨 SOCIAL LOGIN ERROR ({provider}): {str(e)}")
         return jsonify({"status": "error", "message": str(e)})
 
 @app.route("/api/user", methods=["GET"])
