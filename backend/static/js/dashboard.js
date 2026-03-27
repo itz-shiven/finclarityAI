@@ -117,7 +117,7 @@ function initializeDashboard() {
     setupActionCards();
     setupComparisonFeature();
     setupResponsive();
-    
+
     // Premium Home Page Animations
     if (typeof setupHomePageSexyLogic === 'function') {
         setupHomePageSexyLogic();
@@ -191,7 +191,7 @@ async function sendMessage() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 message: message,
                 history: currentConversation.slice(-30),
                 user_memory: JSON.parse(localStorage.getItem(getUserKey('finclarityMemory')) || '[]')
@@ -213,7 +213,7 @@ async function sendMessage() {
         const decoder = new TextDecoder("utf-8");
         let fullReply = "";
         let buffer = ""; // This holds incomplete chunks
-        
+
         removeLoader(loaderId);
         const aiMessageDiv = document.createElement('div');
         aiMessageDiv.className = `chat-message ai`;
@@ -229,19 +229,19 @@ async function sendMessage() {
 
             // decode with stream: true to prevent splitting multi-byte characters
             buffer += decoder.decode(value, { stream: true });
-            
+
             // Split by newline to process complete events
             let lines = buffer.split('\n');
-            
+
             // The last item might be incomplete, keep it in the buffer for the next loop
-            buffer = lines.pop(); 
-            
+            buffer = lines.pop();
+
             for (const line of lines) {
                 const trimmedLine = line.trim();
                 if (trimmedLine.startsWith('data: ')) {
                     const jsonStr = trimmedLine.substring(6);
                     if (jsonStr === "[DONE]") continue; // Standard SSE close tag
-                    
+
                     try {
                         const data = JSON.parse(jsonStr);
                         if (data.chunk) {
@@ -257,7 +257,7 @@ async function sendMessage() {
         }
 
         let reply = fullReply || "No response from AI.";
-        
+
         // Final Post-processing (Memory extraction)
         const memoryMatches = reply.match(/\[MEMORY:(.*?)\]/g);
         if (memoryMatches) {
@@ -268,16 +268,16 @@ async function sendMessage() {
             });
             localStorage.setItem(getUserKey('finclarityMemory'), JSON.stringify(memories));
             if (typeof syncUserDataToBackend === 'function') syncUserDataToBackend();
-            
+
             // Re-render without memory tags
             reply = reply.replace(/\[MEMORY:(.*?)\]/g, '').trim();
             aiBubble.innerHTML = window.marked ? marked.parse(reply) : reply;
         }
 
         if (reply === "" && fullReply.includes("[MEMORY:")) reply = "Okay, I'll remember that!";
-        
+
         currentConversation.push({ role: "assistant", content: reply });
-        saveLocalChats();
+        saveCurrentChat();
 
     } catch (error) {
         removeLoader(loaderId);
@@ -303,9 +303,9 @@ function appendMessage(text, sender) {
     const messageDiv = document.createElement('div');
     messageDiv.className = `chat-message ${sender}`;
     messageDiv.innerHTML = createMessageHTML(text, sender);
-    
+
     chatBox.appendChild(messageDiv);
-    
+
     // Store index for future editing
     messageDiv.dataset.index = currentConversation.length - 1;
     scrollToBottom();
@@ -322,21 +322,21 @@ function createMessageHTML(text, sender, bubbleId = null) {
     const isAI = sender === 'ai';
     const content = (isAI && window.marked) ? marked.parse(text) : text;
     const idAttr = bubbleId ? `id="${bubbleId}"` : '';
-    
+
     // Actions block (Copy/Edit)
     let actionsHTML = `
         <div class="message-actions">
             <button class="message-action-btn" title="Copy" onclick="handleCopy(this)">
                 <i class="far fa-copy"></i>
             </button>`;
-    
+
     if (sender === 'user') {
         actionsHTML += `
             <button class="message-action-btn" title="Edit" onclick="handleEdit(this)">
                 <i class="fas fa-pencil-alt"></i>
             </button>`;
     }
-    
+
     actionsHTML += `</div>`;
 
     return `
@@ -348,17 +348,17 @@ function createMessageHTML(text, sender, bubbleId = null) {
 }
 
 // Global handlers for buttons (works after innerHTML replacement)
-window.handleCopy = function(btn) {
+window.handleCopy = function (btn) {
     const bubble = btn.closest('.bubble-wrapper').querySelector('.message-bubble');
     const text = bubble.innerText || bubble.textContent;
     navigator.clipboard.writeText(text);
-    
+
     const icon = btn.querySelector('i');
     icon.className = 'fas fa-check';
     setTimeout(() => { icon.className = 'far fa-copy'; }, 2000);
 };
 
-window.handleEdit = function(btn) {
+window.handleEdit = function (btn) {
     const messageDiv = btn.closest('.chat-message');
     const bubble = messageDiv.querySelector('.message-bubble');
     const text = bubble.innerText || bubble.textContent;
@@ -372,7 +372,7 @@ window.handleEdit = function(btn) {
 function showInlineEdit(messageDiv, bubble, originalText) {
     // Add editing class to hide everything else via CSS
     messageDiv.classList.add('editing');
-    
+
     // Hide original bubble and actions explicitly too
     const wrapper = messageDiv.querySelector('.bubble-wrapper');
     const actions = messageDiv.querySelector('.message-actions');
@@ -386,7 +386,7 @@ function showInlineEdit(messageDiv, bubble, originalText) {
     const textarea = document.createElement('textarea');
     textarea.className = 'inline-edit-textarea';
     textarea.value = originalText;
-    
+
     const footer = document.createElement('div');
     footer.className = 'inline-edit-footer';
 
@@ -522,7 +522,7 @@ function setupSettings() {
                 localStorage.removeItem('finclarityChats');
                 localStorage.removeItem('finclarityMemory');
                 localStorage.removeItem('currentUser');
-                
+
                 Object.keys(localStorage).forEach(key => {
                     if (key.startsWith('sb-')) {
                         localStorage.removeItem(key);
@@ -555,7 +555,7 @@ function getUserKey(baseKey) {
     if (user && user.isGuest) {
         return `${baseKey}_guest`;
     }
-    return baseKey; 
+    return baseKey;
 }
 
 function loadLocalChats() {
@@ -563,7 +563,7 @@ function loadLocalChats() {
         const stored = localStorage.getItem(getUserKey('finclarityChats'));
         if (stored) {
             chatHistories = JSON.parse(stored);
-            
+
             // Sort: Pinned first, then by ID (timestamp) descending
             chatHistories.sort((a, b) => {
                 if (a.isPinned && !b.isPinned) return -1;
@@ -579,7 +579,7 @@ function loadLocalChats() {
                     historyItem.className = 'history-item';
                     if (chat.id === currentChatId) historyItem.classList.add('active');
                     historyItem.dataset.chatId = chat.id;
-                    
+
                     historyItem.innerHTML = `
                         <i class="fas ${chat.isPinned ? 'fa-thumbtack' : 'fa-comment'}" style="${chat.isPinned ? 'color: var(--primary-600); transform: rotate(45deg);' : ''}"></i>
                         <span class="history-item-title">${chat.title}</span>
@@ -600,11 +600,11 @@ function loadLocalChats() {
                             </div>
                         </div>
                     `;
-                    
+
                     historyItem.addEventListener('click', (e) => {
                         // If we are currently renaming, don't trigger chat loading
                         if (historyItem.classList.contains('renaming')) return;
-                        
+
                         if (!e.target.closest('.history-item-actions')) {
                             loadChat(chat.id);
                         }
@@ -633,7 +633,7 @@ function saveCurrentChat() {
 
     const firstUserMsgDiv = chatMessages.querySelector('.chat-message.user');
     if (!firstUserMsgDiv) return;
-    
+
     const bubble = firstUserMsgDiv.querySelector('.message-bubble');
     const title = bubble ? bubble.textContent.trim() : firstUserMsgDiv.textContent.trim();
     const shortTitle = title.length > 25 ? title.substring(0, 25) + "..." : title;
@@ -656,7 +656,7 @@ function saveCurrentChat() {
             isPinned: false
         });
     }
-    
+
     saveLocalChats();
     // Refresh the whole list to maintain sort order or update titles
     loadLocalChats();
@@ -668,7 +668,7 @@ function loadChat(chatId) {
     currentChatId = chatId;
     const chatData = chatHistories.find(c => c.id === currentChatId);
     if (!chatData) return;
-    
+
     currentConversation = [...(chatData.messages || [])];
 
     const chatMessages = document.getElementById('chatMessages');
@@ -698,12 +698,12 @@ function updateActiveHistoryItem() {
 function toggleHistoryMenu(event, chatId) {
     event.stopPropagation();
     const dropdown = document.getElementById(`dropdown-${chatId}`);
-    
+
     // Close all other dropdowns
     document.querySelectorAll('.history-dropdown').forEach(d => {
         if (d.id !== `dropdown-${chatId}`) d.classList.remove('show');
     });
-    
+
     if (dropdown) dropdown.classList.toggle('show');
 }
 
@@ -724,31 +724,31 @@ function handleRenameChat(event, chatId) {
 
     const titleSpan = historyItem.querySelector('.history-item-title');
     const originalTitle = titleSpan.textContent;
-    
+
     // Hide actions and title, show input
     historyItem.classList.add('renaming');
-    
+
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'history-rename-input';
     input.value = originalTitle;
-    
+
     const actions = document.createElement('div');
     actions.className = 'history-rename-controls';
     actions.innerHTML = `
         <button class="rename-confirm-btn"><i class="fas fa-check"></i></button>
         <button class="rename-cancel-btn"><i class="fas fa-times"></i></button>
     `;
-    
+
     const oldContent = historyItem.innerHTML;
     // We only replace the title area part conceptually, but for simplicity we swap children
     historyItem.innerHTML = '';
     historyItem.appendChild(input);
     historyItem.appendChild(actions);
-    
+
     input.focus();
     input.select();
-    
+
     const saveRename = () => {
         const newTitle = input.value.trim();
         if (newTitle && newTitle !== originalTitle) {
@@ -760,16 +760,16 @@ function handleRenameChat(event, chatId) {
         }
         loadLocalChats();
     };
-    
+
     const cancelRename = () => {
         loadLocalChats();
     };
-    
+
     input.onkeydown = (e) => {
         if (e.key === 'Enter') saveRename();
         if (e.key === 'Escape') cancelRename();
     };
-    
+
     actions.querySelector('.rename-confirm-btn').onclick = (e) => {
         e.stopPropagation();
         saveRename();
@@ -825,7 +825,7 @@ function executeDelete(chatId) {
 }
 
 // Global listener to close history dropdowns
-document.addEventListener('click', function() {
+document.addEventListener('click', function () {
     document.querySelectorAll('.history-dropdown').forEach(d => d.classList.remove('show'));
 });
 
@@ -876,11 +876,11 @@ async function loadUserData() {
                             // Always sync with backend data if available. Overwrite local if we have fresh data.
                             const chats = syncData.data.chats || [];
                             const memory = syncData.data.memory || [];
-                            
+
                             localStorage.setItem(getUserKey('finclarityChats'), JSON.stringify(chats));
                             localStorage.setItem(getUserKey('finclarityMemory'), JSON.stringify(memory));
                             financeData = sanitizeFinanceData(syncData.data.finance_data);
-                            
+
                             // Re-load chats into the local state
                             if (typeof loadLocalChats === 'function') loadLocalChats();
                             renderFinanceModuleViews();
@@ -934,7 +934,7 @@ function setupSidebarCollapse() {
     const sidebar = document.querySelector('.sidebar');
     const container = document.querySelector('.dashboard-container');
     const collapseBtn = document.getElementById('sidebarCollapseBtn');
-    
+
     if (!sidebar || !container || !collapseBtn) return;
 
     // Load initial state
@@ -976,7 +976,7 @@ function resetToHome() {
     // Clear stack except home
     navStack = [{ id: 'mainView', title: 'Home' }];
     renderBreadcrumb();
-    
+
     // Hide all views, show main
     document.querySelectorAll('.main-content > div').forEach(v => {
         if (v.id === 'mainView' || v.classList.contains('dashboard-header-simple')) {
@@ -1611,7 +1611,7 @@ function setupComparisonFeature() {
     }
 }
 
-window.toggleSelection = function(productId) {
+window.toggleSelection = function (productId) {
     const index = comparisonList.indexOf(productId);
     if (index === -1) {
         if (comparisonList.length >= 3) {
@@ -1624,13 +1624,13 @@ window.toggleSelection = function(productId) {
     }
 
     updateSelectionTray();
-    
+
     // Auto-update table if we are already in compare view
     const compareView = document.getElementById('compareView');
     if (compareView && !compareView.classList.contains('hidden')) {
         generateComparisonTable();
     }
-    
+
     // Update any "Select" buttons in the UI if visible
     document.querySelectorAll(`.select-product-btn[data-id="${productId}"]`).forEach(btn => {
         btn.classList.toggle('selected', comparisonList.includes(productId));
@@ -1647,7 +1647,7 @@ function updateSelectionTray() {
     if (!tray || !countEl || !previewsEl) return;
 
     countEl.textContent = comparisonList.length;
-    
+
     // Hide tray if we are already in the comparison view OR if list is empty
     const compareView = document.getElementById('compareView');
     const isInCompareView = compareView && !compareView.classList.contains('hidden');
@@ -1663,7 +1663,7 @@ function updateSelectionTray() {
     }
 }
 
-window.clearSelection = function() {
+window.clearSelection = function () {
     comparisonList = [];
     updateSelectionTray();
     document.querySelectorAll('.select-product-btn').forEach(btn => {
@@ -1703,7 +1703,7 @@ function generateComparisonTable() {
     emptyState.classList.add('hidden');
 
     const selectedProducts = comparisonList.map(id => findProductById(id)).filter(p => p);
-    
+
     // 1. Show Card Preview (always show cards)
     if (compareGrid) {
         compareGrid.innerHTML = selectedProducts.map(item => `
@@ -1739,7 +1739,7 @@ function generateComparisonTable() {
         `;
         return;
     }
-    
+
     // Get all unique feature keys (rows)
     const allDetailKeys = new Set();
     selectedProducts.forEach(p => {
@@ -1774,18 +1774,18 @@ function generateComparisonTable() {
             <tr>
                 <td class="row-label">${key}</td>
                 ${selectedProducts.map(p => {
-                    const val = p.details ? (p.details[key] || '—') : '—';
-                    const valStr = String(val).toLowerCase();
-                    const isCheck = valStr === 'none' || val === '—' ? '<i class="fas fa-times check-no"></i>' : (valStr === 'unlimited' || valStr === 'included' ? '<i class="fas fa-check-circle check-yes"></i>' : '');
-                    return `<td>${isCheck ? isCheck : val}</td>`;
-                }).join('')}
+            const val = p.details ? (p.details[key] || '—') : '—';
+            const valStr = String(val).toLowerCase();
+            const isCheck = valStr === 'none' || val === '—' ? '<i class="fas fa-times check-no"></i>' : (valStr === 'unlimited' || valStr === 'included' ? '<i class="fas fa-check-circle check-yes"></i>' : '');
+            return `<td>${isCheck ? isCheck : val}</td>`;
+        }).join('')}
             </tr>
         `;
     });
 
     html += `</tbody></table></div>`;
     tableContainer.innerHTML = html;
-    
+
     // Hide the comparison tray as requested once the table is generated
     const tray = document.getElementById('comparisonTray');
     if (tray) {
@@ -1819,7 +1819,7 @@ function renderCompareCategoryGrid() {
     `).join('');
 }
 
-let selectedCompareProviders = []; 
+let selectedCompareProviders = [];
 let currentCompareCategory = null;
 
 function renderCompareProviderGrid(categoryKey, title) {
@@ -1828,24 +1828,24 @@ function renderCompareProviderGrid(categoryKey, title) {
     const tableContainer = document.getElementById('compareTableContainer');
     const grid = document.getElementById('providerMultiGrid');
     const subtitle = document.getElementById('compareProviderSubtitle');
-    
+
     if (!emptyState || !multiSelectView || !grid) return;
 
     // Hide old views, show this one
     emptyState.classList.add('hidden');
     if (tableContainer) tableContainer.innerHTML = '';
     multiSelectView.classList.remove('hidden');
-    
+
     currentCompareCategory = { key: categoryKey, title: title };
     selectedCompareProviders = []; // reset
-    
+
     subtitle.textContent = `Select ${title} Providers`;
     grid.innerHTML = '';
 
     // We'll mock some providers if the static list doesn't have them
     const allProducts = productsData[categoryKey] || [];
     let providers = [...new Set(allProducts.map(p => p.provider))];
-    
+
     // Add some default banks if none exist
     if (providers.length === 0) {
         if (title === 'Cards' || title === 'Loans' || title === 'Savings') {
@@ -1884,7 +1884,7 @@ function renderCompareProviderGrid(categoryKey, title) {
                 updateContinueBtn();
                 return;
             }
-            
+
             const count = selectedCompareProviders.filter(p => p === providerName).length;
             const totalCount = selectedCompareProviders.length;
 
@@ -1939,7 +1939,7 @@ function renderCompareProviderGridUpdateCounts() {
         const check = card.querySelector('.check-indicator');
         const removeBtn = card.querySelector('.remove-instance-btn');
         const span = card.querySelector('span');
-        
+
         if (count > 0) {
             card.style.borderColor = 'var(--primary-600)';
             card.style.background = 'rgba(102, 126, 234, 0.15)';
@@ -1979,17 +1979,17 @@ function updateCardStylesInitial() {
 
 // Override clearSelection to handle new views
 const oldClearSelection = window.clearSelection;
-window.clearSelection = function() {
+window.clearSelection = function () {
     if (oldClearSelection) oldClearSelection();
-    
+
     // Reset our new views
     selectedCompareProviders = [];
     currentCompareCategory = null;
-    
+
     const multiSelectView = document.getElementById('compareProviderMultiSelectView');
     const tableContainer = document.getElementById('compareTableContainer');
     const emptyState = document.getElementById('compareEmptyState');
-    
+
     if (multiSelectView) multiSelectView.classList.add('hidden');
     if (tableContainer) tableContainer.innerHTML = '';
     if (emptyState) emptyState.classList.remove('hidden');
@@ -2001,19 +2001,19 @@ function renderCompareMatrixView() {
     if (!multiSelectView || !tableContainer) return;
 
     multiSelectView.classList.add('hidden');
-    
+
     // We need standard product lists for the dropdowns
     // If not found in productsData, we mock a few
     const category = currentCompareCategory.key;
     const allProducts = productsData[category] || [];
-    
+
     const getProductsForProvider = (provider) => {
         let matching = allProducts.filter(p => p.provider === provider);
         if (matching.length === 0) {
             return [
-                {id: `${provider}_basic`, name: `${provider} Standard`},
-                {id: `${provider}_premium`, name: `${provider} Premium`},
-                {id: `${provider}_elite`, name: `${provider} Elite`}
+                { id: `${provider}_basic`, name: `${provider} Standard` },
+                { id: `${provider}_premium`, name: `${provider} Premium` },
+                { id: `${provider}_elite`, name: `${provider} Elite` }
             ];
         }
         return matching;
@@ -2097,7 +2097,7 @@ function renderCompareMatrixView() {
     tableContainer.innerHTML = html;
 }
 
-window.removeCompareColumn = function(idx) {
+window.removeCompareColumn = function (idx) {
     if (selectedCompareProviders.length > 0) {
         selectedCompareProviders.splice(idx, 1);
         if (selectedCompareProviders.length === 0) {
@@ -2111,7 +2111,7 @@ window.removeCompareColumn = function(idx) {
 async function fetchProductDetails(productId, providerName, colIndex) {
     const colBody = document.getElementById(`compare-body-${colIndex}`);
     if (!colBody) return;
-    
+
     // Fallback names if ID is used
     let productName = productId;
     const catProds = productsData[currentCompareCategory.key] || [];
@@ -2143,7 +2143,7 @@ async function fetchProductDetails(productId, providerName, colIndex) {
             console.error("[COMPARE] API Error:", response.status);
             throw new Error("API failed");
         }
-        
+
         const data = await response.json();
         console.log("[COMPARE] Data received:", data);
         const features = data.features || {};
@@ -2175,13 +2175,13 @@ async function fetchProductDetails(productId, providerName, colIndex) {
                     </div>
                 `;
             }).join('');
-            
+
             // Fill remaining space
             contentHtml += `<div style="flex: 1; background: var(--bg-tertiary); min-height: 100px;"></div>`;
         }
-        
+
         colBody.innerHTML = contentHtml;
-        
+
     } catch (err) {
         console.error(err);
         colBody.innerHTML = `
@@ -2202,7 +2202,7 @@ async function populateWhatChangedView() {
     try {
         const res = await fetch('/api/what_changed');
         const data = await res.json();
-        
+
         if (data.status === 'success' && data.updates && data.updates.length > 0) {
             container.innerHTML = data.updates.map(item => `
                 <div class="timeline-item">
@@ -2279,7 +2279,7 @@ function setupChatPanel() {
 }
 function setupActionCards() {
     console.log("Finclarity AI: Setting up Category and Sub-category cards...");
-    
+
     // Level 1: Home Category Cards
     const cards = document.querySelectorAll('.category-card');
     cards.forEach(card => {
@@ -2302,11 +2302,11 @@ function setupActionCards() {
     // Level 2: Sub-category cards (Debit Cards, Credit Cards, etc. in sub-views)
     const subCards = document.querySelectorAll('.sub-view-grid .action-card');
     console.log(`DEBUG: Found ${subCards.length} sub-view cards to bind.`);
-    
+
     subCards.forEach(card => {
         // Skip provider cards as they are handled dynamically
         if (card.classList.contains('provider-card')) return;
-        
+
         card.addEventListener('click', () => {
             const span = card.querySelector('span');
             if (span) {
@@ -2406,7 +2406,7 @@ function setupSettingsAndLogout() {
             localStorage.removeItem('finclarityChats');
             localStorage.removeItem('finclarityMemory');
             localStorage.removeItem('currentUser');
-            
+
             Object.keys(localStorage).forEach(key => {
                 if (key.startsWith('sb-')) {
                     localStorage.removeItem(key);
@@ -2455,11 +2455,11 @@ function setupProfileModal() {
                 const { data: { user: sbUser } } = await window.supabase.auth.getUser();
                 if (sbUser) {
                     const hasPassword = sbUser.identities && sbUser.identities.some(id => id.provider === 'email');
-                    
+
                     const currentPwGroup = document.getElementById('currentPasswordGroup');
                     const currentPwInput = document.getElementById('currentPassword');
                     const changePwBtn = document.getElementById('changePasswordBtn');
-                    
+
                     if (hasPassword) {
                         if (currentPwGroup) currentPwGroup.style.display = 'block';
                         if (currentPwInput) currentPwInput.setAttribute('required', '');
@@ -2593,8 +2593,8 @@ function setupProfileModal() {
                     throw new Error("Your session has expired or is missing. Please try logging out and back in once to refresh your connection.");
                 }
 
-                const { data, error } = await window.supabase.auth.updateUser({ 
-                    password: newPassword 
+                const { data, error } = await window.supabase.auth.updateUser({
+                    password: newPassword
                 });
 
                 if (error) {
@@ -2630,7 +2630,7 @@ function setupProfileModal() {
             try {
                 if (window.supabase) await window.supabase.auth.signOut();
                 await fetch('/api/logout', { method: 'POST' });
-                
+
                 // Clear ALL user related data
                 const user = window.currentUserData;
                 if (user && user.email) {
@@ -2640,7 +2640,7 @@ function setupProfileModal() {
                 localStorage.removeItem('finclarityChats');
                 localStorage.removeItem('finclarityMemory');
                 localStorage.removeItem('currentUser');
-                
+
                 Object.keys(localStorage).forEach(key => {
                     if (key.startsWith('sb-')) {
                         localStorage.removeItem(key);
@@ -2718,7 +2718,7 @@ function setupHomePageSexyLogic() {
         let greeting = "Good Evening";
         if (hour < 12) greeting = "Good Morning";
         else if (hour < 17) greeting = "Good Afternoon";
-        
+
         const username = window.currentUserData?.name?.split(' ')[0] || "Trader";
         greetingEl.textContent = `${greeting}, ${username}`;
     }
@@ -2729,7 +2729,7 @@ function setupHomePageSexyLogic() {
         card.style.opacity = '0';
         card.style.transform = 'translateY(20px)';
         card.style.transition = 'all 0.6s cubic-bezier(0.2, 0.8, 0.2, 1)';
-        
+
         setTimeout(() => {
             card.style.opacity = '1';
             card.style.transform = 'translateY(0)';
@@ -2742,7 +2742,7 @@ function setupHomePageSexyLogic() {
         stat.style.opacity = '0';
         stat.style.transform = 'scale(0.9)';
         stat.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-        
+
         setTimeout(() => {
             stat.style.opacity = '1';
             stat.style.transform = 'scale(1)';
@@ -2865,7 +2865,7 @@ function openProviderSelection(featureTitle) {
     let providerTypeTerm = "Provider";
     if (mainCategory === 'Stock Market') providerTypeTerm = "Broker";
     subtitle.textContent = `Select a ${providerTypeTerm} for ${featureTitle}`;
-    
+
     providerGrid.innerHTML = '';
 
     listToUse.forEach((provider, index) => {
@@ -2880,7 +2880,7 @@ function openProviderSelection(featureTitle) {
         });
 
         providerGrid.appendChild(card);
-        
+
         // Staggered Animation
         setTimeout(() => {
             card.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
@@ -2901,19 +2901,19 @@ function openProductSelection(providerName, subCategory) {
     productGrid.innerHTML = '';
 
     // Get specific products or fallback to generic ones
-    const products = (subCategoryProducts[subCategory] && subCategoryProducts[subCategory][providerName]) 
-                    || [`Standard ${subCategory}`, `Premium ${subCategory}`, `Elite ${subCategory}`];
+    const products = (subCategoryProducts[subCategory] && subCategoryProducts[subCategory][providerName])
+        || [`Standard ${subCategory}`, `Premium ${subCategory}`, `Elite ${subCategory}`];
 
     products.forEach((product, index) => {
         const card = document.createElement('div');
         card.className = 'action-card';
         card.style.opacity = '0';
         card.style.transform = 'translateY(20px)';
-        
+
         let icon = 'fas fa-star';
         if (subCategory.includes('Card')) icon = 'fas fa-credit-card';
         if (subCategory.includes('Loan')) icon = 'fas fa-hand-holding-usd';
-        
+
         card.innerHTML = `<i class="${icon}"></i><span>${product}</span>`;
 
         card.addEventListener('click', () => {
@@ -2921,7 +2921,7 @@ function openProductSelection(providerName, subCategory) {
         });
 
         productGrid.appendChild(card);
-        
+
         setTimeout(() => {
             card.style.transition = 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
             card.style.opacity = '1';
@@ -2936,10 +2936,10 @@ let activeProductDetails = null;
 
 async function openProductDetails(productName, provider, category) {
     navigateTo('productDetailView', productName);
-    
+
     const detailContent = document.getElementById('detailContent');
     const titleEl = document.getElementById('productDetailTitle');
-    
+
     titleEl.textContent = productName;
     detailContent.innerHTML = `
         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; gap: 20px;">
@@ -2954,7 +2954,7 @@ async function openProductDetails(productName, provider, category) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ product_name: productName, provider, category })
         });
-        
+
         const data = await response.json();
         if (data.status === 'success') {
             activeProductDetails = data.details;
@@ -3252,7 +3252,7 @@ function renderCalculatorsHub() {
     if (!container) return;
 
     switchToView('calculatorsView', 'Financial Calculators');
-    
+
     document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
     if (document.getElementById('navCalculators')) document.getElementById('navCalculators').classList.add('active');
 
@@ -4262,7 +4262,7 @@ function toggleGSTMode(btn, mode) {
     document.querySelectorAll('.gst-toggle').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     gstMode = mode;
-    
+
     // Trigger update
     const amtInput = document.getElementById('input-amount');
     const event = new Event('input');
@@ -4481,7 +4481,7 @@ function setupCalculatorLogic(type, customCanvasId) {
     const amtInput = document.getElementById('input-amount');
     const rateInput = document.getElementById('input-rate');
     const yrsInput = document.getElementById('input-years') || document.getElementById('input-time');
-    
+
     const amtDisp = document.getElementById('val-amount');
     const rateDisp = document.getElementById('val-rate');
     const yrsDisp = document.getElementById('val-years') || document.getElementById('val-time');
@@ -4490,11 +4490,11 @@ function setupCalculatorLogic(type, customCanvasId) {
         const p = parseFloat(amtInput.value);
         const r = parseFloat(rateInput.value);
         const n = yrsInput ? parseFloat(yrsInput.value) : 0;
-        
+
         if (amtDisp) amtDisp.textContent = p.toLocaleString('en-IN');
         if (rateDisp) rateDisp.textContent = r;
         if (yrsDisp) yrsDisp.textContent = n;
-        
+
         let invested = 0;
         let interest = 0;
         let total = 0;
@@ -4534,7 +4534,7 @@ function setupCalculatorLogic(type, customCanvasId) {
             invested = p * n * 12;
             const monthlyRate = r / 12 / 100;
             const months = n * 12;
-            total = p * (Math.pow(1 + monthlyRate, months) - 1) / (1 - Math.pow(1 + monthlyRate, -1/12));
+            total = p * (Math.pow(1 + monthlyRate, months) - 1) / (1 - Math.pow(1 + monthlyRate, -1 / 12));
             interest = total - invested;
         } else if (type === 'SSY') {
             invested = p * n;
@@ -4552,9 +4552,9 @@ function setupCalculatorLogic(type, customCanvasId) {
         } else if (type === 'SWP') {
             invested = p;
             withdrawal = r;
-            const rateInput = document.getElementById('input-years'); 
+            const rateInput = document.getElementById('input-years');
             const rate = rateInput ? parseFloat(rateInput.value) / 100 : 0;
-            const time = n; 
+            const time = n;
             const monthlyRate = rate / 12;
             const months = time * 12;
             total = invested * Math.pow(1 + monthlyRate, months) - (withdrawal * (Math.pow(1 + monthlyRate, months) - 1) / monthlyRate);
@@ -4641,7 +4641,7 @@ function setupCalculatorLogic(type, customCanvasId) {
     amtInput.addEventListener('input', update);
     rateInput.addEventListener('input', update);
     if (yrsInput) yrsInput.addEventListener('input', update);
-    
+
     update(); // Initial run
 }
 
@@ -4662,7 +4662,7 @@ function updateCalcChart(type, invested, interest) {
     const isSSY = type === 'SSY';
     const isNPS = type === 'NPS';
     const isPPF = type === 'PPF';
-    
+
     let label1 = 'Invested Amount';
     let label2 = 'Est. Returns';
     let color1 = 'rgba(99, 102, 241, 0.85)';
@@ -4705,21 +4705,21 @@ function updateCalcChart(type, invested, interest) {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { 
-                    position: 'bottom', 
-                    labels: { 
-                        usePointStyle: true, 
-                        boxWidth: 8, 
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        boxWidth: 8,
                         font: { size: 11, weight: '600' },
                         padding: 20
-                    } 
+                    }
                 },
                 tooltip: {
                     backgroundColor: 'rgba(0, 0, 0, 0.8)',
                     padding: 12,
                     borderRadius: 10,
                     callbacks: {
-                        label: function(item) {
+                        label: function (item) {
                             return ' ₹ ' + Math.round(item.raw).toLocaleString('en-IN');
                         }
                     }
