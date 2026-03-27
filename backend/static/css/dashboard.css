@@ -48,6 +48,7 @@
     --glass-blur: blur(12px);
     
     --accent-glow: 0 0 30px rgba(99, 102, 241, 0.3);
+    --accent-light: #a78bfa;
 }
 
 
@@ -82,6 +83,7 @@
     --glass-border: rgba(255, 255, 255, 0.08);
     --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
     --accent-glow: 0 0 30px rgba(102, 126, 234, 0.2);
+    --accent-light: #c4b5fd;
 }
 
 
