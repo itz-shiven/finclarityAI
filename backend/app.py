@@ -296,6 +296,34 @@ def google_login():
         print(f"🚨 GOOGLE LOGIN ERROR: {str(e)}")
         return jsonify({"status": "error", "message": str(e)})
 
+@app.route("/api/facebook-login", methods=["POST"])
+def facebook_login():
+    try:
+        data = request.get_json()
+        user_id = data.get("id")
+        user_name = data.get("name")
+        user_email = data.get("email")
+
+        if not user_email or not user_id:
+            return jsonify({"status": "error", "message": "User data missing"})
+
+        session['user_id'] = user_id
+        session['user_name'] = user_name or "Facebook User"
+        session['user_email'] = user_email
+        
+        ensure_user_data(user_id, user_email, session['user_name'])
+        
+        print(f"DEBUG: Session successfully created for Facebook user {user_email}!")
+
+        return jsonify({
+            "status": "success",
+            "redirect": "/dashboard"
+        })
+
+    except Exception as e:
+        print(f"🚨 FACEBOOK LOGIN ERROR: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)})
+
 @app.route("/api/user", methods=["GET"])
 def get_user():
     if 'user_id' in session:

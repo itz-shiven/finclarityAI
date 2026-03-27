@@ -218,6 +218,47 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
+    // FACEBOOK LOGIN
+    const facebookBtns = document.querySelectorAll(".fab fa-facebook-f") || [];
+    document.querySelectorAll(".social-container a").forEach(link => {
+        const icon = link.querySelector("i");
+        if (icon && icon.className.includes("fa-facebook")) {
+            link.addEventListener("click", async (e) => {
+                e.preventDefault();
+                console.log("Facebook clicked");
+
+                // Wait for Supabase to load
+                let attempts = 0;
+                while (!window.supabase && attempts < 10) {
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    attempts++;
+                }
+
+                if (!window.supabase) {
+                    showNotification("Authentication service not loaded. Please refresh and try again.", "error");
+                    return;
+                }
+
+                try {
+                    const { error } = await window.supabase.auth.signInWithOAuth({
+                        provider: "facebook",
+                        options: {
+                            redirectTo: `${window.location.origin}/login`
+                        }
+                    });
+
+                    if (error) {
+                        console.error("Facebook OAuth error:", error);
+                        showNotification("Facebook login failed: " + (error.message || "Unknown error"), "error");
+                    }
+                } catch (err) {
+                    console.error("Facebook OAuth crash:", err);
+                    showNotification("Facebook login error. Please try again.", "error");
+                }
+            });
+        }
+    });
+
     // Handle Supabase Auth State Change
     const setupAuthStateChange = async () => {
         let attempts = 0;
@@ -230,8 +271,17 @@ document.addEventListener("DOMContentLoaded", () => {
             window.supabase.auth.onAuthStateChange(async (event, session) => {
                 if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session && session.user) {
                     const user = session.user;
+                    const provider = session.user.app_metadata?.provider || 'unknown';
+                    
+                    console.log(`Auth event: ${event}, Provider: ${provider}`);
+                    
                     try {
-                        const response = await fetch("/api/google-login", {
+                        let endpoint = "/api/google-login";
+                        if (provider === 'facebook') {
+                            endpoint = "/api/facebook-login";
+                        }
+                        
+                        const response = await fetch(endpoint, {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             credentials: "include",
