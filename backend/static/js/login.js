@@ -29,7 +29,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const signupForm = document.getElementById("signupForm");
     const loginForm = document.getElementById("loginForm");
     const guestLink = document.getElementById("guestLink");
-    const googleBtns = document.querySelectorAll(".fa-google");
+    const googleBtns = document.querySelectorAll(".google-btn");
+    const microsoftBtns = document.querySelectorAll(".microsoft-btn");
     
     console.log(`Found ${googleBtns.length} Google buttons`);
 
@@ -181,31 +182,60 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // GOOGLE LOGIN
     googleBtns.forEach(btn => {
-        btn.parentElement.addEventListener("click", async (e) => {
+        btn.addEventListener("click", async (e) => {
             e.preventDefault();
-            console.log("Google clicked");
+            console.log("Google Social Login clicked");
+            await initiateOAuth("google");
+        });
+    });
 
-            // Wait for Supabase to load
-            let attempts = 0;
-            while (!window.supabase && attempts < 10) {
-                await new Promise(resolve => setTimeout(resolve, 200));
-                attempts++;
+    microsoftBtns.forEach(btn => {
+        btn.addEventListener("click", async (e) => {
+            e.preventDefault();
+            console.log("Microsoft Social Login clicked");
+            await initiateOAuth("azure");
+        });
+    });
+
+    // URL Error Detection
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has("error")) {
+        const errorMsg = urlParams.get("error_description") || urlParams.get("error") || "Unknown authentication error";
+        console.error("Authentication error from URL:", errorMsg);
+        // Delay slightly to ensure notifications are setup
+        setTimeout(() => {
+            showNotification(decodeURIComponent(errorMsg).replace(/\+/g, " "), "error");
+        }, 500);
+    }
+
+    async function initiateOAuth(provider) {
+        // Wait for Supabase to load
+        let attempts = 0;
+        while (!window.supabase && attempts < 10) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+            attempts++;
+        }
+
+        if (!window.supabase) {
+            showNotification("Authentication service not loaded. Please refresh and try again.", "error");
+            return;
+        }
+
+        try {
+            const options = {
+                redirectTo: `${window.location.origin}/login`
+            };
+            
+            // Add email scope for azure/microsoft login
+            if (provider === "azure") {
+                options.scopes = "email profile openid";
             }
 
-            if (!window.supabase) {
-                showNotification("Authentication service not loaded. Please refresh and try again.", "error");
-                return;
-            }
-
-            try {
-                const { error } = await window.supabase.auth.signInWithOAuth({
-                    provider: "google",
-                    options: {
-                        redirectTo: `${window.location.origin}/login`
-                    }
-                });
+            const { error } = await window.supabase.auth.signInWithOAuth({
+                provider: provider,
+                options: options
+            });
 
                 if (error) {
                     console.error("OAuth error:", error);
@@ -269,6 +299,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (window.supabase) {
             window.supabase.auth.onAuthStateChange(async (event, session) => {
+                console.log("🔔 Auth state changed:", event, session ? "Session found" : "No session");
+                
                 if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session && session.user) {
                     const user = session.user;
                     const provider = session.user.app_metadata?.provider || 'unknown';
@@ -287,22 +319,29 @@ document.addEventListener("DOMContentLoaded", () => {
                             credentials: "include",
                             body: JSON.stringify({
                                 id: user.id,
-                                name: user.user_metadata?.full_name || "User",
-                                email: user.email
+                                name: user.user_metadata?.full_name || user.user_metadata?.name || "User",
+                                email: user.email,
+                                provider: provider
                             })
                         });
 
                         const data = await response.json();
+                        console.log("📥 Backend response:", data);
+
                         if (data.status === "success") {
                             localStorage.setItem("currentUser", JSON.stringify({
-                                name: user.user_metadata?.full_name || "User",
+                                name: user.user_metadata?.full_name || user.user_metadata?.name || "User",
                                 email: user.email,
                                 isGuest: false
                             }));
+                            console.log("🚀 Redirecting to dashboard...");
                             window.location.href = "/dashboard";
+                        } else {
+                            console.error("❌ Backend sync failed:", data.message);
+                            showNotification("System error during login sync. Please try again.", "error");
                         }
                     } catch (err) {
-                        console.error("Backend sync error:", err);
+                        console.error("🚨 Backend sync crash:", err);
                     }
                 }
             });
