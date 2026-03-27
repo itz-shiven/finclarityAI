@@ -15,8 +15,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-optimizations.css') }}?v=3">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-optimizations.css') }}?v=4">
     <script src="{{ url_for('static', filename='js/theme-toggle.js') }}"></script>
+</head>
 <body class="dashboard-body">
     <div class="mobile-overlay"></div>
     <div class="dashboard-container">
@@ -577,12 +578,8 @@
         const script = document.createElement('script');
         script.src = "{{ url_for('static', filename='js/dashboard.js') }}?v=" + new Date().getTime();
         document.body.appendChild(script);
-
-        // Mobile optimizations script
-        const mobileScript = document.createElement('script');
-        mobileScript.src = "{{ url_for('static', filename='js/mobile-optimizations.js') }}";
-        document.body.appendChild(mobileScript);
     </script>
+    <script src="{{ url_for('static', filename='js/mobile-optimizations.js') }}?v=4"></script>
 </body>
 
 </html>

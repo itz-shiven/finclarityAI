@@ -504,13 +504,14 @@ function updateMobileChatViewport() {
 
 function syncChatBodyScrollLock() {
     const chatWindow = document.getElementById('chatWindow');
-    const shouldLock = Boolean(
-        chatWindow &&
-        chatWindow.classList.contains('open') &&
-        isMobileChatViewport()
-    );
-
-    document.body.classList.toggle('chat-mobile-open', shouldLock);
+    const sidebar = document.querySelector('.sidebar');
+    if (isMobileChatViewport()) {
+        const chatOpen = Boolean(chatWindow && chatWindow.classList.contains('open'));
+        const sidebarOpen = Boolean(sidebar && sidebar.classList.contains('mobile-active'));
+        document.body.classList.toggle('chat-mobile-open', chatOpen || sidebarOpen);
+    } else {
+        document.body.classList.remove('chat-mobile-open');
+    }
 }
 
 function setupSettings() {
@@ -1020,11 +1021,13 @@ function setupSidebarCollapse() {
 
     if (!sidebar || !container || !collapseBtn) return;
 
-    // Load initial state
-    const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-    if (isCollapsed) {
-        sidebar.classList.add('collapsed');
-        container.classList.add('collapsed');
+    // Load initial state — only on desktop to avoid conflicting with mobile CSS
+    if (window.innerWidth > 1024) {
+        const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        if (isCollapsed) {
+            sidebar.classList.add('collapsed');
+            container.classList.add('collapsed');
+        }
     }
 
     collapseBtn.addEventListener('click', () => {
@@ -2333,6 +2336,7 @@ function setupChatPanel() {
     const chatWindow = document.getElementById('chatWindow');
     const chatCloseBtn = document.getElementById('chatCloseBtn');
     const chatHeaderCloseBtn = document.getElementById('chatHeaderCloseBtn');
+    const mobileChatHeaderCloseBtn = document.getElementById('mobileChatHeaderCloseBtn');
     const chatInput = document.getElementById('chatInput');
 
     const applyChatViewportState = () => {
@@ -2384,6 +2388,15 @@ function setupChatPanel() {
 
     if (chatHeaderCloseBtn && chatWindow) {
         chatHeaderCloseBtn.addEventListener('click', closeChatWindow);
+    }
+
+    // Mobile dashboard-header close button (visible at small viewports above the fullscreen chat)
+    if (mobileChatHeaderCloseBtn) {
+        mobileChatHeaderCloseBtn.addEventListener('click', () => {
+            if (chatWindow?.classList.contains('open')) {
+                closeChatWindow();
+            }
+        });
     }
 
     if (chatInput) {

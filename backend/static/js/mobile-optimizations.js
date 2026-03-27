@@ -2,7 +2,7 @@
  * FINCLARITY AI - Mobile Interactions
  * Handles sidebar toggling and mobile-specific UI logic.
  */
-document.addEventListener('DOMContentLoaded', () => {
+function initMobileOptimizations() {
     const isMobileViewport = () => window.innerWidth <= 1024;
     const mobileMenuBtn = document.getElementById('mobileMenuBtn');
     const mobileChatHeaderCloseBtn = document.getElementById('mobileChatHeaderCloseBtn');
@@ -211,4 +211,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     syncMobileChatViewport();
-});
+    console.log('Finclarity AI: Mobile optimizations initialized.');
+}
+
+// Defensive: works whether loaded before or after DOMContentLoaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMobileOptimizations);
+} else {
+    initMobileOptimizations();
+}

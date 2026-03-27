@@ -247,7 +247,8 @@ body.mobile-sidebar-open {
         cursor: pointer !important;
     }
 
-    .mobile-header-close-btn.is-visible {
+    .mobile-header-close-btn.is-visible,
+    body.chat-mobile-open .mobile-header-close-btn {
         display: flex !important;
     }
 
