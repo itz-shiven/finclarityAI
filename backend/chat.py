@@ -112,11 +112,19 @@ def is_mode_query(text):
     ]
     return any(pattern in text_lower for pattern in patterns)
 
+def build_database_only_refusal():
+    return (
+        "### Data Not Found\n"
+        "- I don't have information about this in my database.\n"
+        "- Please contact support or try rephrasing your question.\n\n"
+        "Source: **Finclarity Database** (No matching data)"
+    )
+
 def build_instant_greeting_reply():
     return (
         "### Hello\n"
         "- Hey! I can help with **cards, loans, savings, investing, and product comparisons**.\n"
-        "- Ask me a finance question and I'll keep it short and practical.\n\n"
+        "- Ask me a finance question and I'll answer from the **Finclarity Database** when matching data is available.\n\n"
         "Source: 🤖 **AI Knowledge**"
     )
 
@@ -191,20 +199,26 @@ def chat():
                 'match_financial_docs',
                 {
                     'query_embedding': query_embedding,
-                    'match_threshold': 0.3, 
+                    'match_threshold': 0.45, 
                     'match_count': 3 if chat_mode == "free" else 5        
                 }
             ).execute()
-            docs = response.data
+            docs = response.data or []
         except Exception as e:
             print(f"🚨 [RAG] Supabase Search Error: {e}")
             docs = []
+
+        docs = [doc for doc in docs if float(doc.get("similarity") or 0) >= 0.45]
 
         # ===== DEBUG: RAG SOURCE TRACKING =====
         print(f"[RAG DEBUG] Docs retrieved: {len(docs)}")
         for i, doc in enumerate(docs):
             print(f"  -> Match #{i+1} | similarity={doc.get('similarity', 'N/A'):.4f} | preview: {str(doc.get('content', ''))[:80]}...")
         # =======================================
+
+        if not docs:
+            print("[RAG DEBUG] [WARNING] NO DOCS MATCHED - Refusing with database-only response.")
+            return build_sse_response(build_database_only_refusal(), model_config)
 
         # 3. Context & Memory Injection
         if docs:
@@ -307,7 +321,7 @@ Source: 🤖 **AI Knowledge** (If greeting/small talk)
         # 6. Stream the Response to the Frontend
         def generate():
             active_model = model_config["model"]
-            temperature = 0.7 if is_greeting(message) else 0.2
+            temperature = 0.1
             max_tokens = 350 if model_config["label"] == "Free" else 600
             print(f"[LLM DEBUG] Starting stream for {active_model} ({model_config['label']})...")
             try:
