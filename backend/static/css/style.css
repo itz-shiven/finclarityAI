@@ -21,6 +21,9 @@
   --hero-text-secondary: #1e293b;
   --hero-overlay-opacity: 0.15;
   --btn-text-hero: #020617;
+  --index-scrollbar-track: rgba(15, 23, 42, 0.1);
+  --index-scrollbar-thumb: rgba(99, 102, 241, 0.5);
+  --index-scrollbar-thumb-hover: rgba(79, 70, 229, 0.8);
 }
 
 [data-theme="dark"] {
@@ -39,6 +42,9 @@
   --hero-text-secondary: #e8eef7;
   --hero-overlay-opacity: 0.35;
   --btn-text-hero: #ffffff;
+  --index-scrollbar-track: rgba(248, 250, 252, 0.15);
+  --index-scrollbar-thumb: rgba(248, 250, 252, 0.8);
+  --index-scrollbar-thumb-hover: rgba(248, 250, 252, 1);
 }
 
 /* GLOBAL */
@@ -58,6 +64,41 @@ body{
 background: var(--bg-main);
 color: var(--text-main);
 line-height:1.6;
+}
+
+.simplebar-track,
+.simplebar-scrollbar {
+    transition: opacity 0.35s ease;
+    opacity: 0;
+}
+
+.simplebar-track,
+.simplebar-track .simplebar-scrollbar:before {
+    background: var(--index-scrollbar-track);
+}
+
+.simplebar-track .simplebar-scrollbar:before {
+    border-radius: 4px;
+}
+
+.simplebar-track.simplebar-visible::before,
+.show-footer-scrollbar .simplebar-track,
+.show-footer-scrollbar .simplebar-track .simplebar-scrollbar:before {
+    opacity: 1;
+}
+
+.simplebar-track .simplebar-scrollbar:before {
+    background: var(--index-scrollbar-thumb);
+}
+
+.simplebar-track .simplebar-scrollbar:hover::before,
+.simplebar-track .simplebar-scrollbar:active::before {
+    background: var(--index-scrollbar-thumb-hover);
+}
+
+.show-main-scrollbar .simplebar-track,
+.show-main-scrollbar .simplebar-track .simplebar-scrollbar:before {
+    opacity: 1;
 }
 
 .container{
