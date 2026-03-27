@@ -21,6 +21,7 @@ if (document.readyState === 'loading') {
 
 let comparisonList = []; // Global comparison state
 let financeData = { todos: [] };
+let currentChatMode = 'pro';
 
 
 async function checkSupabaseAuth() {
@@ -119,6 +120,7 @@ function initializeDashboard() {
     setupNavigation();
     setupChatPanel();
     setupChatInput();
+    setupChatModelSwitch();
     ensureCalculatorInFinanceHub();
     setupActionCards();
     setupComparisonFeature();
@@ -200,9 +202,19 @@ async function sendMessage() {
             body: JSON.stringify({
                 message: message,
                 history: currentConversation.slice(-30),
-                user_memory: JSON.parse(localStorage.getItem(getUserKey('finclarityMemory')) || '[]')
+                user_memory: JSON.parse(localStorage.getItem(getUserKey('finclarityMemory')) || '[]'),
+                chat_mode: currentChatMode
             })
         });
+
+        let chatProvider = response.headers.get('X-Chat-Provider')
+            || response.headers.get('Chat-Provider')
+            || 'Unknown';
+        let chatModel = response.headers.get('X-Chat-Model')
+            || response.headers.get('Chat-Model')
+            || 'Unknown';
+        console.log('[CHAT DEBUG] Response headers snapshot:', Array.from(response.headers.entries()));
+        console.log(`[CHAT DEBUG] Initial Provider=${chatProvider} Model=${chatModel} Mode=${currentChatMode}`);
 
         if (!response.ok) {
             removeLoader(loaderId);
@@ -250,6 +262,16 @@ async function sendMessage() {
 
                     try {
                         const data = JSON.parse(jsonStr);
+                        if (data.meta) {
+                            chatProvider = data.meta.provider || chatProvider;
+                            chatModel = data.meta.model || chatModel;
+                            console.log(`[CHAT DEBUG] Server confirmed Provider=${chatProvider} Model=${chatModel} Mode=${currentChatMode}`);
+                            continue;
+                        }
+                        if (data.error) {
+                            console.error(`[CHAT DEBUG] Server error from ${data.provider || chatProvider}/${data.model || chatModel}: ${data.error}`);
+                            continue;
+                        }
                         if (data.chunk) {
                             fullReply += data.chunk;
                             aiBubble.innerHTML = window.marked ? marked.parse(fullReply) : fullReply;
@@ -263,6 +285,7 @@ async function sendMessage() {
         }
 
         let reply = fullReply || "No response from AI.";
+        console.log(`[CHAT DEBUG] Final reply from ${chatProvider}/${chatModel}:`, reply);
 
         // Final Post-processing (Memory extraction)
         const memoryMatches = reply.match(/\[MEMORY:(.*?)\]/g);
@@ -601,6 +624,34 @@ function getUserKey(baseKey) {
     return baseKey;
 }
 
+function updateChatModeUI() {
+    const buttons = document.querySelectorAll('[data-chat-mode]');
+    buttons.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.chatMode === currentChatMode);
+    });
+}
+
+function loadChatModePreference() {
+    const savedMode = localStorage.getItem(getUserKey('finclarityChatMode'));
+    currentChatMode = savedMode === 'free' ? 'free' : 'pro';
+    updateChatModeUI();
+}
+
+function setChatMode(mode) {
+    currentChatMode = mode === 'free' ? 'free' : 'pro';
+    localStorage.setItem(getUserKey('finclarityChatMode'), currentChatMode);
+    updateChatModeUI();
+}
+
+function setupChatModelSwitch() {
+    loadChatModePreference();
+    document.querySelectorAll('[data-chat-mode]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            setChatMode(btn.dataset.chatMode);
+        });
+    });
+}
+
 function loadLocalChats() {
     try {
         const stored = localStorage.getItem(getUserKey('finclarityChats'));
@@ -911,6 +962,7 @@ async function loadUserData() {
             if (data.status === 'success') {
                 window.currentUserData = data.user;
                 console.log("User data loaded:", window.currentUserData);
+                loadChatModePreference();
 
                 // Fetch persistent chat data
                 if (!window.currentUserData.isGuest) {
@@ -946,6 +998,7 @@ async function loadUserData() {
             if (localUser) {
                 window.currentUserData = JSON.parse(localUser);
                 console.log("Using local user data:", window.currentUserData);
+                loadChatModePreference();
                 // Also render finance view for local data if guest
                 if (window.currentUserData.isGuest) {
                     financeData = sanitizeFinanceData();
@@ -954,6 +1007,7 @@ async function loadUserData() {
             } else {
                 // Default to guest
                 window.currentUserData = { isGuest: true, name: "Guest" };
+                loadChatModePreference();
                 financeData = sanitizeFinanceData();
                 renderFinanceModuleViews();
             }

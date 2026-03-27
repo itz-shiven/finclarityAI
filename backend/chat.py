@@ -17,6 +17,10 @@ chat_bp = Blueprint('chat_bp', __name__)
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+CHATBOT_OPENAI_MODEL = os.getenv("CHATBOT_OPENAI_MODEL", "gpt-4o-mini")
+CHATBOT_OPENROUTER_MODEL = os.getenv("CHATBOT_OPENROUTER_MODEL", "liquid/lfm-2.5-1.2b-instruct:free")
+CHATBOT_OPENROUTER_FALLBACK_MODEL = os.getenv("CHATBOT_OPENROUTER_FALLBACK_MODEL")
 
 if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
     raise Exception("Supabase env variables missing in chat.py")
@@ -26,6 +30,10 @@ if not OPENAI_API_KEY:
 # Initialize clients using your updated method
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 openai_client = OpenAI(api_key=OPENAI_API_KEY)
+openrouter_client = OpenAI(
+    api_key=OPENROUTER_API_KEY,
+    base_url="https://openrouter.ai/api/v1"
+) if OPENROUTER_API_KEY else None
 
 # -------------------------
 # HELPER FUNCTIONS
@@ -58,6 +66,82 @@ def is_greeting(text):
         return True
     return False
 
+def build_rag_search_query(message, history):
+    """Expands follow-up prompts with recent context so retrieval stays on-topic."""
+    recent_turns = []
+    for msg in history[-4:]:
+        role = msg.get("role", "user")
+        content = (msg.get("content") or "").strip()
+        if not content:
+            continue
+        recent_turns.append(f"{role}: {content}")
+
+    if not recent_turns:
+        return message
+
+    return f"Conversation so far:\n" + "\n".join(recent_turns) + f"\n\nLatest user question:\n{message}"
+
+def get_chat_model_config(chat_mode):
+    """Chatbot-only provider switch. Other tabs continue using OpenAI directly."""
+    if chat_mode == "free" and openrouter_client:
+        return {
+            "client": openrouter_client,
+            "model": CHATBOT_OPENROUTER_MODEL,
+            "fallback_model": CHATBOT_OPENROUTER_FALLBACK_MODEL,
+            "label": "Free"
+        }
+
+    return {
+        "client": openai_client,
+        "model": CHATBOT_OPENAI_MODEL,
+        "fallback_model": None,
+        "label": "Pro"
+    }
+
+def is_mode_query(text):
+    text_lower = (text or "").lower().strip()
+    patterns = [
+        "which model are you",
+        "what model are you",
+        "which mode are you",
+        "what mode are you",
+        "which provider are you",
+        "what provider are you",
+        "are you in free mode",
+        "are you in pro mode"
+    ]
+    return any(pattern in text_lower for pattern in patterns)
+
+def build_instant_greeting_reply():
+    return (
+        "### Hello\n"
+        "- Hey! I can help with **cards, loans, savings, investing, and product comparisons**.\n"
+        "- Ask me a finance question and I'll keep it short and practical.\n\n"
+        "Source: 🤖 **AI Knowledge**"
+    )
+
+def build_sse_response(reply_text, model_config):
+    def generate_once():
+        yield f"data: {json.dumps({'meta': {'provider': model_config['label'], 'model': model_config['model']}})}\n\n"
+        yield f"data: {json.dumps({'chunk': reply_text})}\n\n"
+
+    response = flask.Response(generate_once(), mimetype='text/event-stream')
+    response.headers["X-Chat-Provider"] = model_config["label"]
+    response.headers["X-Chat-Model"] = model_config["model"]
+    response.headers["Chat-Provider"] = model_config["label"]
+    response.headers["Chat-Model"] = model_config["model"]
+    response.headers["Access-Control-Expose-Headers"] = "X-Chat-Provider, X-Chat-Model, Chat-Provider, Chat-Model"
+    return response
+
+def create_chat_completion(client, model, messages, temperature, max_tokens, stream=False):
+    return client.chat.completions.create(
+        model=model,
+        messages=messages,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        stream=stream
+    )
+
 # -------------------------
 # THE MAIN CHAT ROUTE (STREAMING RAG PIPELINE)
 # -------------------------
@@ -71,14 +155,33 @@ def chat():
         message = data.get("message")
         history = data.get("history", [])
         user_memory = data.get("user_memory", [])
+        chat_mode = (data.get("chat_mode") or "pro").lower()
 
         if not message:
             return jsonify({"reply": "Empty message"})
 
         print(f"\n🔍 [RAG] Processing query: '{message}'")
         
+        model_config = get_chat_model_config(chat_mode)
+        retrieval_query = build_rag_search_query(message, history)
+
+        if model_config["label"] == "Free" and is_greeting(message):
+            direct_reply = build_instant_greeting_reply()
+            print(f"[LLM DEBUG] Instant greeting reply using {model_config['label']} / {model_config['model']}")
+            return build_sse_response(direct_reply, model_config)
+
+        if model_config["label"] == "Free" and is_mode_query(message):
+            direct_reply = (
+                f"### Current Mode\n"
+                f"- You are chatting with **{model_config['label']}** mode.\n"
+                f"- Current model: **{model_config['model']}**.\n\n"
+                f"Source: ðŸ¤– **System Configuration**"
+            )
+            print(f"[LLM DEBUG] Instant mode reply using {model_config['label']} / {model_config['model']}")
+            return build_sse_response(direct_reply, model_config)
+
         # 1. Generate the vector for the user's question
-        query_embedding = get_embedding(message)
+        query_embedding = get_embedding(retrieval_query)
         if not query_embedding:
             return jsonify({"reply": "I'm having trouble connecting to my knowledge base right now. Please try again in a moment.\n\nSource: 🤖 **System Error**"})
 
@@ -89,7 +192,7 @@ def chat():
                 {
                     'query_embedding': query_embedding,
                     'match_threshold': 0.3, 
-                    'match_count': 5        
+                    'match_count': 3 if chat_mode == "free" else 5        
                 }
             ).execute()
             docs = response.data
@@ -133,6 +236,8 @@ You MUST ONLY answer questions using the financial documents provided in the CON
 - DO NOT use your training data, general knowledge, or the internet.
 - If context doesn't have the information, say: "I don't have this information in my database. Please contact support."
 - NEVER answer financial questions that aren't covered by the provided documents.
+- If the user asks for guidance like "Should I take this?" or "Is this worth it?", and the context includes relevant product facts, you SHOULD give a practical recommendation based only on that context.
+- Keep that recommendation informational and context-based, not generic training-data advice.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 You are Finclarity AI — a smart financial assistant for Indian users.
@@ -148,6 +253,10 @@ OUT OF DOMAIN & SMALL TALK HANDLING
 - NO DATA IN DATABASE: If no matching financial documents exist in the database for the user's query:
   - You MUST refuse to answer.
   - Say: "I don't have information about this in my database. Please contact support or try rephrasing your question."
+- WHEN DATABASE INFO EXISTS:
+  - If the user asks whether a product is worth taking, summarize the fit using the facts in context.
+  - Clearly mention who it seems good for, what trade-offs stand out, and when someone may want to skip it.
+  - Do NOT say you lack data if the needed product details are already present in context.
 
 ━━━━━━━━━━━━━━━━━━━
 RESPONSE LOGIC & FORMATTING (STRICT)
@@ -197,26 +306,77 @@ Source: 🤖 **AI Knowledge** (If greeting/small talk)
 
         # 6. Stream the Response to the Frontend
         def generate():
-            print(f"[LLM DEBUG] Starting stream for GPT-4o-mini...")
+            active_model = model_config["model"]
+            temperature = 0.7 if is_greeting(message) else 0.2
+            max_tokens = 350 if model_config["label"] == "Free" else 600
+            print(f"[LLM DEBUG] Starting stream for {active_model} ({model_config['label']})...")
             try:
-                stream = openai_client.chat.completions.create(
-                    model="gpt-4o-mini",
+                full_reply = ""
+                yield f"data: {json.dumps({'meta': {'provider': model_config['label'], 'model': active_model}})}\n\n"
+                stream = create_chat_completion(
+                    client=model_config["client"],
+                    model=active_model,
                     messages=messages,
-                    temperature=0.7 if is_greeting(message) else 0.2,
-                    max_tokens=600,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
                     stream=True
                 )
 
                 for chunk in stream:
                     if chunk.choices[0].delta.content:
                         content = chunk.choices[0].delta.content
+                        full_reply += content
                         yield f"data: {json.dumps({'chunk': content})}\n\n"
+
+                if not full_reply.strip():
+                    print(f"[LLM DEBUG] Empty stream from {active_model}, retrying without streaming...")
+                    retry_res = create_chat_completion(
+                        client=model_config["client"],
+                        model=active_model,
+                        messages=messages,
+                        temperature=temperature,
+                        max_tokens=max_tokens
+                    )
+                    retry_content = (retry_res.choices[0].message.content or "").strip()
+                    if retry_content:
+                        full_reply = retry_content
+                        yield f"data: {json.dumps({'chunk': retry_content})}\n\n"
+
+                print(f"[LLM DEBUG] Provider={model_config['label']} Model={active_model}")
+                print(f"[LLM DEBUG] User message: {message}")
+                print(f"[LLM DEBUG] Final reply: {full_reply}")
                         
             except Exception as e:
+                if model_config["label"] == "Free" and model_config.get("fallback_model") and active_model != model_config["fallback_model"]:
+                    fallback_model = model_config["fallback_model"]
+                    print(f"[LLM DEBUG] Primary free model failed ({active_model}). Retrying with fallback {fallback_model}...")
+                    try:
+                        fallback_res = create_chat_completion(
+                            client=model_config["client"],
+                            model=fallback_model,
+                            messages=messages,
+                            temperature=temperature,
+                            max_tokens=max_tokens
+                        )
+                        fallback_content = (fallback_res.choices[0].message.content or "").strip()
+                        yield f"data: {json.dumps({'meta': {'provider': model_config['label'], 'model': fallback_model}})}\n\n"
+                        if fallback_content:
+                            print(f"[LLM DEBUG] Fallback free model succeeded: {fallback_model}")
+                            yield f"data: {json.dumps({'chunk': fallback_content})}\n\n"
+                            return
+                    except Exception as fallback_error:
+                        print(f"[LLM DEBUG] Fallback free model failed: {fallback_error}")
                 print(f"🚨 [LLM ERROR]: {e}")
+                yield f"data: {json.dumps({'error': str(e), 'provider': model_config['label'], 'model': active_model})}\n\n"
                 yield f"data: {json.dumps({'chunk': ' An error occurred while generating the response.'})}\n\n"
 
-        return flask.Response(generate(), mimetype='text/event-stream')
+        response = flask.Response(generate(), mimetype='text/event-stream')
+        response.headers["X-Chat-Provider"] = model_config["label"]
+        response.headers["X-Chat-Model"] = model_config["model"]
+        response.headers["Chat-Provider"] = model_config["label"]
+        response.headers["Chat-Model"] = model_config["model"]
+        response.headers["Access-Control-Expose-Headers"] = "X-Chat-Provider, X-Chat-Model, Chat-Provider, Chat-Model"
+        return response
 
     except Exception as e:
         import traceback
