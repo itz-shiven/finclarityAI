@@ -8,8 +8,11 @@ async function runInitialization() {
     initializeDashboard();
     setupSettingsAndLogout();
     setupProfileModal();
+    setupUpgradePlanModal();
     setupComparisonFeature();
     setupAutoHideScrollbars();
+    showPaymentBootstrapMessage();
+    window.addEventListener('focus', refreshSubscriptionState);
 }
 
 // FIX: If script is loaded dynamically after DOMContentLoaded, the listener won't fire.
@@ -21,7 +24,48 @@ if (document.readyState === 'loading') {
 
 let comparisonList = []; // Global comparison state
 let financeData = { todos: [] };
-let currentChatMode = 'pro';
+let currentChatMode = 'free';
+let subscriptionState = defaultSubscriptionState();
+const FREE_TODO_LIMIT = 10;
+
+function defaultSubscriptionState() {
+    return {
+        plan: 'free',
+        status: 'inactive',
+        selected_chat_mode: 'free',
+        premium_activated_at: null,
+        premium_checkout_session_id: null,
+        premium_payment_status: null
+    };
+}
+
+function sanitizeSubscription(raw = {}) {
+    const safe = {
+        ...defaultSubscriptionState(),
+        ...(raw && typeof raw === 'object' ? raw : {})
+    };
+    const premiumActive = String(safe.plan || '').toLowerCase() === 'premium'
+        && String(safe.status || '').toLowerCase() === 'active';
+
+    safe.plan = premiumActive ? 'premium' : 'free';
+    safe.status = premiumActive ? 'active' : 'inactive';
+    safe.selected_chat_mode = premiumActive && safe.selected_chat_mode === 'pro' ? 'pro' : 'free';
+    return safe;
+}
+
+function isPremiumUser() {
+    return subscriptionState.plan === 'premium' && subscriptionState.status === 'active';
+}
+
+function getTodoLimit() {
+    return isPremiumUser() ? Infinity : FREE_TODO_LIMIT;
+}
+
+function getRemainingTodoSlots() {
+    if (isPremiumUser()) return 'Unlimited';
+    const remaining = Math.max(FREE_TODO_LIMIT - ((financeData.todos || []).length), 0);
+    return `${remaining} left`;
+}
 
 
 async function checkSupabaseAuth() {
@@ -628,26 +672,64 @@ function updateChatModeUI() {
     const buttons = document.querySelectorAll('[data-chat-mode]');
     buttons.forEach(btn => {
         btn.classList.toggle('active', btn.dataset.chatMode === currentChatMode);
+        const wantsPro = btn.dataset.chatMode === 'pro';
+        btn.disabled = wantsPro && !isPremiumUser();
+        btn.title = wantsPro && !isPremiumUser() ? 'Upgrade to Premium to use Pro mode' : '';
     });
 }
 
 function loadChatModePreference() {
     const savedMode = localStorage.getItem(getUserKey('finclarityChatMode'));
-    currentChatMode = savedMode === 'free' ? 'free' : 'pro';
+    if (isPremiumUser()) {
+        currentChatMode = savedMode === 'free' ? 'free' : 'pro';
+    } else {
+        currentChatMode = 'free';
+    }
     updateChatModeUI();
 }
 
-function setChatMode(mode) {
-    currentChatMode = mode === 'free' ? 'free' : 'pro';
+async function setChatMode(mode) {
+    if (mode === 'pro' && !isPremiumUser()) {
+        await showFinanceActionModal({
+            title: 'Premium Required',
+            message: 'Upgrade to Premium to unlock Pro chat mode. You can still use the free model right now.',
+            confirmText: 'Open Plans',
+            cancelText: 'Later'
+        }).then(confirmed => {
+            if (confirmed) openUpgradePlanModal();
+        });
+        return;
+    }
+
+    currentChatMode = mode === 'pro' ? 'pro' : 'free';
     localStorage.setItem(getUserKey('finclarityChatMode'), currentChatMode);
+    subscriptionState.selected_chat_mode = currentChatMode;
     updateChatModeUI();
+
+    if (!window.currentUserData?.isGuest) {
+        try {
+            const res = await fetch('/api/plan/select', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ mode: currentChatMode })
+            });
+            const data = await res.json();
+            if (data.status === 'success' && data.subscription) {
+                subscriptionState = sanitizeSubscription(data.subscription);
+                updateSubscriptionUI();
+            }
+        } catch (error) {
+            console.error('Failed to persist chat mode selection', error);
+        }
+    }
 }
 
 function setupChatModelSwitch() {
     loadChatModePreference();
     document.querySelectorAll('[data-chat-mode]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            setChatMode(btn.dataset.chatMode);
+        btn.addEventListener('click', async () => {
+            await setChatMode(btn.dataset.chatMode);
         });
     });
 }
@@ -961,8 +1043,10 @@ async function loadUserData() {
         .then(async data => {
             if (data.status === 'success') {
                 window.currentUserData = data.user;
+                subscriptionState = sanitizeSubscription(data.user?.subscription);
                 console.log("User data loaded:", window.currentUserData);
                 loadChatModePreference();
+                updateSubscriptionUI();
 
                 // Fetch persistent chat data
                 if (!window.currentUserData.isGuest) {
@@ -977,16 +1061,26 @@ async function loadUserData() {
                             localStorage.setItem(getUserKey('finclarityChats'), JSON.stringify(chats));
                             localStorage.setItem(getUserKey('finclarityMemory'), JSON.stringify(memory));
                             financeData = sanitizeFinanceData(syncData.data.finance_data);
+                            subscriptionState = sanitizeSubscription(syncData.data.subscription || subscriptionState);
+                            currentChatMode = isPremiumUser()
+                                ? (subscriptionState.selected_chat_mode === 'pro' ? 'pro' : 'free')
+                                : 'free';
+                            localStorage.setItem(getUserKey('finclarityChatMode'), currentChatMode);
 
                             // Re-load chats into the local state
                             if (typeof loadLocalChats === 'function') loadLocalChats();
+                            updateSubscriptionUI();
                             renderFinanceModuleViews();
                         }
                     } catch (e) {
                         console.error("Failed to load user data from backend", e);
+                        updateSubscriptionUI();
+                        renderFinanceModuleViews();
                     }
                 } else {
                     financeData = sanitizeFinanceData();
+                    subscriptionState = defaultSubscriptionState();
+                    updateSubscriptionUI();
                     renderFinanceModuleViews();
                 }
             }
@@ -997,18 +1091,22 @@ async function loadUserData() {
             const localUser = localStorage.getItem('currentUser');
             if (localUser) {
                 window.currentUserData = JSON.parse(localUser);
+                subscriptionState = sanitizeSubscription(window.currentUserData?.subscription);
                 console.log("Using local user data:", window.currentUserData);
                 loadChatModePreference();
                 // Also render finance view for local data if guest
                 if (window.currentUserData.isGuest) {
                     financeData = sanitizeFinanceData();
+                    updateSubscriptionUI();
                     renderFinanceModuleViews();
                 }
             } else {
                 // Default to guest
                 window.currentUserData = { isGuest: true, name: "Guest" };
+                subscriptionState = defaultSubscriptionState();
                 loadChatModePreference();
                 financeData = sanitizeFinanceData();
+                updateSubscriptionUI();
                 renderFinanceModuleViews();
             }
         });
@@ -1056,7 +1154,7 @@ async function syncUserDataToBackend() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ chats, memory, finance_data: financeData })
+            body: JSON.stringify({ chats, memory, finance_data: financeData, subscription: subscriptionState })
         });
     } catch (e) {
         console.error("Failed to sync data to backend", e);
@@ -1170,8 +1268,250 @@ function switchToView(viewId, title) {
 
 function sanitizeFinanceData(raw = {}) {
     return {
-        todos: Array.isArray(raw.todos) ? raw.todos : []
+        todos: Array.isArray(raw.todos) ? raw.todos : [],
+        aiSuggestions: Array.isArray(raw.aiSuggestions) ? raw.aiSuggestions : [],
+        goals: Array.isArray(raw.goals) ? raw.goals : [],
+        expenses: Array.isArray(raw.expenses) ? raw.expenses : []
     };
+}
+
+function updateSubscriptionUI() {
+    if (window.currentUserData) {
+        window.currentUserData.subscription = { ...subscriptionState };
+    }
+    updateChatModeUI();
+
+    const isPremium = isPremiumUser();
+    const sidebarPlanBadge = document.getElementById('sidebarPlanBadge');
+    if (sidebarPlanBadge) {
+        sidebarPlanBadge.textContent = isPremium ? 'PREMIUM' : 'FREE';
+        sidebarPlanBadge.classList.toggle('premium', isPremium);
+    }
+
+    const chatPlanIndicator = document.getElementById('chatPlanIndicator');
+    if (chatPlanIndicator) {
+        chatPlanIndicator.textContent = isPremium ? 'PREMIUM' : 'FREE';
+        chatPlanIndicator.classList.toggle('premium', isPremium);
+    }
+
+    const displayPlan = document.getElementById('displayPlan');
+    if (displayPlan) {
+        displayPlan.textContent = isPremium
+            ? 'Plan: Premium active • Pro + Free chat • Unlimited tasks'
+            : `Plan: Free • Free chat only • ${FREE_TODO_LIMIT} tasks max`;
+    }
+
+    const planStatusNote = document.getElementById('planStatusNote');
+    if (planStatusNote) {
+        planStatusNote.textContent = isPremium
+            ? 'Current plan: Premium active. You can switch between Free and Pro chat modes.'
+            : 'Current plan: Free. Upgrade to Premium for Pro chat and unlimited to-do tasks.';
+    }
+
+    const freeCard = document.getElementById('freePlanCard');
+    const premiumCard = document.getElementById('premiumPlanCard');
+    if (freeCard) freeCard.classList.toggle('active-plan', !isPremium);
+    if (premiumCard) premiumCard.classList.toggle('active-plan', isPremium);
+
+    const freeBtn = document.getElementById('selectFreePlanBtn');
+    if (freeBtn) {
+        freeBtn.textContent = isPremium ? 'Switch to Free' : 'Using Free';
+    }
+
+    const premiumBtn = document.getElementById('buyPremiumPlanBtn');
+    if (premiumBtn) {
+        premiumBtn.textContent = isPremium ? 'Premium Active' : 'Upgrade with Test Payment';
+        premiumBtn.disabled = isPremium;
+    }
+
+    renderFinanceModuleViews();
+}
+
+function openUpgradePlanModal() {
+    const modal = document.getElementById('upgradePlanModal');
+    if (!modal) return;
+    updateSubscriptionUI();
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeUpgradePlanModal() {
+    const modal = document.getElementById('upgradePlanModal');
+    if (!modal) return;
+    modal.classList.remove('show');
+    document.body.style.overflow = '';
+}
+
+function setupUpgradePlanModal() {
+    const upgradeBtn = document.getElementById('upgradePlanBtn');
+    const modal = document.getElementById('upgradePlanModal');
+    const closeBtn = document.getElementById('closeUpgradePlanBtn');
+    const freeBtn = document.getElementById('selectFreePlanBtn');
+    const premiumBtn = document.getElementById('buyPremiumPlanBtn');
+
+    if (upgradeBtn) {
+        upgradeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            openUpgradePlanModal();
+        });
+    }
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeUpgradePlanModal);
+    }
+
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeUpgradePlanModal();
+        });
+    }
+
+    if (freeBtn) {
+        freeBtn.addEventListener('click', async () => {
+            if (window.currentUserData?.isGuest) {
+                closeUpgradePlanModal();
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/plan/select', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ plan: 'free', mode: 'free' })
+                });
+                const data = await res.json();
+                if (data.status !== 'success' || !data.subscription) {
+                    throw new Error(data.message || 'Unable to switch to the free plan.');
+                }
+
+                subscriptionState = sanitizeSubscription(data.subscription);
+                currentChatMode = 'free';
+                localStorage.setItem(getUserKey('finclarityChatMode'), currentChatMode);
+                updateSubscriptionUI();
+                await syncUserDataToBackend();
+            } catch (error) {
+                await showFinanceActionModal({
+                    title: 'Plan Update Error',
+                    message: error.message || 'Unable to save your free plan right now.',
+                    confirmText: 'Okay',
+                    hideCancel: true,
+                    destructive: true
+                });
+                return;
+            }
+            closeUpgradePlanModal();
+        });
+    }
+
+    if (premiumBtn) {
+        premiumBtn.addEventListener('click', async () => {
+            if (isPremiumUser()) {
+                closeUpgradePlanModal();
+                return;
+            }
+
+            premiumBtn.disabled = true;
+            premiumBtn.textContent = 'Opening Stripe...';
+
+            try {
+                const res = await fetch('/create-checkout-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ plan: 'premium' })
+                });
+                const data = await res.json();
+                if (!res.ok || !data.url) {
+                    throw new Error(data.message || data.error || 'Unable to start Stripe checkout.');
+                }
+
+                window.location.href = data.url;
+            } catch (error) {
+                await showFinanceActionModal({
+                    title: 'Checkout Error',
+                    message: error.message || 'Unable to open the Stripe test checkout right now.',
+                    confirmText: 'Okay',
+                    hideCancel: true,
+                    destructive: true
+                });
+            } finally {
+                premiumBtn.disabled = isPremiumUser();
+                premiumBtn.textContent = isPremiumUser() ? 'Premium Active' : 'Upgrade with Test Payment';
+            }
+        });
+    }
+}
+
+function showPaymentBootstrapMessage() {
+    const bootstrap = window.dashboardBootstrap || {};
+    const params = new URLSearchParams(window.location.search);
+    const queryStatus = params.get('payment_status');
+    const queryMessage = params.get('payment_message');
+    const effectiveStatus = bootstrap.paymentStatus || queryStatus;
+    const effectiveMessage = bootstrap.paymentMessage || queryMessage;
+
+    if (effectiveStatus !== 'success') return;
+
+    subscriptionState = sanitizeSubscription({
+        ...subscriptionState,
+        plan: 'premium',
+        status: 'active',
+        selected_chat_mode: 'pro'
+    });
+    currentChatMode = 'pro';
+    localStorage.setItem(getUserKey('finclarityChatMode'), currentChatMode);
+    updateSubscriptionUI();
+    refreshSubscriptionState();
+
+    showFinanceActionModal({
+        title: 'Premium Activated',
+        message: effectiveMessage || 'Your Premium test payment was verified and your account is now upgraded.',
+        confirmText: 'Nice',
+        hideCancel: true
+    });
+
+    if (queryStatus) {
+        params.delete('payment_status');
+        params.delete('payment_message');
+        const nextQuery = params.toString();
+        const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}`;
+        window.history.replaceState({}, document.title, nextUrl);
+    }
+}
+
+async function refreshSubscriptionState() {
+    if (!window.currentUserData || window.currentUserData.isGuest) return;
+
+    try {
+        const res = await fetch('/api/plan', {
+            credentials: 'include'
+        });
+        const data = await res.json();
+        if (data.status !== 'success' || !data.subscription) return;
+
+        const nextSubscription = sanitizeSubscription(data.subscription);
+        const wasPremium = isPremiumUser();
+        const isNowPremium = nextSubscription.plan === 'premium' && nextSubscription.status === 'active';
+
+        subscriptionState = nextSubscription;
+        currentChatMode = isNowPremium
+            ? (subscriptionState.selected_chat_mode === 'pro' ? 'pro' : 'free')
+            : 'free';
+        localStorage.setItem(getUserKey('finclarityChatMode'), currentChatMode);
+        updateSubscriptionUI();
+
+        if (!wasPremium && isNowPremium) {
+            showFinanceActionModal({
+                title: 'Premium Activated',
+                message: 'Your Premium access is now active. You can switch between Free and Pro chat modes anytime.',
+                confirmText: 'Nice',
+                hideCancel: true
+            });
+        }
+    } catch (error) {
+        console.error('Failed to refresh subscription state', error);
+    }
 }
 
 function formatINR(value) {
@@ -1297,6 +1637,7 @@ function renderTodoView() {
     const tasks = financeData.todos || [];
     const pendingCount = tasks.filter(task => !task.completed).length;
     const completedCount = tasks.length - pendingCount;
+    const isAtFreeLimit = !isPremiumUser() && tasks.length >= FREE_TODO_LIMIT;
 
     view.innerHTML = `
         <section class="finance-module-card">
@@ -1304,6 +1645,7 @@ function renderTodoView() {
                 <h3>Personalized Financial To-Do List</h3>
                 <p>Keep your tasks in sync securely across sessions.</p>
                 <p class="finance-module-hint">Need help with a specific task? Check the Smart Suggestions tab for focused tips.</p>
+                <p class="todo-plan-note"><strong>${isPremiumUser() ? 'Premium plan' : 'Free plan'}</strong> • ${isPremiumUser() ? 'Unlimited tasks available' : `Up to ${FREE_TODO_LIMIT} tasks`} • ${getRemainingTodoSlots()}</p>
             </div>
             <div class="finance-kpi-row">
                 <div class="finance-kpi"><span>Pending</span><strong>${pendingCount}</strong></div>
@@ -1312,10 +1654,10 @@ function renderTodoView() {
             </div>
             <form id="todoForm" class="finance-form" autocomplete="off">
                 <input type="hidden" id="todoTaskId">
-                <input type="text" id="todoTitle" placeholder="Task title (e.g. Increase SIP by ₹2,000)" required autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-                <input type="date" id="todoDueDate" autocomplete="off">
-                <input type="text" id="todoNotes" placeholder="Notes (optional)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
-                <button type="submit" class="btn-primary">Save Task</button>
+                <input type="text" id="todoTitle" placeholder="Task title (e.g. Increase SIP by ₹2,000)" required autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" ${isAtFreeLimit ? 'disabled' : ''}>
+                <input type="date" id="todoDueDate" autocomplete="off" ${isAtFreeLimit ? 'disabled' : ''}>
+                <input type="text" id="todoNotes" placeholder="Notes (optional)" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" ${isAtFreeLimit ? 'disabled' : ''}>
+                <button type="submit" class="btn-primary" ${isAtFreeLimit ? 'disabled' : ''}>${isAtFreeLimit ? 'Upgrade For More Tasks' : 'Save Task'}</button>
             </form>
             <div class="finance-list">
                 ${tasks.length ? tasks.map(task => `
@@ -1347,6 +1689,16 @@ function renderTodoView() {
                 notes: document.getElementById('todoNotes').value.trim()
             };
             if (!payload.title) return;
+            if (!taskId && !isPremiumUser() && (financeData.todos || []).length >= FREE_TODO_LIMIT) {
+                const confirmed = await showFinanceActionModal({
+                    title: 'Free Plan Limit Reached',
+                    message: `Free users can create up to ${FREE_TODO_LIMIT} to-do tasks. Upgrade to Premium for unlimited tasks.`,
+                    confirmText: 'Open Plans',
+                    cancelText: 'Cancel'
+                });
+                if (confirmed) openUpgradePlanModal();
+                return;
+            }
             try {
                 if (taskId) {
                     await updateTodoTask(taskId, payload);
@@ -1394,6 +1746,14 @@ function renderTodoView() {
             const task = (financeData.todos || []).find(item => item.id === e.target.dataset.id);
             if (!task) return;
             document.getElementById('todoTaskId').value = task.id;
+            document.getElementById('todoTitle').disabled = false;
+            document.getElementById('todoDueDate').disabled = false;
+            document.getElementById('todoNotes').disabled = false;
+            const submitBtn = document.querySelector('#todoForm button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Save Task';
+            }
             document.getElementById('todoTitle').value = task.title || '';
             document.getElementById('todoDueDate').value = task.dueDate || '';
             document.getElementById('todoNotes').value = task.notes || '';
@@ -1439,6 +1799,24 @@ function renderSuggestionsView() {
     const suggestions = generateSmartSuggestions();
     const highImpactCount = suggestions.filter(item => item.priority === 'High').length;
     const quickWinsCount = suggestions.filter(item => item.priority === 'Quick Win').length;
+    const suggestionsMarkup = suggestions.length > 0
+        ? `
+            <div class="smart-suggest-grid">
+                ${suggestions.map(item => `
+                    <article class="smart-suggest-card">
+                        <div class="smart-card-head">
+                            <span class="smart-priority smart-priority-${item.priority.toLowerCase().replace(/\s+/g, '-')}">${item.priority}</span>
+                            <h4>${item.title}</h4>
+                        </div>
+                        <p class="smart-insight">${item.tip}</p>
+                        <ul class="smart-steps">
+                            ${item.steps.map(step => `<li>${step}</li>`).join('')}
+                        </ul>
+                    </article>
+                `).join('')}
+            </div>
+        `
+        : '';
 
     view.innerHTML = `
         <section class="finance-module-card">
@@ -1460,79 +1838,55 @@ function renderSuggestionsView() {
                     <strong>${suggestions.length}</strong>
                 </div>
             </div>
-            <div class="smart-suggest-grid">
-                ${suggestions.map(item => `
-                    <article class="smart-suggest-card">
-                        <div class="smart-card-head">
-                            <span class="smart-priority smart-priority-${item.priority.toLowerCase().replace(/\s+/g, '-')}">${item.priority}</span>
-                            <h4>${item.title}</h4>
-                        </div>
-                        <p class="smart-insight">${item.tip}</p>
-                        <ul class="smart-steps">
-                            ${item.steps.map(step => `<li>${step}</li>`).join('')}
-                        </ul>
-                    </article>
-                `).join('')}
-            </div>
+            ${suggestionsMarkup}
         </section>
     `;
 }
 
+function buildFallbackSuggestionFromTodo(task) {
+    const title = (task?.title || 'Financial Task').trim();
+    const dueDate = (task?.dueDate || '').trim();
+    const notes = (task?.notes || '').trim();
+    const dueText = dueDate ? ` before ${dueDate}` : '';
+    const notesText = notes ? ` Context: ${notes}` : '';
+
+    return {
+        title: `AI Plan: ${title}`,
+        priority: 'Quick Win',
+        tip: `Turn "${title}" into one focused money action${dueText}.${notesText}`.trim(),
+        steps: [
+            `Define the exact action needed to complete "${title}".`,
+            'Block a short time slot and gather any required account details first.',
+            'Complete the action and mark the task done immediately after.'
+        ]
+    };
+}
+
 function generateSmartSuggestions() {
-    const suggestions = [];
     const todos = financeData.todos || [];
-    const pendingTodos = todos.filter(todo => !todo.completed);
-    const completedTodos = todos.filter(todo => todo.completed);
+    const aiSuggestions = financeData.aiSuggestions || [];
 
-    if (pendingTodos.length > 0) {
-        const nextTask = pendingTodos[0];
-        const dueSoon = pendingTodos
-            .filter(task => task.dueDate)
-            .map(task => ({ ...task, days: Math.ceil((new Date(task.dueDate) - new Date()) / (1000 * 60 * 60 * 24)) }))
-            .filter(task => task.days >= 0 && task.days <= 7)
-            .sort((a, b) => a.days - b.days);
-
-        suggestions.push({
-            title: 'Execution Sprint',
-            priority: 'Quick Win',
-            tip: `${pendingTodos.length} pending tasks. Start with "${nextTask.title}" for immediate momentum.`,
-            steps: [
-                'Spend 15 focused minutes on the first task only.',
-                'After completion, instantly mark it done here.',
-                'Then pick the next highest-impact pending task.'
-            ]
-        });
-
-        if (dueSoon.length > 0) {
-            suggestions.push({
-                title: 'Due Date Protection',
-                priority: 'High',
-                tip: `${dueSoon.length} task(s) are due within 7 days. Prevent last-minute stress.`,
-                steps: [
-                    `Start with "${dueSoon[0].title}" due in ${Math.max(0, dueSoon[0].days)} day(s).`,
-                    'Move low-urgency tasks to next week.',
-                    'Close at least one due task before tonight.'
-                ]
-            });
-        }
+    if (todos.length > 0 && aiSuggestions.length > 0) {
+        return aiSuggestions.slice(0, 1).map(item => ({
+            title: item.title || 'AI Suggestion',
+            priority: item.priority || 'Quick Win',
+            tip: item.tip || 'Take the next best action on your latest financial task.',
+            steps: Array.isArray(item.steps) ? item.steps.slice(0, 3) : []
+        }));
     }
 
-    if (completedTodos.length > 0) {
-        const completionRate = Math.round((completedTodos.length / Math.max(1, todos.length)) * 100);
-        suggestions.push({
-            title: 'Consistency Booster',
-            priority: 'Quick Win',
-            tip: `Your task completion rate is ${completionRate}%. Maintain this streak for compounding discipline.`,
-            steps: [
-                'Keep daily target: close one financial task per day.',
-                'Batch easy tasks into a single 20-minute slot.',
-                'Review completed wins every weekend.'
-            ]
-        });
+    if (todos.length > 0) {
+        const latestTodo = [...todos].sort((a, b) => {
+            const aTime = new Date(a.updatedAt || a.createdAt || 0).getTime();
+            const bTime = new Date(b.updatedAt || b.createdAt || 0).getTime();
+            return bTime - aTime;
+        })[0];
+        return [buildFallbackSuggestionFromTodo(latestTodo)];
     }
 
-    while (suggestions.length < 4) {
-        suggestions.push({
+    if (todos.length === 0) {
+        return [
+            {
             title: 'Foundation Move',
             priority: 'Quick Win',
             tip: 'Create one concrete money move now, then we will keep optimizing your plan.',
@@ -1541,10 +1895,11 @@ function generateSmartSuggestions() {
                 'Set a due date so it does not slip.',
                 'Return here to get your refreshed next-step strategy.'
             ]
-        });
+            }
+        ];
     }
 
-    return suggestions.slice(0, 4);
+    return [];
 }
 
 const productsData = {
@@ -2615,16 +2970,83 @@ function setupSettingsAndLogout() {
     console.log("Setting up settings and logout listeners");
     const settingsBtn = document.getElementById('settingsBtn');
     const settingsMenu = document.getElementById('settingsDropdown');
+    const sidebar = document.querySelector('.sidebar');
 
     if (settingsBtn && settingsMenu) {
+        const originalSettingsMenuParent = settingsMenu.parentElement;
+        const originalSettingsMenuNextSibling = settingsMenu.nextSibling;
+
+        const restoreSettingsMenuParent = () => {
+            if (!originalSettingsMenuParent || settingsMenu.parentElement === originalSettingsMenuParent) {
+                return;
+            }
+
+            if (originalSettingsMenuNextSibling) {
+                originalSettingsMenuParent.insertBefore(settingsMenu, originalSettingsMenuNextSibling);
+            } else {
+                originalSettingsMenuParent.appendChild(settingsMenu);
+            }
+        };
+
+        const resetSettingsMenuPosition = () => {
+            restoreSettingsMenuParent();
+            settingsMenu.classList.remove('floating');
+            settingsMenu.style.left = '';
+            settingsMenu.style.top = '';
+        };
+
+        const positionSettingsMenu = () => {
+            if (settingsMenu.parentElement !== document.body) {
+                document.body.appendChild(settingsMenu);
+            }
+
+            settingsMenu.classList.add('floating');
+
+            const btnRect = settingsBtn.getBoundingClientRect();
+            const menuRect = settingsMenu.getBoundingClientRect();
+            const gap = 12;
+            const viewportPadding = 16;
+
+            const left = Math.min(
+                btnRect.right + gap,
+                window.innerWidth - menuRect.width - viewportPadding
+            );
+            const top = Math.max(
+                viewportPadding,
+                Math.min(
+                    btnRect.top - menuRect.height - gap,
+                    window.innerHeight - menuRect.height - viewportPadding
+                )
+            );
+
+            settingsMenu.style.left = `${left}px`;
+            settingsMenu.style.top = `${top}px`;
+        };
+
         settingsBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            const willShow = !settingsMenu.classList.contains('show');
             settingsMenu.classList.toggle('show');
+
+            if (willShow) {
+                positionSettingsMenu();
+            } else {
+                resetSettingsMenuPosition();
+            }
         });
 
         document.addEventListener('click', (e) => {
             if (!settingsBtn.contains(e.target) && !settingsMenu.contains(e.target)) {
                 settingsMenu.classList.remove('show');
+                resetSettingsMenuPosition();
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            if (settingsMenu.classList.contains('show')) {
+                positionSettingsMenu();
+            } else {
+                resetSettingsMenuPosition();
             }
         });
     } else {
@@ -2715,6 +3137,12 @@ function setupProfileModal() {
 
             document.getElementById('displayUsername').textContent = name;
             document.getElementById('displayEmail').textContent = email;
+            const planCopy = document.getElementById('displayPlan');
+            if (planCopy) {
+                planCopy.textContent = isPremiumUser()
+                    ? 'Plan: Premium active • Pro + Free chat • Unlimited tasks'
+                    : `Plan: Free • Free chat only • ${FREE_TODO_LIMIT} tasks max`;
+            }
 
             document.getElementById('editUsername').value = name;
             document.getElementById('editEmail').value = email;
