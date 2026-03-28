@@ -36,9 +36,9 @@ OPENAI_API_KEY = _clean_env("OPENAI_API_KEY")
 TODO_SUGGEST_MODEL = _clean_env("TODO_SUGGEST_MODEL", "gpt-4o-mini")
 STRIPE_SECRET_KEY = _clean_env("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = _clean_env("STRIPE_WEBHOOK_SECRET")
-STRIPE_SAMPLE_PLACEHOLDER_KEYS = {
-    "sk_test_tR3PYbcVNZZ796th88S4VQ2u",
-}
+STRIPE_SAMPLE_PLACEHOLDER_KEY_SUFFIXES = (
+    "ZZ796th88S4VQ2u",
+)
 
 if not SUPABASE_URL or not SUPABASE_KEY:
     raise Exception("Supabase env variables missing")
@@ -1151,7 +1151,7 @@ def create_checkout_session():
         return jsonify({"status": "error", "message": "Unauthorized"}), 401
     if not stripe.api_key:
         return jsonify({"status": "error", "message": "Stripe is not configured on the server."}), 500
-    if stripe.api_key in STRIPE_SAMPLE_PLACEHOLDER_KEYS:
+    if stripe.api_key and any(stripe.api_key.endswith(suffix) for suffix in STRIPE_SAMPLE_PLACEHOLDER_KEY_SUFFIXES):
         return jsonify({
             "status": "error",
             "message": "Your server is still using Stripe's sample placeholder key. Replace STRIPE_SECRET_KEY in .env with your real Stripe test secret key from the Stripe dashboard."

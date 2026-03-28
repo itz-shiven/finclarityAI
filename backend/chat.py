@@ -55,7 +55,8 @@ def is_greeting(text):
     greetings = [
         r"\bhi\b", r"\bhello\b", r"\bhey\b", r"\bgood morning\b", 
         r"\bgood afternoon\b", r"\bgood evening\b", r"\bhow are you\b",
-        r"\bwho are you\b", r"\bthanks\b", r"\bthank you\b", r"\bnamaste\b"
+        r"\bwho are you\b", r"\bwho r u\b", r"\bwho are u\b", r"\bwhat are you\b",
+        r"\bthanks\b", r"\bthank you\b", r"\bnamaste\b", r"\bhii+\b", r"\bhelo+\b"
     ]
     text_lower = text.lower().strip()
     for pattern in greetings:
@@ -65,6 +66,77 @@ def is_greeting(text):
     if len(text_lower.split()) <= 2 and any(word in text_lower for word in ["hi", "hey", "hello"]):
         return True
     return False
+
+
+def is_small_talk_or_identity_query(text):
+    text_lower = (text or "").lower().strip()
+    if is_greeting(text_lower):
+        return True
+
+    patterns = [
+        r"\bwho are (you|u)\b",
+        r"\bwhat can you do\b",
+        r"\bwhat do you do\b",
+        r"\btell me about yourself\b",
+        r"\bhow does this work\b",
+        r"\bare you ai\b",
+        r"\bwhat is finclarity\b",
+        r"\bhelp\b"
+    ]
+    return any(re.search(pattern, text_lower) for pattern in patterns)
+
+
+def build_small_talk_reply(message):
+    text_lower = (message or "").lower().strip()
+    if re.search(r"\bwho are (you|u)\b|\bwhat are you\b|\btell me about yourself\b", text_lower):
+        return (
+            "### About Me\n"
+            "- I am **Finclarity AI**, your finance assistant for **cards, loans, savings, investing, and comparisons**.\n"
+            "- I can answer from the **Finclarity Database** when product data exists, and I can also help with simple finance guidance and chat.\n\n"
+            "Source: 🤖 **AI Knowledge**"
+        )
+
+    if re.search(r"\bwhat can you do\b|\bhelp\b|\bhow does this work\b", text_lower):
+        return (
+            "### How I Help\n"
+            "- I can help with **financial product comparisons, planning questions, savings, loans, cards, and investing topics**.\n"
+            "- Ask me something specific, and if your database has matching product info I will use that too.\n\n"
+            "Source: 🤖 **AI Knowledge**"
+        )
+
+    return build_instant_greeting_reply()
+
+
+def requires_database_lookup(text):
+    text_lower = (text or "").lower().strip()
+    patterns = [
+        r"\bcompare\b",
+        r"\bvs\b",
+        r"\bcredit card\b",
+        r"\bloan\b",
+        r"\binterest rate\b",
+        r"\bprocessing fee\b",
+        r"\bannual fee\b",
+        r"\bjoining fee\b",
+        r"\bforex markup\b",
+        r"\beligibility\b",
+        r"\blounge access\b",
+        r"\breward rate\b",
+        r"\bbrokerage\b",
+        r"\bamc\b",
+        r"\bfeatures of\b",
+        r"\bdetails of\b",
+        r"\bhdfc\b",
+        r"\bsbi\b",
+        r"\baxis\b",
+        r"\bicici\b",
+        r"\bkotak\b",
+        r"\bamex\b",
+        r"\bindusind\b",
+        r"\byes bank\b",
+        r"\bbajaj\b"
+    ]
+    return any(re.search(pattern, text_lower) for pattern in patterns)
 
 def build_rag_search_query(message, history):
     """Expands follow-up prompts with recent context so retrieval stays on-topic."""
@@ -214,8 +286,11 @@ def chat():
         model_config = get_chat_model_config(chat_mode)
         retrieval_query = build_rag_search_query(message, history)
 
-        if model_config["label"] == "Free" and is_greeting(message):
-            direct_reply = build_instant_greeting_reply()
+        small_talk_query = is_small_talk_or_identity_query(message)
+        database_required = requires_database_lookup(message)
+
+        if model_config["label"] == "Free" and small_talk_query:
+            direct_reply = build_small_talk_reply(message)
             print(f"[LLM DEBUG] Instant greeting reply using {model_config['label']} / {model_config['model']}")
             return build_sse_response(direct_reply, model_config)
 
@@ -257,7 +332,11 @@ def chat():
             print(f"  -> Match #{i+1} | similarity={doc.get('similarity', 'N/A'):.4f} | preview: {str(doc.get('content', ''))[:80]}...")
         # =======================================
 
-        if not docs:
+        if not docs and small_talk_query:
+            print("[RAG DEBUG] No docs matched, but query is small talk/identity. Routing to AI knowledge response.")
+            return build_sse_response(build_small_talk_reply(message), model_config)
+
+        if not docs and database_required:
             print("[RAG DEBUG] [WARNING] NO DOCS MATCHED - Refusing with database-only response.")
             return build_sse_response(build_database_only_refusal(), model_config)
 
@@ -269,13 +348,21 @@ def chat():
             ])
             source_info = "SOURCE: 🏦 **Finclarity Database**"
         else:
-            print("[RAG DEBUG] [WARNING] NO DOCS MATCHED - Using fallback logic.")
-            if is_greeting(message):
-                rag_context = "USER IS GREETING: This is casual small talk. You are NOT restricted by the 'NO DATA AVAILABLE' rule. Please greet the user warmly and naturally. Be varied in your greeting. Keep it to 1-2 sentences."
+            print("[RAG DEBUG] [INFO] NO DOCS MATCHED - Using AI knowledge fallback.")
+            if small_talk_query:
+                rag_context = "The user is making casual conversation or asking about Finclarity AI itself. Reply naturally, briefly, and helpfully."
                 source_info = "SOURCE: 🤖 **AI Knowledge**"
             else:
                 rag_context = "❌ NO DATA AVAILABLE: There are no financial documents in the database matching this query. You MUST refuse to answer and tell the user to contact support or check back later. DO NOT use your training data to answer."
                 source_info = "SOURCE: 🏦 **Finclarity Database** (Attempted)"
+
+        if not docs and not small_talk_query and not database_required:
+            rag_context = (
+                "The user is asking a general finance question that does not require database-only product facts. "
+                "You may answer using broad financial knowledge. Keep the answer practical, simple, and educational. "
+                "Do not invent Finclarity database facts or specific product claims."
+            )
+            source_info = "SOURCE: 🤖 **AI Knowledge**"
 
         memory_str = "\n".join(f"- {m}" for m in user_memory)
         memory_block = f"USER PROFILE MEMORY (Facts you learned in past sessions):\n{memory_str}\n\n" if memory_str else ""
@@ -286,7 +373,7 @@ def chat():
         system_prompt = """
 🔒 IMPORTANT: DATA SOURCE RESTRICTION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-You MUST ONLY answer questions using the financial documents provided in the CONTEXT section below.
+Use the provided CONTEXT as your source of truth.
 - If the context says "❌ NO DATA AVAILABLE", you MUST refuse to answer.
 - DO NOT use your training data, general knowledge, or the internet.
 - If context doesn't have the information, say: "I don't have this information in my database. Please contact support."
@@ -354,6 +441,8 @@ Source: 🤖 **AI Knowledge** (If greeting/small talk)
         
         if is_greeting(message):
             final_user_content += "\n\n(IMPORTANT: Use Source: 🤖 **AI Knowledge** and provide a varied greeting.)"
+        elif "AI Knowledge" in source_info:
+            final_user_content += "\n\n(IMPORTANT: This is a general AI-knowledge question, not a database-only lookup. Answer helpfully using general financial knowledge and end with Source: 🤖 **AI Knowledge**.)"
         else:
             final_user_content += f"\n\n(IMPORTANT: Based on the provided context, you must use {source_info} at the end of your response.)"
             
