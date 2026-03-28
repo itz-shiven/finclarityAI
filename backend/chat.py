@@ -266,6 +266,13 @@ def get_user_subscription(user_id):
         print(f"[CHAT SUBSCRIPTION ERROR] {exc}")
         return default_subscription_data()
 
+def is_premium_subscription(subscription):
+    return (
+        isinstance(subscription, dict)
+        and str(subscription.get("plan") or "").lower() == "premium"
+        and str(subscription.get("status") or "").lower() == "active"
+    )
+
 def is_mode_query(text):
     text_lower = (text or "").lower().strip()
     patterns = [
@@ -563,6 +570,19 @@ Source: 🤖 **AI Financial Guidance** (If guidance provided without docs)
 def compare_product():
     if 'user_id' not in session and 'is_guest' not in session:
         return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    if 'user_id' not in session:
+        return jsonify({
+            "status": "error",
+            "message": "Compare is available on the Premium plan. Please upgrade to continue."
+        }), 403
+
+    subscription = get_user_subscription(session['user_id'])
+    if not is_premium_subscription(subscription):
+        return jsonify({
+            "status": "error",
+            "message": "Compare is available on the Premium plan. Please upgrade to continue."
+        }), 403
 
     try:
         data = request.get_json()

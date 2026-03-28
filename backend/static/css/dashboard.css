@@ -352,6 +352,29 @@ body::-webkit-scrollbar-thumb:hover {
     opacity: 1;
 }
 
+.compare-lock-indicator {
+    margin-left: auto;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    align-items: center;
+    justify-content: center;
+    background: rgba(245, 158, 11, 0.14);
+    color: #b45309;
+    font-size: 11px;
+    opacity: 0;
+    transform: scale(0.8);
+    pointer-events: none;
+    display: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.nav-item.compare-locked .compare-lock-indicator {
+    display: inline-flex;
+    opacity: 1;
+    transform: scale(1);
+}
+
 .sidebar.collapsed .nav-item span {
     width: 0;
     opacity: 0;
@@ -2704,6 +2727,11 @@ body::-webkit-scrollbar-thumb:hover {
 
     .nav-item span {
         display: none;
+    }
+
+    .nav-item.compare-locked .compare-lock-indicator {
+        display: inline-flex;
+        margin-left: 0;
     }
 
     .user-profile {

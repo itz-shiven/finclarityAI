@@ -57,6 +57,53 @@ function isPremiumUser() {
     return subscriptionState.plan === 'premium' && subscriptionState.status === 'active';
 }
 
+function isCompareLocked() {
+    return !isPremiumUser();
+}
+
+async function showComparePremiumPrompt() {
+    const confirmed = await showFinanceActionModal({
+        title: 'Premium Feature',
+        message: 'Compare is available on the Premium plan. Upgrade to Premium to unlock product comparison.',
+        confirmText: 'Upgrade Plan',
+        cancelText: 'Maybe Later'
+    });
+
+    if (confirmed) {
+        openUpgradePlanModal();
+    }
+}
+
+async function guardCompareAccess() {
+    if (!isCompareLocked()) {
+        return true;
+    }
+
+    await showComparePremiumPrompt();
+    return false;
+}
+
+function updateCompareAccessUI() {
+    const navCompare = document.getElementById('navCompare');
+    const compareLockIndicator = document.getElementById('compareLockIndicator');
+    const locked = isCompareLocked();
+
+    if (navCompare) {
+        navCompare.classList.toggle('compare-locked', locked);
+        navCompare.setAttribute(
+            'title',
+            locked
+                ? 'Upgrade to Premium to unlock Compare'
+                : 'Compare financial products'
+        );
+        navCompare.setAttribute('aria-label', locked ? 'Compare locked for free plan' : 'Compare');
+    }
+
+    if (compareLockIndicator) {
+        compareLockIndicator.setAttribute('aria-hidden', locked ? 'false' : 'true');
+    }
+}
+
 function getTodoLimit() {
     return isPremiumUser() ? Infinity : FREE_TODO_LIMIT;
 }
@@ -1198,7 +1245,16 @@ function setupSidebarCollapse() {
 function setupNavigation() {
     const navItems = {
         'navHome': { view: 'mainView', title: 'Home', action: resetToHome },
-        'navCompare': { view: 'compareView', title: 'Smart Comparison', action: () => { switchToView('compareView', 'Smart Comparison'); generateComparisonTable(); } },
+        'navCompare': {
+            view: 'compareView',
+            title: 'Smart Comparison',
+            action: async () => {
+                const canOpenCompare = await guardCompareAccess();
+                if (!canOpenCompare) return;
+                switchToView('compareView', 'Smart Comparison');
+                generateComparisonTable();
+            }
+        },
         'navWhatChanged': { view: 'whatChangedView', title: "What's Changed?", action: () => { switchToView('whatChangedView', "What's Changed?"); populateWhatChangedView(); } },
         'navTodo': { view: 'todoView', title: 'Financial To-Do List', action: () => openFinanceView('todoView', 'Financial To-Do List') },
         'navSuggestions': { view: 'suggestionsView', title: 'Smart Suggestions', action: () => openFinanceView('suggestionsView', 'Smart Suggestions') },
@@ -1237,6 +1293,11 @@ function resetToHome() {
 }
 
 function switchToView(viewId, title) {
+    if (viewId === 'compareView' && isCompareLocked()) {
+        showComparePremiumPrompt();
+        return;
+    }
+
     navStack = [{ id: viewId, title: title }];
     renderBreadcrumb();
 
@@ -1289,6 +1350,7 @@ function updateSubscriptionUI() {
         window.currentUserData.subscription = { ...subscriptionState };
     }
     updateChatModeUI();
+    updateCompareAccessUI();
 
     const isPremium = isPremiumUser();
     const sidebarPlanBadge = document.getElementById('sidebarPlanBadge');
@@ -2161,7 +2223,9 @@ function setupComparisonFeature() {
     }
 
     if (trayCompareBtn) {
-        trayCompareBtn.addEventListener('click', () => {
+        trayCompareBtn.addEventListener('click', async () => {
+            const canOpenCompare = await guardCompareAccess();
+            if (!canOpenCompare) return;
             switchToView('compareView', 'Smart Comparison');
             generateComparisonTable();
         });
@@ -2721,6 +2785,9 @@ window.fetchProductDetails = async function (productId, providerName, colIndex) 
         });
 
         if (!response.ok) {
+            if (response.status === 403) {
+                await showComparePremiumPrompt();
+            }
             console.error("[COMPARE] API Error:", response.status);
             throw new Error("API failed");
         }
