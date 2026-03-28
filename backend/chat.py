@@ -38,18 +38,6 @@ openrouter_client = OpenAI(
 # -------------------------
 # HELPER FUNCTIONS
 # -------------------------
-def get_embedding(text):
-    """Converts text to a 1536-dimension vector using OpenAI."""
-    try:
-        response = openai_client.embeddings.create(
-            input=text,
-            model="text-embedding-3-small"
-        )
-        return response.data[0].embedding
-    except Exception as e:
-        print(f"🚨 OpenAI Embedding Error: {e}")
-        return None
-
 def is_greeting(text):
     """Detects if the message is a simple greeting or casual small talk."""
     greetings = [
@@ -284,7 +272,6 @@ def chat():
         print(f"\n🔍 [RAG] Processing query: '{message}'")
         
         model_config = get_chat_model_config(chat_mode)
-        retrieval_query = build_rag_search_query(message, history)
 
         small_talk_query = is_small_talk_or_identity_query(message)
         database_required = requires_database_lookup(message)
@@ -304,25 +291,12 @@ def chat():
             print(f"[LLM DEBUG] Instant mode reply using {model_config['label']} / {model_config['model']}")
             return build_sse_response(direct_reply, model_config)
 
-        # 1. Generate the vector for the user's question
-        query_embedding = get_embedding(retrieval_query)
-        if not query_embedding:
-            return jsonify({"reply": "I'm having trouble connecting to my knowledge base right now. Please try again in a moment.\n\nSource: 🤖 **System Error**"})
+        # -------------------------
+        # RAG RETRIEVAL (CLEAN)
+        # -------------------------
+        from services.rag_service import retrieve_context
 
-        # 2. Search Supabase for the best matches using your updated RPC call
-        try:
-            response = supabase.rpc(
-                'match_financial_docs',
-                {
-                    'query_embedding': query_embedding,
-                    'match_threshold': 0.45, 
-                    'match_count': 3 if chat_mode == "free" else 5        
-                }
-            ).execute()
-            docs = response.data or []
-        except Exception as e:
-            print(f"🚨 [RAG] Supabase Search Error: {e}")
-            docs = []
+        docs, status = retrieve_context(message, history, chat_mode)
 
         docs = [doc for doc in docs if float(doc.get("similarity") or 0) >= 0.45]
 
@@ -368,67 +342,51 @@ def chat():
         memory_block = f"USER PROFILE MEMORY (Facts you learned in past sessions):\n{memory_str}\n\n" if memory_str else ""
         
         context = f"INFORMATION SOURCE: {source_info}\n\n{memory_block}{rag_context}"
+        from services.decision_service import generate_decision
+
+        decision_block = generate_decision(docs, message, user_memory)
+
+        if decision_block:
+            context += "\n\nIMPORTANT DECISION:\n" + decision_block
 
         # 4. Master Prompt
         system_prompt = """
-🔒 IMPORTANT: DATA SOURCE RESTRICTION
+🔒 IMPORTANT: DOMAIN RESTRICTION & SOURCE USAGE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Use the provided CONTEXT as your source of truth.
-- If the context says "❌ NO DATA AVAILABLE", you MUST refuse to answer.
-- DO NOT use your training data, general knowledge, or the internet.
-- If context doesn't have the information, say: "I don't have this information in my database. Please contact support."
-- NEVER answer financial questions that aren't covered by the provided documents.
-- If the user asks for guidance like "Should I take this?" or "Is this worth it?", and the context includes relevant product facts, you SHOULD give a practical recommendation based only on that context.
-- Keep that recommendation informational and context-based, not generic training-data advice.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+You are Finclarity AI — a specialized Financial Assistant for Indian users.
+Your strictly enforced domain is FINANCE, BANKING, INVESTING, TAXES, and MONEY MANAGEMENT.
 
-You are Finclarity AI — a smart financial assistant for Indian users.
-Your goal: Give clear, practical, and easy-to-understand financial guidance.
+DOMAIN RULES:
+1. **FINANCIAL ADVICE/GUIDANCE**: If a user asks for financial guidance (budgeting, savings tips, general finance help), and it's NOT product-specific, use your internal AI Knowledge to provide a helpful, practical response.
+2. **DATABASE PRODUCTS**: If a user asks about specific cards, loans, or institutions, use the provided CONTEXT. If context says "❌ NO DATA AVAILABLE", refuse based on that specific product.
+3. **STRICT REFUSAL (OUT-OF-DOMAIN)**: If a user asks non-financial questions, you MUST politely refuse.
+   - **REFUSE**: Travel, Directions (e.g., "How to go to Chandigarh?"), Sports, Cooking, Geography, Science, Arts, or non-finance general knowledge.
+   - **REFUSE RESPONSE**: "I am a financial assistant and I can only help you with questions related to cards, loans, investing, and money management. How can I help you with your finances today?"
 
 ━━━━━━━━━━━━━━━━━━━
 OUT OF DOMAIN & SMALL TALK HANDLING
 ━━━━━━━━━━━━━━━━━━━
-- CASUAL SMALL TALK ALLOWED: If the user engages in normal human small talk, reply warmly and naturally in 1-2 sentences, then politely ask how you can help them with their finances.
-- STRICTLY OUT OF DOMAIN: If the user asks complex non-financial questions or types random gibberish:
-  - Do NOT attempt to answer the external question.
-  - Reply with 1 short sentence politely refusing, reminding them you are a financial assistant.
-- NO DATA IN DATABASE: If no matching financial documents exist in the database for the user's query:
-  - You MUST refuse to answer.
-  - Say: "I don't have information about this in my database. Please contact support or try rephrasing your question."
-- WHEN DATABASE INFO EXISTS:
-  - If the user asks whether a product is worth taking, summarize the fit using the facts in context.
-  - Clearly mention who it seems good for, what trade-offs stand out, and when someone may want to skip it.
-  - Do NOT say you lack data if the needed product details are already present in context.
+- CASUAL SMALL TALK: If the user says "Hi", "How are you?", or asks "Who are you?", reply warmly in 1-2 sentences, then ask how you can help with their finances.
+- CLEAR OFF-TOPIC: For questions about anything other than finance, banking, or investing:
+  - You MUST refuse. Do NOT try to answer the question even halfway.
+- NO DATA IN DATABASE: If the user asks for a specific product and matching documents aren't found:
+  - Say: "I don't have information about this specific item in my database. Please contact support or try rephrasing."
+- ADVICE & GUIDANCE: If no matching product documents exist BUT the query is about general financial advice (e.g., "How to save 10% of my income?"):
+  - Provide helpful financial guidance using AI knowledge.
 
 ━━━━━━━━━━━━━━━━━━━
-RESPONSE LOGIC & FORMATTING (STRICT)
+RESPONSE FORMATTING (STRICT)
 ━━━━━━━━━━━━━━━━━━━
 - NEVER write long paragraphs. Max 1-2 lines per block.
-- By default, ALL responses MUST be in bullet points unless the user explicitly asks for a paragraph.
-- Break every idea into a new bullet.
-- **BOLD IMPORTANT WORDS**: Use Markdown bold (`**text**`) for numbers, dates, terms, and key advice.
-- **USE HEADERS**: Use `###` for sub-sections to make them stand out.
-- Response should be scannable in 5 seconds.
+- Use bullet points for almost everything.
+- **BOLD** numbers, dates, and key advice.
+- Use `###` headers for sections.
 
-━━━━━━━━━━━━━━━━━━━
-CONTEXT & MEMORY USAGE (LONG & SHORT-TERM MEMORY)
-━━━━━━━━━━━━━━━━━━━
-- Always maintain continuity with the chat history.
-- Always provide a highly personalized experience based on what you already know about the user.
-
-━━━━━━━━━━━━━━━━━━━
-STATE-OF-THE-ART PERMANENT FACT EXTRACTION
-━━━━━━━━━━━━━━━━━━━
-- If the user reveals a persistent, important personal fact about themselves (e.g., their salary, their city, their financial goals, their age, their debts), you MUST save it to your permanent memory vault.
-- To save a fact to memory, include this exact tag anywhere in your response: [MEMORY: <fact>]
-- Example: [MEMORY: User earns 50k INR per month]
-
-🚨 MANDATORY SOURCE CITATION (CRITICAL)
+🚨 SOURCE CITATION (MANDATORY)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Every single response without exception MUST end with a source citation. Place it at the VERY BOTTOM of your response, separated by a blank line.
-Format:
-Source: 🏦 **Finclarity Database** (If information came from context)
-Source: 🤖 **AI Knowledge** (If greeting/small talk)
+Bottom of response:
+Source: 🏦 **Finclarity Database** (If product-specific facts were used)
+Source: 🤖 **AI Knowledge** (If greeting or general financial advice)
 """
 
         # 5. Assemble the LLM Payload
@@ -437,7 +395,17 @@ Source: 🤖 **AI Knowledge** (If greeting/small talk)
         for msg in history[:-1]:
             messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
             
-        final_user_content = f"Context:\n{context}\n\nQuestion:\n{message}"
+        final_user_content = f"""
+        Context:
+        {context}
+
+        User Question:
+        {message}
+
+        IMPORTANT:
+        - If there is a section titled 'Final Recommendation', you MUST include it in your answer.
+        - Do NOT ignore recommendation sections.
+        """
         
         if is_greeting(message):
             final_user_content += "\n\n(IMPORTANT: Use Source: 🤖 **AI Knowledge** and provide a varied greeting.)"
@@ -489,6 +457,18 @@ Source: 🤖 **AI Knowledge** (If greeting/small talk)
                 print(f"[LLM DEBUG] Provider={model_config['label']} Model={active_model}")
                 print(f"[LLM DEBUG] User message: {message}")
                 print(f"[LLM DEBUG] Final reply: {full_reply}")
+
+                # 🔥 ADD HERE (NOT ABOVE, NOT INSIDE IF)
+
+                try:
+                    from services.decision_service import generate_decision
+                    decision_block = generate_decision(docs, message, user_memory)
+
+                    if decision_block:
+                        full_reply += "\n\n" + decision_block
+
+                except Exception as e:
+                    print(f"[DECISION ERROR] {e}")
                         
             except Exception as e:
                 if model_config["label"] == "Free" and model_config.get("fallback_model") and active_model != model_config["fallback_model"]:
