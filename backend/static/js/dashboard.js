@@ -673,8 +673,15 @@ function updateChatModeUI() {
     buttons.forEach(btn => {
         btn.classList.toggle('active', btn.dataset.chatMode === currentChatMode);
         const wantsPro = btn.dataset.chatMode === 'pro';
-        btn.disabled = wantsPro && !isPremiumUser();
-        btn.title = wantsPro && !isPremiumUser() ? 'Upgrade to Premium to use Pro mode' : '';
+        // Keep button enabled even for free users so they can click to upgrade
+        btn.disabled = false;
+        if (wantsPro && !isPremiumUser()) {
+            btn.classList.add('pro-locked');
+            btn.title = 'Upgrade to Premium to use Pro mode';
+        } else {
+            btn.classList.remove('pro-locked');
+            btn.title = '';
+        }
     });
 }
 
@@ -690,14 +697,13 @@ function loadChatModePreference() {
 
 async function setChatMode(mode) {
     if (mode === 'pro' && !isPremiumUser()) {
-        await showFinanceActionModal({
-            title: 'Premium Required',
-            message: 'Upgrade to Premium to unlock Pro chat mode. You can still use the free model right now.',
-            confirmText: 'Open Plans',
-            cancelText: 'Later'
-        }).then(confirmed => {
-            if (confirmed) openUpgradePlanModal();
-        });
+        // Direct trigger for Upgrade Modal for Free users
+        if (typeof openUpgradePlanModal === 'function') {
+            openUpgradePlanModal();
+        } else {
+            // Fallback: If function not yet defined globally, trigger the button click
+            document.getElementById('upgradePlanBtn')?.click();
+        }
         return;
     }
 
@@ -1271,7 +1277,10 @@ function sanitizeFinanceData(raw = {}) {
         todos: Array.isArray(raw.todos) ? raw.todos : [],
         aiSuggestions: Array.isArray(raw.aiSuggestions) ? raw.aiSuggestions : [],
         goals: Array.isArray(raw.goals) ? raw.goals : [],
-        expenses: Array.isArray(raw.expenses) ? raw.expenses : []
+        expenses: Array.isArray(raw.expenses) ? raw.expenses : [],
+        smart_suggestions_opt_in: (raw.smart_suggestions_opt_in === true || raw.smart_suggestions_opt_in === false) 
+            ? raw.smart_suggestions_opt_in 
+            : null
     };
 }
 
@@ -1700,6 +1709,21 @@ function renderTodoView() {
                 return;
             }
             try {
+                // ONE-TIME PRIVACY OPT-IN: Only trigger if the user hasn't decided yet (null)
+                if (financeData.smart_suggestions_opt_in === null || financeData.smart_suggestions_opt_in === undefined) {
+                    const optedIn = await showFinanceActionModal({
+                        title: 'Privacy & AI Insights',
+                        message: 'To provide personalized financial suggestions, we need to analyze your to-do tasks and inputs using our AI model. Your data is used only for generating these insights and is not shared to train external models. Would you like to enable Smart Suggestions?',
+                        confirmText: 'Enable Smart Suggestions',
+                        cancelText: 'Keep Private'
+                    });
+                    
+                    // Set local state
+                    financeData.smart_suggestions_opt_in = optedIn;
+                    // Pass the choice to the server in the same request to avoid race conditions
+                    payload.smart_suggestions_opt_in = optedIn;
+                }
+
                 if (taskId) {
                     await updateTodoTask(taskId, payload);
                 } else {
@@ -1796,6 +1820,55 @@ function renderTodoView() {
 function renderSuggestionsView() {
     const view = document.getElementById('suggestionsView');
     if (!view) return;
+
+    // Handle Privacy Locked State
+    if (financeData.smart_suggestions_opt_in === false) {
+        view.innerHTML = `
+            <section class="finance-module-card privacy-locked-module">
+                <div class="finance-module-header">
+                    <h3>Smart Suggestions</h3>
+                    <div class="privacy-lock-badge"><i class="fas fa-user-shield"></i> Privacy Enabled</div>
+                </div>
+                <div class="locked-suggestion-content">
+                    <i class="fas fa-brain-circuit" style="font-size: 32px; color: var(--primary-600); margin-bottom: 20px; opacity: 0.4;"></i>
+                    <h4>Suggestions are Currently Private</h4>
+                    <p>You have chosen to keep your tasks private. Enable AI analysis to receive personalized financial moves and strategies based on your activity.</p>
+                    <button class="btn-primary" id="enableSmartSuggestionsBtn" style="margin-top: 16px;">Enable AI Insights</button>
+                    <p class="privacy-note">Your data remains secure and is only used to generate your personalized plan.</p>
+                </div>
+            </section>
+        `;
+        
+        const enableBtn = document.getElementById('enableSmartSuggestionsBtn');
+        if (enableBtn) {
+            enableBtn.onclick = async () => {
+                financeData.smart_suggestions_opt_in = true;
+                await persistFinanceData();
+                renderFinanceModuleViews();
+            };
+        }
+        return;
+    }
+
+    // Handle Pending First Task State
+    const tasks = financeData.todos || [];
+    if (tasks.length === 0) {
+        view.innerHTML = `
+            <section class="finance-module-card">
+                <div class="finance-module-header">
+                    <h3>Smart Suggestions</h3>
+                    <p>Start by adding your first financial goal or to-do.</p>
+                </div>
+                <div class="locked-suggestion-content" style="padding: 40px; opacity: 0.7;">
+                    <i class="fas fa-plus-circle" style="font-size: 32px; color: var(--text-tertiary); margin-bottom: 20px;"></i>
+                    <h4>Waiting for your first task...</h4>
+                    <p>Once you add a to-do, we'll provide smart moves to help you complete it efficiently.</p>
+                </div>
+            </section>
+        `;
+        return;
+    }
+
     const suggestions = generateSmartSuggestions();
     const highImpactCount = suggestions.filter(item => item.priority === 'High').length;
     const quickWinsCount = suggestions.filter(item => item.priority === 'Quick Win').length;

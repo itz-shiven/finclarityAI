@@ -3,14 +3,8 @@ from services.vector_service import search_documents
 
 def retrieve_context(message, history, chat_mode="pro"):
     try:
-        # Combine history (same logic as yours)
+        # Use ONLY the message for search to avoid history bias
         context_text = message
-        if history:
-            recent = "\n".join([
-                f"{msg.get('role')}: {msg.get('content')}"
-                for msg in history[-4:]
-            ])
-            context_text = f"{recent}\n\nUser: {message}"
 
         embedding = get_embedding(context_text)
         if not embedding:

@@ -123,7 +123,8 @@ def default_finance_data():
         "todos": [],
         "aiSuggestions": [],
         "goals": [],
-        "expenses": []
+        "expenses": [],
+        "smart_suggestions_opt_in": None
     }
 
 
@@ -259,8 +260,9 @@ def _extract_chat_finance_and_subscription(raw_chats):
         else:
             base = default_finance_data()
             for key in base:
-                if isinstance(finance_data.get(key), list):
-                    base[key] = finance_data[key]
+                val = finance_data.get(key)
+                if val is not None:
+                    base[key] = val
             finance_data = base
         return chat_history, finance_data, subscription
 
@@ -771,12 +773,15 @@ def sync_userdata():
         if finance_data is not None and isinstance(finance_data, dict):
             merged_finance = default_finance_data()
             for key in merged_finance:
-                if isinstance(finance_data.get(key), list):
-                    merged_finance[key] = finance_data[key]
+                val = finance_data.get(key)
+                if val is not None:
+                    merged_finance[key] = val
                 else:
-                    merged_finance[key] = current_finance_data.get(key, [])
-            if not _is_premium_subscription(current_subscription) and len(merged_finance.get("todos", [])) > 10:
-                merged_finance["todos"] = merged_finance.get("todos", [])[:10]
+                    merged_finance[key] = current_finance_data.get(key)
+            
+            # Apply todo limit for free users
+            if not _is_premium_subscription(current_subscription) and isinstance(merged_finance.get("todos"), list) and len(merged_finance["todos"]) > 10:
+                merged_finance["todos"] = merged_finance["todos"][:10]
             current_finance_data = merged_finance
         if subscription_data is not None and isinstance(subscription_data, dict):
             current_subscription = _normalize_subscription_data(subscription_data)
@@ -979,8 +984,19 @@ def create_finance_todo():
         "completed": bool(data.get("completed", False)),
         "createdAt": datetime.now(timezone.utc).isoformat()
     }
+
+    # Handle optional privacy opt-in passed during first task creation
+    if "smart_suggestions_opt_in" in data:
+        finance_data["smart_suggestions_opt_in"] = bool(data.get("smart_suggestions_opt_in"))
+
     finance_data["todos"].append(task)
-    _replace_task_suggestion(finance_data, _generate_ai_suggestion_for_task(task))
+    
+    # PERFORMANCE: Only call AI generator if opted in. Otherwise use fast fallback.
+    if finance_data.get("smart_suggestions_opt_in") == True:
+        _replace_task_suggestion(finance_data, _generate_ai_suggestion_for_task(task))
+    else:
+        _replace_task_suggestion(finance_data, _fallback_todo_suggestion(task))
+
     _save_finance_data_for_user(session['user_id'], finance_data)
 
     return jsonify({"status": "success", "task": task, "data": finance_data})
@@ -1013,7 +1029,11 @@ def update_finance_todo(task_id):
         return jsonify({"status": "error", "message": "Task not found"}), 404
 
     if any(key in data for key in ["title", "notes", "dueDate"]):
-        _replace_task_suggestion(finance_data, _generate_ai_suggestion_for_task(updated_task))
+        # PERFORMANCE: Only call AI generator if opted in.
+        if finance_data.get("smart_suggestions_opt_in") == True:
+            _replace_task_suggestion(finance_data, _generate_ai_suggestion_for_task(updated_task))
+        else:
+            _replace_task_suggestion(finance_data, _fallback_todo_suggestion(updated_task))
 
     _save_finance_data_for_user(session['user_id'], finance_data)
     return jsonify({"status": "success", "task": updated_task, "data": finance_data})
@@ -1047,9 +1067,15 @@ def update_finance_data():
     payload = request.get_json() or {}
     finance_data = _get_finance_data_for_user(session['user_id'])
 
-    for key in ["goals", "expenses", "todos", "aiSuggestions"]:
-        if key in payload and isinstance(payload.get(key), list):
-            finance_data[key] = payload[key]
+    for key in ["goals", "expenses", "todos", "aiSuggestions", "smart_suggestions_opt_in"]:
+        if key in payload:
+             # Only check list type for the original 4 keys
+             if key in ["goals", "expenses", "todos", "aiSuggestions"]:
+                 if isinstance(payload.get(key), list):
+                     finance_data[key] = payload[key]
+             else:
+                 # For opt-in, it can be boolean or null
+                 finance_data[key] = payload[key]
 
     subscription = _get_subscription_for_user(session['user_id'])
     if not _is_premium_subscription(subscription) and len(finance_data.get("todos", [])) > 10:

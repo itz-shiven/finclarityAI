@@ -126,6 +126,77 @@ def requires_database_lookup(text):
     ]
     return any(re.search(pattern, text_lower) for pattern in patterns)
 
+def is_suggestion_query(text):
+    """Detects if the user is asking for a recommendation or suggestion."""
+    text_lower = (text or "").lower().strip()
+    patterns = [
+        r"\bsuggest\b", r"\brecommend\b", r"\bbest\b", r"\bwhich one\b",
+        r"\bshould i\b", r"\bgive me some\b", r"\bmere liye\b", r"\bkaunsa\b"
+    ]
+    return any(re.search(pattern, text_lower) for pattern in patterns)
+
+def is_explicitly_forbidden(text):
+    """Detects explicitly forbidden non-financial topics like travel, cities, recipes, etc."""
+    text_lower = (text or "").lower().strip()
+    patterns = [
+        r"\btravel\b", r"\bflight\b", r"\bbus\b", r"\btrain\b", r"\bhotel\b",
+        r"\bchandigarh\b", r"\bdelhi\b", r"\bmumbai\b", r"\bpune\b", r"\bbangalore\b",
+        r"\bgo to\b", r"\bvisit\b", r"\brecipe\b", r"\bhow to cook\b", r"\bweather\b",
+        r"\bsports\b", r"\bcricket\b", r"\bmovies\b", r"\bactor\b"
+    ]
+    return any(re.search(pattern, text_lower) for pattern in patterns)
+
+def verify_keyword_match(message, docs):
+    """Ensure that if the user mentions a specific bank or brand, the doc contains it."""
+    message_lower = message.lower()
+    keywords = ["hdfc", "sbi", "axis", "axis bank", "atlas", "icici", "kotak", "amex", "indusind"]
+    
+    # Identify which entities the user is asking about
+    present_keywords = [k for k in keywords if k in message_lower]
+    if not present_keywords:
+        return docs # No specific entity mentioned, allow all matches
+
+    filtered = []
+    for doc in docs:
+        content_lower = doc.get("content", "").lower()
+        # If any requested keyword is in the doc, it's a valid match
+        if any(k in content_lower for k in present_keywords):
+            filtered.append(doc)
+    
+    return filtered
+
+def build_forbidden_refusal():
+    return (
+        "### Information Restricted\n"
+        "- I am a **Financial Assistant** and I am explicitly restricted from answering non-financial questions about travel, locations, or general knowledge.\n"
+        "- I can only help you with **cards, loans, investing, and money management** found in my database.\n\n"
+        "SOURCE: 🤖 **System Guard (Ver 2.0)**"
+    )
+
+def build_pro_suggestion_refusal():
+    return (
+        "### Pro Feature Required\n"
+        "- I can't provide specific suggestions or recommendations in the **Free** model.\n"
+        "- Please **Upgrade to Pro** to get personalized financial advice and product recommendations.\n\n"
+        "SOURCE: 🤖 **System Restriction**"
+    )
+
+def build_database_only_refusal():
+    return (
+        "### Information Not Found\n"
+        "- I couldn't find any specific information about this in my database.\n"
+        "- As an AI Financial Assistant, I am restricted to answering only based on my database context to ensure accuracy.\n\n"
+        "SOURCE: 🏦 **Finclarity Database (No Match)**"
+    )
+
+def build_out_of_domain_refusal():
+    return (
+        "### Out of Domain\n"
+        "- I am a **Financial Assistant** and I can only help you with questions related to **cards, loans, investing, and money management**.\n"
+        "- Additionally, I only answer questions that are present in my database.\n\n"
+        "Source: 🤖 **System Filter**"
+    )
+
 def build_rag_search_query(message, history):
     """Expands follow-up prompts with recent context so retrieval stays on-topic."""
     recent_turns = []
@@ -208,14 +279,6 @@ def is_mode_query(text):
     ]
     return any(pattern in text_lower for pattern in patterns)
 
-def build_database_only_refusal():
-    return (
-        "### Data Not Found\n"
-        "- I don't have information about this in my database.\n"
-        "- Please contact support or try rephrasing your question.\n\n"
-        "Source: **Finclarity Database** (No matching data)"
-    )
-
 def build_instant_greeting_reply():
     return (
         "### Hello\n"
@@ -286,10 +349,19 @@ def chat():
                 f"### Current Mode\n"
                 f"- You are chatting with **{model_config['label']}** mode.\n"
                 f"- Current model: **{model_config['model']}**.\n\n"
-                f"Source: ðŸ¤– **System Configuration**"
+                f"Source: 🤖 **System Configuration**"
             )
             print(f"[LLM DEBUG] Instant mode reply using {model_config['label']} / {model_config['model']}")
             return build_sse_response(direct_reply, model_config)
+
+        # 1. Broad Topic & Model Restriction
+        if is_explicitly_forbidden(message):
+            print(f"[LLM DEBUG] Forbidden topic matched: '{message}'. Refusing early.")
+            return build_sse_response(build_forbidden_refusal(), model_config)
+
+        if model_config["label"] == "Free" and is_suggestion_query(message):
+            print("[LLM DEBUG] Suggestion requested in Free mode. Refusing.")
+            return build_sse_response(build_pro_suggestion_refusal(), model_config)
 
         # -------------------------
         # RAG RETRIEVAL (CLEAN)
@@ -298,45 +370,36 @@ def chat():
 
         docs, status = retrieve_context(message, history, chat_mode)
 
+        # Base similarity filter
         docs = [doc for doc in docs if float(doc.get("similarity") or 0) >= 0.45]
 
+        # NEW: Keyword consistency check
+        docs = verify_keyword_match(message, docs)
+
         # ===== DEBUG: RAG SOURCE TRACKING =====
-        print(f"[RAG DEBUG] Docs retrieved: {len(docs)}")
-        for i, doc in enumerate(docs):
-            print(f"  -> Match #{i+1} | similarity={doc.get('similarity', 'N/A'):.4f} | preview: {str(doc.get('content', ''))[:80]}...")
+        print(f"[RAG DEBUG] Docs retrieved after filtering: {len(docs)}")
         # =======================================
 
-        if not docs and small_talk_query:
-            print("[RAG DEBUG] No docs matched, but query is small talk/identity. Routing to AI knowledge response.")
-            return build_sse_response(build_small_talk_reply(message), model_config)
-
-        if not docs and database_required:
-            print("[RAG DEBUG] [WARNING] NO DOCS MATCHED - Refusing with database-only response.")
-            return build_sse_response(build_database_only_refusal(), model_config)
-
-        # 3. Context & Memory Injection
-        if docs:
+        if not docs:
+            # PRO MODEL EXCEPTION: Allow general guidance for suggestion queries even without docs
+            if model_config["label"] == "Pro" and is_suggestion_query(message):
+                print("[RAG DEBUG] No docs matched, but Pro model is allowed to provide general guidance for suggestions.")
+                rag_context = "NOTICE: No specific product record was found in the Finclarity database for this query. Provide general financial principles and guidance only."
+                source_info = "SOURCE: 🤖 **AI Financial Guidance**"
+                # Proceed to LLM instead of returning
+            elif small_talk_query:
+                print("[RAG DEBUG] No docs matched, but query is small talk/identity. Routing to safe response.")
+                return build_sse_response(build_small_talk_reply(message), model_config)
+            else:
+                print(f"[RAG DEBUG] [STRICT] NO DOCS MATCHED for query: '{message}'. Refusing based on 'JUST DATABASE' rule.")
+                return build_sse_response(build_database_only_refusal(), model_config)
+        else:
+            # 3. Context & Memory Injection (Docs found)
             rag_context = "\n\n".join([
                 f"{doc.get('content', '')}\nSource: {doc.get('metadata', {}).get('source', 'Unknown')}"
                 for doc in docs
             ])
             source_info = "SOURCE: 🏦 **Finclarity Database**"
-        else:
-            print("[RAG DEBUG] [INFO] NO DOCS MATCHED - Using AI knowledge fallback.")
-            if small_talk_query:
-                rag_context = "The user is making casual conversation or asking about Finclarity AI itself. Reply naturally, briefly, and helpfully."
-                source_info = "SOURCE: 🤖 **AI Knowledge**"
-            else:
-                rag_context = "❌ NO DATA AVAILABLE: There are no financial documents in the database matching this query. You MUST refuse to answer and tell the user to contact support or check back later. DO NOT use your training data to answer."
-                source_info = "SOURCE: 🏦 **Finclarity Database** (Attempted)"
-
-        if not docs and not small_talk_query and not database_required:
-            rag_context = (
-                "The user is asking a general finance question that does not require database-only product facts. "
-                "You may answer using broad financial knowledge. Keep the answer practical, simple, and educational. "
-                "Do not invent Finclarity database facts or specific product claims."
-            )
-            source_info = "SOURCE: 🤖 **AI Knowledge**"
 
         memory_str = "\n".join(f"- {m}" for m in user_memory)
         memory_block = f"USER PROFILE MEMORY (Facts you learned in past sessions):\n{memory_str}\n\n" if memory_str else ""
@@ -351,42 +414,28 @@ def chat():
 
         # 4. Master Prompt
         system_prompt = """
-🔒 IMPORTANT: DOMAIN RESTRICTION & SOURCE USAGE
+🔒 STRICT DATABASE-ONLY ENFORCEMENT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-You are Finclarity AI — a specialized Financial Assistant for Indian users.
-Your strictly enforced domain is FINANCE, BANKING, INVESTING, TAXES, and MONEY MANAGEMENT.
+You are Finclarity AI — a specialized Financial Assistant.
+Your strictly enforced domain is FINANCE, BANKING, and MONEY MANAGEMENT.
 
-DOMAIN RULES:
-1. **FINANCIAL ADVICE/GUIDANCE**: If a user asks for financial guidance (budgeting, savings tips, general finance help), and it's NOT product-specific, use your internal AI Knowledge to provide a helpful, practical response.
-2. **DATABASE PRODUCTS**: If a user asks about specific cards, loans, or institutions, use the provided CONTEXT. If context says "❌ NO DATA AVAILABLE", refuse based on that specific product.
-3. **STRICT REFUSAL (OUT-OF-DOMAIN)**: If a user asks non-financial questions, you MUST politely refuse.
-   - **REFUSE**: Travel, Directions (e.g., "How to go to Chandigarh?"), Sports, Cooking, Geography, Science, Arts, or non-finance general knowledge.
-   - **REFUSE RESPONSE**: "I am a financial assistant and I can only help you with questions related to cards, loans, investing, and money management. How can I help you with your finances today?"
-
-━━━━━━━━━━━━━━━━━━━
-OUT OF DOMAIN & SMALL TALK HANDLING
-━━━━━━━━━━━━━━━━━━━
-- CASUAL SMALL TALK: If the user says "Hi", "How are you?", or asks "Who are you?", reply warmly in 1-2 sentences, then ask how you can help with their finances.
-- CLEAR OFF-TOPIC: For questions about anything other than finance, banking, or investing:
-  - You MUST refuse. Do NOT try to answer the question even halfway.
-- NO DATA IN DATABASE: If the user asks for a specific product and matching documents aren't found:
-  - Say: "I don't have information about this specific item in my database. Please contact support or try rephrasing."
-- ADVICE & GUIDANCE: If no matching product documents exist BUT the query is about general financial advice (e.g., "How to save 10% of my income?"):
-  - Provide helpful financial guidance using AI knowledge.
+CRITICAL RULES (NO EXCEPTIONS):
+1. **JUST DATABASE**: If the information is product-specific (rates, fees, features), you MUST ONLY answer using the provided CONTEXT. 
+2. **NO PRETRAINED DATA**: Do NOT state specific numbers, percentages, or facts from your training data. Use "No data available in my records" if specific facts are missing.
+3. **PRO GUIDANCE**: If the Source is 'AI Financial Guidance', you may provide general financial logic, pros/cons, or guiding questions based on general principles, but still REFUSE to state specific product numbers.
+4. **STRICT REFUSAL**: If the question is out of domain (travel, cooking, etc.), you MUST politely refuse.
 
 ━━━━━━━━━━━━━━━━━━━
 RESPONSE FORMATTING (STRICT)
 ━━━━━━━━━━━━━━━━━━━
 - NEVER write long paragraphs. Max 1-2 lines per block.
 - Use bullet points for almost everything.
-- **BOLD** numbers, dates, and key advice.
+- **BOLD** numbers and key advice.
 - Use `###` headers for sections.
 
-🚨 SOURCE CITATION (MANDATORY)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Bottom of response:
-Source: 🏦 **Finclarity Database** (If product-specific facts were used)
-Source: 🤖 **AI Knowledge** (If greeting or general financial advice)
+Source: 🏦 **Finclarity Database** (If docs used)
+Source: 🤖 **AI Financial Guidance** (If guidance provided without docs)
 """
 
         # 5. Assemble the LLM Payload
@@ -409,8 +458,6 @@ Source: 🤖 **AI Knowledge** (If greeting or general financial advice)
         
         if is_greeting(message):
             final_user_content += "\n\n(IMPORTANT: Use Source: 🤖 **AI Knowledge** and provide a varied greeting.)"
-        elif "AI Knowledge" in source_info:
-            final_user_content += "\n\n(IMPORTANT: This is a general AI-knowledge question, not a database-only lookup. Answer helpfully using general financial knowledge and end with Source: 🤖 **AI Knowledge**.)"
         else:
             final_user_content += f"\n\n(IMPORTANT: Based on the provided context, you must use {source_info} at the end of your response.)"
             
