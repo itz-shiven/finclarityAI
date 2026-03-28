@@ -98,6 +98,42 @@ def get_chat_model_config(chat_mode):
         "label": "Pro"
     }
 
+
+def default_subscription_data():
+    return {
+        "plan": "free",
+        "status": "inactive",
+        "selected_chat_mode": "free"
+    }
+
+
+def get_user_subscription(user_id):
+    try:
+        response = supabase.table("user_data").select("chats").eq("user_id", user_id).limit(1).execute()
+        if not response.data:
+            return default_subscription_data()
+
+        chats = response.data[0].get("chats")
+        if not isinstance(chats, dict):
+            return default_subscription_data()
+
+        subscription = chats.get("subscription")
+        if not isinstance(subscription, dict):
+            return default_subscription_data()
+
+        plan = str(subscription.get("plan") or "free").lower()
+        status = str(subscription.get("status") or "inactive").lower()
+        selected_mode = str(subscription.get("selected_chat_mode") or "free").lower()
+
+        return {
+            "plan": "premium" if plan == "premium" else "free",
+            "status": "active" if plan == "premium" and status == "active" else "inactive",
+            "selected_chat_mode": "pro" if selected_mode == "pro" and plan == "premium" and status == "active" else "free"
+        }
+    except Exception as exc:
+        print(f"[CHAT SUBSCRIPTION ERROR] {exc}")
+        return default_subscription_data()
+
 def is_mode_query(text):
     text_lower = (text or "").lower().strip()
     patterns = [
@@ -164,6 +200,11 @@ def chat():
         history = data.get("history", [])
         user_memory = data.get("user_memory", [])
         chat_mode = (data.get("chat_mode") or "pro").lower()
+        if 'user_id' in session:
+            subscription = get_user_subscription(session['user_id'])
+            premium_active = subscription.get("plan") == "premium" and subscription.get("status") == "active"
+            if not premium_active and chat_mode == "pro":
+                chat_mode = "free"
 
         if not message:
             return jsonify({"reply": "Empty message"})

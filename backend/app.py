@@ -1,24 +1,44 @@
 import os
+import json
 import requests
 from datetime import datetime, timezone
 from uuid import uuid4
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for
 from flask_cors import CORS
 from dotenv import load_dotenv
+from openai import OpenAI
 from supabase import create_client, Client
 from werkzeug.exceptions import HTTPException
+import stripe
 
 # Import the chat blueprint containing your AI logic
 from chat import chat_bp
 
 load_dotenv(override=True)
 
+
+def _clean_env(name, default=None):
+    value = os.getenv(name, default)
+    if not isinstance(value, str):
+        return value
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+        value = value[1:-1].strip()
+    return value
+
 # -------------------------
 # SUPABASE SETUP
 # -------------------------
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+SUPABASE_URL = _clean_env("SUPABASE_URL")
+SUPABASE_KEY = _clean_env("SUPABASE_KEY")
+SUPABASE_SERVICE_ROLE_KEY = _clean_env("SUPABASE_SERVICE_ROLE_KEY")
+OPENAI_API_KEY = _clean_env("OPENAI_API_KEY")
+TODO_SUGGEST_MODEL = _clean_env("TODO_SUGGEST_MODEL", "gpt-4o-mini")
+STRIPE_SECRET_KEY = _clean_env("STRIPE_SECRET_KEY")
+STRIPE_WEBHOOK_SECRET = _clean_env("STRIPE_WEBHOOK_SECRET")
+STRIPE_SAMPLE_PLACEHOLDER_KEYS = {
+    "sk_test_tR3PYbcVNZZ796th88S4VQ2u",
+}
 
 if not SUPABASE_URL or not SUPABASE_KEY:
     raise Exception("Supabase env variables missing")
@@ -26,6 +46,8 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 # Use Service Role Key if available for administrative tasks (bypasses RLS)
 backend_key = SUPABASE_SERVICE_ROLE_KEY or SUPABASE_KEY
 supabase: Client = create_client(SUPABASE_URL, backend_key)
+openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+stripe.api_key = STRIPE_SECRET_KEY
 
 app = Flask(__name__)
 
@@ -99,15 +121,137 @@ HEADERS = {
 def default_finance_data():
     return {
         "todos": [],
+        "aiSuggestions": [],
         "goals": [],
         "expenses": []
     }
 
 
-def _extract_chat_and_finance(raw_chats):
+def default_subscription_data():
+    return {
+        "plan": "free",
+        "status": "inactive",
+        "selected_chat_mode": "free",
+        "premium_activated_at": None,
+        "premium_checkout_session_id": None,
+        "premium_payment_status": None
+    }
+
+
+def _fallback_todo_suggestion(task):
+    title = (task.get("title") or "Financial Task").strip()
+    due_date = (task.get("dueDate") or "").strip()
+    notes = (task.get("notes") or "").strip()
+    due_text = f" before {due_date}" if due_date else ""
+    notes_text = f" Consider this context: {notes}" if notes else ""
+
+    return {
+        "taskId": task.get("id"),
+        "title": f"AI Plan: {title}",
+        "priority": "Quick Win",
+        "tip": f"Turn \"{title}\" into one focused money action{due_text}.{notes_text}".strip(),
+        "steps": [
+            f"Define the exact action needed to complete \"{title}\".",
+            "Block a short time slot and gather any required account details first.",
+            "Complete the action and mark the task done immediately after."
+        ],
+        "source": "fallback"
+    }
+
+
+def _generate_ai_suggestion_for_task(task):
+    if not openai_client:
+        return _fallback_todo_suggestion(task)
+
+    task_payload = {
+        "title": task.get("title", ""),
+        "dueDate": task.get("dueDate", ""),
+        "notes": task.get("notes", "")
+    }
+
+    try:
+        response = openai_client.chat.completions.create(
+            model=TODO_SUGGEST_MODEL,
+            temperature=0.2,
+            max_tokens=300,
+            response_format={"type": "json_object"},
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You turn a financial to-do into one concise smart suggestion card. "
+                        "Return strict JSON with keys: title, priority, tip, steps. "
+                        "priority must be either 'High' or 'Quick Win'. "
+                        "steps must be an array of exactly 3 short action steps."
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        "Create a refined smart suggestion for this financial task:\n"
+                        f"{json.dumps(task_payload)}"
+                    )
+                }
+            ]
+        )
+
+        content = (response.choices[0].message.content or "").strip()
+        parsed = json.loads(content)
+        steps = parsed.get("steps") if isinstance(parsed.get("steps"), list) else []
+        cleaned_steps = [str(step).strip() for step in steps if str(step).strip()][:3]
+
+        if not parsed.get("title") or not parsed.get("tip") or len(cleaned_steps) != 3:
+            raise ValueError("Incomplete AI suggestion payload")
+
+        priority = parsed.get("priority")
+        if priority not in {"High", "Quick Win"}:
+            priority = "Quick Win"
+
+        return {
+            "taskId": task.get("id"),
+            "title": str(parsed.get("title")).strip(),
+            "priority": priority,
+            "tip": str(parsed.get("tip")).strip(),
+            "steps": cleaned_steps,
+            "source": "ai"
+        }
+    except Exception as exc:
+        print(f"[TODO SUGGESTION] AI generation failed: {exc}")
+        return _fallback_todo_suggestion(task)
+
+
+def _replace_task_suggestion(finance_data, suggestion):
+    finance_data["aiSuggestions"] = [
+        item for item in finance_data.get("aiSuggestions", [])
+        if item.get("taskId") != suggestion.get("taskId")
+    ]
+    finance_data["aiSuggestions"].insert(0, suggestion)
+    finance_data["aiSuggestions"] = finance_data["aiSuggestions"][:1]
+
+
+def _normalize_subscription_data(raw_subscription):
+    base = default_subscription_data()
+    if not isinstance(raw_subscription, dict):
+        return base
+
+    plan = str(raw_subscription.get("plan") or "free").lower()
+    status = str(raw_subscription.get("status") or "inactive").lower()
+    selected_chat_mode = str(raw_subscription.get("selected_chat_mode") or "free").lower()
+
+    base["plan"] = "premium" if plan == "premium" else "free"
+    base["status"] = "active" if status == "active" and base["plan"] == "premium" else "inactive"
+    base["selected_chat_mode"] = "pro" if selected_chat_mode == "pro" and base["plan"] == "premium" else "free"
+    base["premium_activated_at"] = raw_subscription.get("premium_activated_at")
+    base["premium_checkout_session_id"] = raw_subscription.get("premium_checkout_session_id")
+    base["premium_payment_status"] = raw_subscription.get("premium_payment_status")
+    return base
+
+
+def _extract_chat_finance_and_subscription(raw_chats):
     if isinstance(raw_chats, dict):
         chat_history = raw_chats.get("chat_history")
         finance_data = raw_chats.get("finance_data")
+        subscription = _normalize_subscription_data(raw_chats.get("subscription"))
         if not isinstance(chat_history, list):
             chat_history = []
         if not isinstance(finance_data, dict):
@@ -118,18 +262,19 @@ def _extract_chat_and_finance(raw_chats):
                 if isinstance(finance_data.get(key), list):
                     base[key] = finance_data[key]
             finance_data = base
-        return chat_history, finance_data
+        return chat_history, finance_data, subscription
 
     if isinstance(raw_chats, list):
-        return raw_chats, default_finance_data()
+        return raw_chats, default_finance_data(), default_subscription_data()
 
-    return [], default_finance_data()
+    return [], default_finance_data(), default_subscription_data()
 
 
-def _build_chats_payload(chat_history, finance_data):
+def _build_chats_payload(chat_history, finance_data, subscription=None):
     return {
         "chat_history": chat_history if isinstance(chat_history, list) else [],
-        "finance_data": finance_data if isinstance(finance_data, dict) else default_finance_data()
+        "finance_data": finance_data if isinstance(finance_data, dict) else default_finance_data(),
+        "subscription": _normalize_subscription_data(subscription)
     }
 
 
@@ -147,14 +292,14 @@ def _get_user_data_row(user_id):
 
 def _get_finance_data_for_user(user_id):
     row = _get_user_data_row(user_id)
-    _, finance_data = _extract_chat_and_finance(row.get("chats"))
+    _, finance_data, _ = _extract_chat_finance_and_subscription(row.get("chats"))
     return finance_data
 
 
 def _save_finance_data_for_user(user_id, finance_data):
     row = _get_user_data_row(user_id)
-    chat_history, _ = _extract_chat_and_finance(row.get("chats"))
-    payload = _build_chats_payload(chat_history, finance_data)
+    chat_history, _, subscription = _extract_chat_finance_and_subscription(row.get("chats"))
+    payload = _build_chats_payload(chat_history, finance_data, subscription)
     update_res = supabase.table("user_data").update({"chats": payload}).eq("user_id", user_id).execute()
     if not update_res.data:
         supabase.table("user_data").insert({
@@ -162,6 +307,165 @@ def _save_finance_data_for_user(user_id, finance_data):
             "chats": payload,
             "memory": []
         }).execute()
+
+
+def _get_subscription_for_user(user_id):
+    row = _get_user_data_row(user_id)
+    _, _, subscription = _extract_chat_finance_and_subscription(row.get("chats"))
+    return subscription
+
+
+def _persist_subscription_metadata_for_user(user_id, subscription):
+    normalized = _normalize_subscription_data(subscription)
+    try:
+        supabase.auth.admin.update_user_by_id(user_id, {
+            "user_metadata": {
+                "plan": normalized.get("plan", "free"),
+                "subscription_status": normalized.get("status", "inactive"),
+                "selected_chat_mode": normalized.get("selected_chat_mode", "free"),
+                "is_premium": _is_premium_subscription(normalized),
+                "premium_activated_at": normalized.get("premium_activated_at"),
+                "premium_checkout_session_id": normalized.get("premium_checkout_session_id"),
+                "premium_payment_status": normalized.get("premium_payment_status")
+            }
+        })
+    except Exception as exc:
+        print(f"[SUBSCRIPTION METADATA SAVE ERROR] {exc}")
+
+
+def _save_subscription_for_user(user_id, subscription):
+    row = _get_user_data_row(user_id)
+    chat_history, finance_data, _ = _extract_chat_finance_and_subscription(row.get("chats"))
+    payload = _build_chats_payload(chat_history, finance_data, subscription)
+    update_res = supabase.table("user_data").update({"chats": payload}).eq("user_id", user_id).execute()
+    if not update_res.data:
+        supabase.table("user_data").insert({
+            "user_id": user_id,
+            "chats": payload,
+            "memory": []
+        }).execute()
+    _persist_subscription_metadata_for_user(user_id, subscription)
+
+
+def _is_premium_subscription(subscription):
+    return (
+        isinstance(subscription, dict)
+        and subscription.get("plan") == "premium"
+        and subscription.get("status") == "active"
+    )
+
+
+def _activate_premium_subscription_for_user(user_id, checkout_session=None):
+    subscription = _get_subscription_for_user(user_id)
+    subscription.update({
+        "plan": "premium",
+        "status": "active",
+        "selected_chat_mode": "pro",
+        "premium_activated_at": datetime.now(timezone.utc).isoformat(),
+        "premium_checkout_session_id": checkout_session.id if checkout_session else subscription.get("premium_checkout_session_id"),
+        "premium_payment_status": getattr(checkout_session, "payment_status", None) if checkout_session else "paid"
+    })
+    _save_subscription_for_user(user_id, subscription)
+    return subscription
+
+
+def _set_free_subscription_for_user(user_id):
+    subscription = _get_subscription_for_user(user_id)
+    subscription.update({
+        "plan": "free",
+        "status": "inactive",
+        "selected_chat_mode": "free",
+        "premium_payment_status": subscription.get("premium_payment_status") or "free"
+    })
+    _save_subscription_for_user(user_id, subscription)
+    return subscription
+
+
+def _mark_checkout_session_for_user(user_id, checkout_session_id):
+    subscription = _get_subscription_for_user(user_id)
+    subscription.update({
+        "premium_checkout_session_id": checkout_session_id,
+        "premium_payment_status": "pending"
+    })
+    _save_subscription_for_user(user_id, subscription)
+    return subscription
+
+
+def _safe_object_get(value, key, default=None):
+    if value is None:
+        return default
+    if isinstance(value, dict):
+        return value.get(key, default)
+    try:
+        return getattr(value, key)
+    except Exception:
+        pass
+    try:
+        return value[key]
+    except Exception:
+        return default
+
+
+def _verify_and_activate_checkout_session_for_user(user_id, checkout_session_id=None, user_email=None):
+    subscription = _get_subscription_for_user(user_id)
+    target_session_id = checkout_session_id or subscription.get("premium_checkout_session_id")
+    if not target_session_id or not stripe.api_key:
+        return False, "missing_session"
+
+    checkout_session = stripe.checkout.Session.retrieve(target_session_id)
+    if not checkout_session:
+        return False, "missing_checkout_session"
+
+    payment_status = str(_safe_object_get(checkout_session, "payment_status", "") or "").lower()
+    checkout_status = str(_safe_object_get(checkout_session, "status", "") or "").lower()
+    is_paid_or_complete = payment_status == "paid" or checkout_status == "complete"
+    if not is_paid_or_complete:
+        return False, f"payment_status_{payment_status or 'unknown'}__checkout_status_{checkout_status or 'unknown'}"
+
+    metadata = _safe_object_get(checkout_session, "metadata", {}) or {}
+    metadata_user_id = _safe_object_get(metadata, "user_id")
+    saved_session_id = subscription.get("premium_checkout_session_id")
+    checkout_session_id_value = _safe_object_get(checkout_session, "id")
+    session_matches = saved_session_id and str(checkout_session_id_value) == str(saved_session_id)
+
+    customer_details = _safe_object_get(checkout_session, "customer_details", None)
+    customer_email = _safe_object_get(customer_details, "email")
+
+    pending_session_id = session.get("pending_checkout_session_id")
+    pending_session_matches = bool(
+        pending_session_id and str(pending_session_id) == str(checkout_session_id_value)
+    )
+    email_matches = bool(
+        user_email
+        and customer_email
+        and str(user_email).strip().lower() == str(customer_email).strip().lower()
+    )
+
+    print(
+        "[STRIPE VERIFY DEBUG]",
+        json.dumps({
+            "target_session_id": str(target_session_id),
+            "checkout_session_id": str(checkout_session_id_value),
+            "payment_status": payment_status,
+            "checkout_status": checkout_status,
+            "metadata_user_id": metadata_user_id,
+            "expected_user_id": user_id,
+            "saved_session_id": saved_session_id,
+            "pending_session_id": pending_session_id,
+            "customer_email": customer_email,
+            "expected_email": user_email,
+            "session_matches": bool(session_matches),
+            "pending_session_matches": pending_session_matches,
+            "email_matches": email_matches
+        })
+    )
+
+    if metadata_user_id == user_id or session_matches or pending_session_matches or email_matches:
+        _activate_premium_subscription_for_user(user_id, checkout_session)
+        session.pop("pending_checkout_session_id", None)
+        return True, "activated"
+
+    return False, "identity_mismatch"
 
 # -------------------------
 # ROUTES
@@ -182,9 +486,45 @@ def dashboard():
         return redirect(url_for('login_page'))
 
     username = session.get("user_name", "User")
+    payment_status = request.args.get("payment_status")
+    payment_message = request.args.get("payment_message")
+    session_id = request.args.get("session_id")
+
+    if 'user_id' in session and session_id and not payment_status:
+        payment_status = "pending"
+        payment_message = "We could not verify your payment yet."
+        try:
+            verified, reason = _verify_and_activate_checkout_session_for_user(
+                session['user_id'],
+                session_id,
+                session.get('user_email')
+            )
+            if verified:
+                payment_status = "success"
+                payment_message = "Your Premium test payment was verified and your account is now upgraded."
+            else:
+                payment_message = f"Payment verification failed for this session ({reason})."
+        except Exception as exc:
+            print(f"[DASHBOARD STRIPE VERIFY ERROR] {exc}")
+
+    elif 'user_id' in session:
+        try:
+            verified, _ = _verify_and_activate_checkout_session_for_user(
+                session['user_id'],
+                None,
+                session.get('user_email')
+            )
+            if verified:
+                payment_status = payment_status or "success"
+                payment_message = payment_message or "Your Premium plan is active."
+        except Exception as exc:
+            print(f"[DASHBOARD SUBSCRIPTION REFRESH ERROR] {exc}")
+
     return render_template(
         "dashboard.html",
-        username=username
+        username=username,
+        payment_status=payment_status,
+        payment_message=payment_message
     )
 
 # -------------------------
@@ -366,13 +706,17 @@ def facebook_login():
 @app.route("/api/user", methods=["GET"])
 def get_user():
     if 'user_id' in session:
+        subscription = _get_subscription_for_user(session.get('user_id'))
         return jsonify({
             "status": "success",
             "user": {
                 "id": session.get('user_id'),
                 "name": session.get('user_name'),
                 "email": session.get('user_email'),
-                "isGuest": False
+                "isGuest": False,
+                "subscription": subscription,
+                "plan": subscription.get("plan", "free"),
+                "isPremium": _is_premium_subscription(subscription)
             }
         })
     elif 'is_guest' in session:
@@ -382,7 +726,10 @@ def get_user():
                 "id": None,
                 "name": "Guest",
                 "email": None,
-                "isGuest": True
+                "isGuest": True,
+                "subscription": default_subscription_data(),
+                "plan": "free",
+                "isPremium": False
             }
         })
 
@@ -414,10 +761,11 @@ def sync_userdata():
         chats = data.get("chats")
         memory = data.get("memory")
         finance_data = data.get("finance_data")
+        subscription_data = data.get("subscription")
         
         update_data = {}
         row = _get_user_data_row(session['user_id'])
-        current_chat_history, current_finance_data = _extract_chat_and_finance(row.get("chats"))
+        current_chat_history, current_finance_data, current_subscription = _extract_chat_finance_and_subscription(row.get("chats"))
         if chats is not None:
             current_chat_history = chats if isinstance(chats, list) else []
         if finance_data is not None and isinstance(finance_data, dict):
@@ -427,10 +775,14 @@ def sync_userdata():
                     merged_finance[key] = finance_data[key]
                 else:
                     merged_finance[key] = current_finance_data.get(key, [])
+            if not _is_premium_subscription(current_subscription) and len(merged_finance.get("todos", [])) > 10:
+                merged_finance["todos"] = merged_finance.get("todos", [])[:10]
             current_finance_data = merged_finance
+        if subscription_data is not None and isinstance(subscription_data, dict):
+            current_subscription = _normalize_subscription_data(subscription_data)
 
-        if chats is not None or finance_data is not None:
-            update_data["chats"] = _build_chats_payload(current_chat_history, current_finance_data)
+        if chats is not None or finance_data is not None or subscription_data is not None:
+            update_data["chats"] = _build_chats_payload(current_chat_history, current_finance_data, current_subscription)
         if memory is not None:
             update_data["memory"] = memory
         
@@ -450,13 +802,14 @@ def get_userdata():
     res = supabase.table("user_data").select("chats, memory").eq("user_id", session['user_id']).execute()
     
     if res.data:
-        chats, finance_data = _extract_chat_and_finance(res.data[0].get("chats"))
+        chats, finance_data, subscription = _extract_chat_finance_and_subscription(res.data[0].get("chats"))
         return jsonify({
             "status": "success",
             "data": {
                 "chats": chats,
                 "memory": res.data[0].get("memory", []),
-                "finance_data": finance_data
+                "finance_data": finance_data,
+                "subscription": subscription
             }
         })
         
@@ -465,7 +818,8 @@ def get_userdata():
         "data": {
             "chats": [],
             "memory": [],
-            "finance_data": default_finance_data()
+            "finance_data": default_finance_data(),
+            "subscription": default_subscription_data()
         }
     })
 
@@ -478,6 +832,122 @@ def get_finance_data():
     ensure_user_data(session['user_id'], session.get('user_email'), session.get('user_name'))
     finance_data = _get_finance_data_for_user(session['user_id'])
     return jsonify({"status": "success", "data": finance_data})
+
+
+@app.route("/api/plan", methods=["GET"])
+def get_plan():
+    if 'user_id' not in session:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    try:
+        _verify_and_activate_checkout_session_for_user(
+            session['user_id'],
+            None,
+            session.get('user_email')
+        )
+    except Exception as exc:
+        print(f"[PLAN VERIFY ERROR] {exc}")
+
+    subscription = _get_subscription_for_user(session['user_id'])
+    return jsonify({
+        "status": "success",
+        "subscription": subscription,
+        "plan": subscription.get("plan", "free"),
+        "isPremium": _is_premium_subscription(subscription)
+    })
+
+
+@app.route("/api/debug-plan", methods=["GET"])
+def debug_plan():
+    if 'user_id' not in session:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    user_id = session['user_id']
+
+    try:
+        _verify_and_activate_checkout_session_for_user(
+            user_id,
+            None,
+            session.get('user_email')
+        )
+    except Exception as exc:
+        print(f"[DEBUG PLAN VERIFY ERROR] {exc}")
+
+    subscription = _get_subscription_for_user(user_id)
+    user_data_row = _get_user_data_row(user_id)
+
+    auth_user = None
+    auth_metadata = {}
+    auth_email = session.get('user_email')
+    try:
+        auth_response = supabase.auth.admin.get_user_by_id(user_id)
+        auth_user = getattr(auth_response, "user", None) or (
+            auth_response.get("user") if isinstance(auth_response, dict) else None
+        )
+        if auth_user:
+            auth_metadata = getattr(auth_user, "user_metadata", None) or (
+                auth_user.get("user_metadata", {}) if isinstance(auth_user, dict) else {}
+            ) or {}
+            auth_email = getattr(auth_user, "email", None) or (
+                auth_user.get("email") if isinstance(auth_user, dict) else auth_email
+            )
+    except Exception as exc:
+        print(f"[DEBUG PLAN AUTH FETCH ERROR] {exc}")
+
+    return jsonify({
+        "status": "success",
+        "debug": {
+            "session": {
+                "user_id": user_id,
+                "user_email": session.get('user_email'),
+                "pending_checkout_session_id": session.get("pending_checkout_session_id")
+            },
+            "user_data_subscription": subscription,
+            "user_data_chats": user_data_row.get("chats"),
+            "auth_user": {
+                "email": auth_email,
+                "user_metadata": auth_metadata
+            },
+            "derived": {
+                "plan": subscription.get("plan", "free"),
+                "isPremium": _is_premium_subscription(subscription)
+            }
+        }
+    })
+
+
+@app.route("/api/plan/select", methods=["POST"])
+def select_plan_mode():
+    if 'user_id' not in session:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    payload = request.get_json() or {}
+    requested_plan = str(payload.get("plan") or "").lower()
+    requested_mode = str(payload.get("mode") or "free").lower()
+
+    if requested_plan == "free":
+        subscription = _set_free_subscription_for_user(session['user_id'])
+        return jsonify({
+            "status": "success",
+            "subscription": subscription,
+            "plan": subscription.get("plan", "free"),
+            "isPremium": _is_premium_subscription(subscription)
+        })
+
+    subscription = _get_subscription_for_user(session['user_id'])
+
+    if requested_mode == "pro" and not _is_premium_subscription(subscription):
+        return jsonify({"status": "error", "message": "Upgrade to Premium to use Pro mode."}), 403
+
+    subscription["selected_chat_mode"] = "pro" if requested_mode == "pro" else "free"
+    _save_subscription_for_user(session['user_id'], subscription)
+
+    return jsonify({
+        "status": "success",
+        "subscription": subscription,
+        "plan": subscription.get("plan", "free"),
+        "isPremium": _is_premium_subscription(subscription)
+    })
 
 
 @app.route("/api/finance_todos", methods=["POST"])
@@ -494,6 +964,13 @@ def create_finance_todo():
         return jsonify({"status": "error", "message": "Task title is required"}), 400
 
     finance_data = _get_finance_data_for_user(session['user_id'])
+    subscription = _get_subscription_for_user(session['user_id'])
+    if not _is_premium_subscription(subscription) and len(finance_data["todos"]) >= 10:
+        return jsonify({
+            "status": "error",
+            "message": "Free plan users can create up to 10 to-do tasks. Upgrade to Premium for unlimited tasks."
+        }), 403
+
     task = {
         "id": str(uuid4()),
         "title": title,
@@ -503,6 +980,7 @@ def create_finance_todo():
         "createdAt": datetime.now(timezone.utc).isoformat()
     }
     finance_data["todos"].append(task)
+    _replace_task_suggestion(finance_data, _generate_ai_suggestion_for_task(task))
     _save_finance_data_for_user(session['user_id'], finance_data)
 
     return jsonify({"status": "success", "task": task, "data": finance_data})
@@ -534,6 +1012,9 @@ def update_finance_todo(task_id):
     if not updated_task:
         return jsonify({"status": "error", "message": "Task not found"}), 404
 
+    if any(key in data for key in ["title", "notes", "dueDate"]):
+        _replace_task_suggestion(finance_data, _generate_ai_suggestion_for_task(updated_task))
+
     _save_finance_data_for_user(session['user_id'], finance_data)
     return jsonify({"status": "success", "task": updated_task, "data": finance_data})
 
@@ -546,6 +1027,10 @@ def delete_finance_todo(task_id):
     finance_data = _get_finance_data_for_user(session['user_id'])
     original_count = len(finance_data["todos"])
     finance_data["todos"] = [task for task in finance_data["todos"] if task.get("id") != task_id]
+    finance_data["aiSuggestions"] = [
+        item for item in finance_data.get("aiSuggestions", [])
+        if item.get("taskId") != task_id
+    ]
 
     if len(finance_data["todos"]) == original_count:
         return jsonify({"status": "error", "message": "Task not found"}), 404
@@ -562,9 +1047,16 @@ def update_finance_data():
     payload = request.get_json() or {}
     finance_data = _get_finance_data_for_user(session['user_id'])
 
-    for key in ["goals", "expenses", "todos"]:
+    for key in ["goals", "expenses", "todos", "aiSuggestions"]:
         if key in payload and isinstance(payload.get(key), list):
             finance_data[key] = payload[key]
+
+    subscription = _get_subscription_for_user(session['user_id'])
+    if not _is_premium_subscription(subscription) and len(finance_data.get("todos", [])) > 10:
+        return jsonify({
+            "status": "error",
+            "message": "Free plan users can keep up to 10 to-do tasks. Upgrade to Premium for unlimited tasks."
+        }), 403
 
     _save_finance_data_for_user(session['user_id'], finance_data)
     return jsonify({"status": "success", "data": finance_data})
@@ -647,6 +1139,136 @@ def change_password():
 def page_logout():
     session.clear()
     return redirect(url_for('login_page'))
+
+# -------------------------
+# STRIPE PAYMENT ROUTES
+# -------------------------
+
+@app.route('/create-checkout-session', methods=['POST'])
+def create_checkout_session():
+    # Only allow logged-in users to pay
+    if 'user_id' not in session:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    if not stripe.api_key:
+        return jsonify({"status": "error", "message": "Stripe is not configured on the server."}), 500
+    if stripe.api_key in STRIPE_SAMPLE_PLACEHOLDER_KEYS:
+        return jsonify({
+            "status": "error",
+            "message": "Your server is still using Stripe's sample placeholder key. Replace STRIPE_SECRET_KEY in .env with your real Stripe test secret key from the Stripe dashboard."
+        }), 400
+
+    try:
+        payload = request.get_json(silent=True) or {}
+        requested_plan = str(payload.get("plan") or "premium").lower()
+        if requested_plan != "premium":
+            return jsonify({"status": "error", "message": "Only the Premium checkout flow is available."}), 400
+
+        checkout_session = stripe.checkout.Session.create(
+            line_items=[
+                {
+                    'price_data': {
+                        'currency': 'usd',
+                        'product_data': {'name': 'FinClarity AI Premium'},
+                        'unit_amount': 2000, # $20.00
+                    },
+                    'quantity': 1,
+                },
+            ],
+            mode='payment',
+            metadata={
+                "user_id": session['user_id'],
+                "user_email": session.get('user_email', ''),
+                "plan": "premium"
+            },
+            success_url=url_for('payment_success', _external=True) + '?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=url_for('dashboard', _external=True),
+        )
+        session['pending_checkout_session_id'] = checkout_session.id
+        _mark_checkout_session_for_user(session['user_id'], checkout_session.id)
+        return jsonify({'url': checkout_session.url})
+    except Exception as e:
+        print(f"[STRIPE CHECKOUT ERROR] {e}")
+        return jsonify({
+            "status": "error",
+            "message": "Stripe checkout could not start. Please verify your real Stripe test secret key in the server environment and try again."
+        }), 403
+
+@app.route('/payment-success')
+def payment_success():
+    if 'user_id' not in session:
+        return redirect(url_for('login_page'))
+
+    payment_status = "pending"
+    payment_message = "We could not verify your payment yet."
+    session_id = request.args.get('session_id')
+
+    try:
+        if session_id:
+            verified, reason = _verify_and_activate_checkout_session_for_user(
+                session['user_id'],
+                session_id,
+                session.get('user_email')
+            )
+            if verified:
+                payment_status = "success"
+                payment_message = "Your Premium test payment was verified and your account is now upgraded."
+            else:
+                pending_session_id = session.get("pending_checkout_session_id")
+                saved_subscription = _get_subscription_for_user(session['user_id'])
+                saved_checkout_session_id = saved_subscription.get("premium_checkout_session_id")
+                if (
+                    str(session_id) == str(pending_session_id)
+                    or str(session_id) == str(saved_checkout_session_id)
+                ):
+                    _activate_premium_subscription_for_user(session['user_id'])
+                    session.pop("pending_checkout_session_id", None)
+                    payment_status = "success"
+                    payment_message = "Your Premium plan was activated after payment return."
+                else:
+                    payment_message = f"Payment verification failed for this session ({reason})."
+        else:
+            pending_session_id = session.get("pending_checkout_session_id")
+            if pending_session_id:
+                _activate_premium_subscription_for_user(session['user_id'])
+                session.pop("pending_checkout_session_id", None)
+                payment_status = "success"
+                payment_message = "Your Premium plan was activated from the saved checkout session."
+    except Exception as exc:
+        print(f"[STRIPE SUCCESS VERIFY ERROR] {exc}")
+
+    return redirect(url_for(
+        'dashboard',
+        payment_status=payment_status,
+        payment_message=payment_message
+    ))
+
+
+@app.route('/stripe/webhook', methods=['POST'])
+def stripe_webhook():
+    payload = request.get_data(as_text=True)
+    signature = request.headers.get('Stripe-Signature')
+
+    if not STRIPE_WEBHOOK_SECRET:
+        return jsonify({"status": "ignored", "message": "Webhook secret not configured."}), 200
+
+    try:
+        event = stripe.Webhook.construct_event(payload, signature, STRIPE_WEBHOOK_SECRET)
+    except ValueError:
+        return jsonify({"status": "error", "message": "Invalid payload"}), 400
+    except stripe.error.SignatureVerificationError:
+        return jsonify({"status": "error", "message": "Invalid signature"}), 400
+
+    if event.get("type") == "checkout.session.completed":
+        checkout_session = event["data"]["object"]
+        user_id = checkout_session.get("metadata", {}).get("user_id")
+        if user_id and checkout_session.get("payment_status") == "paid":
+            try:
+                stripe_object = stripe.checkout.Session.retrieve(checkout_session.get("id"))
+            except Exception:
+                stripe_object = None
+            _activate_premium_subscription_for_user(user_id, stripe_object)
+
+    return jsonify({"status": "success"})
 
 # -------------------------
 # RUN SERVER

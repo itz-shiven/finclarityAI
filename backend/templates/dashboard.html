@@ -51,6 +51,7 @@
             <div class="sidebar-footer">
                 <div class="profile-section">
                     <div class="profile-name">
+                        <span id="sidebarPlanBadge" class="sidebar-plan-badge">Free</span>
                         {% if username and ' ' in username %}
                         {{ username.split(' ')[0] | capitalize }}
                         {% else %}
@@ -65,6 +66,8 @@
                             <div class="sidebar-dropdown" id="settingsDropdown">
                                 <a href="#" class="dropdown-item" id="profileBtn"><i class="fas fa-user-circle"></i>
                                     Profile</a>
+                                <a href="#" class="dropdown-item" id="upgradePlanBtn"><i class="fas fa-crown"></i>
+                                    Upgrade Plan</a>
                                 <a href="#" class="dropdown-item" id="themeToggleBtn"><i class="fas fa-moon"></i> Theme
                                     Toggle</a>
                                 <div class="dropdown-divider"></div>
@@ -404,6 +407,7 @@
                                 </div>
                                 <div class="chat-widget-title">
                                     Finclarity AI <i class="fas fa-robot"></i>
+                                    <span id="chatPlanIndicator" class="chat-plan-indicator">Free</span>
                                 </div>
                                 <div class="chat-header-actions-right">
                                     <div class="chat-model-switch" id="chatModelSwitch" role="group" aria-label="Chat model switch">
@@ -490,6 +494,7 @@
                     <div class="profile-details">
                         <h4 id="displayUsername">Loading...</h4>
                         <p id="displayEmail">loading@...</p>
+                        <p id="displayPlan">Plan: Free</p>
                     </div>
                 </div>
 
@@ -575,8 +580,60 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="upgradePlanModal">
+        <div class="modal-card upgrade-plan-modal">
+            <div class="modal-header">
+                <h3><i class="fas fa-crown"></i> Upgrade Your Plan</h3>
+                <button class="close-modal" id="closeUpgradePlanBtn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="upgrade-plan-copy">
+                    <p id="upgradePlanSummary">Choose the plan you want to use on Finclarity AI.</p>
+                    <p class="upgrade-plan-subcopy">This uses Stripe test mode, so you can demo the full business model safely with Stripe test card numbers.</p>
+                </div>
+                <div class="upgrade-plan-grid">
+                    <article class="plan-card" id="freePlanCard">
+                        <div class="plan-card-header">
+                            <span class="plan-badge">Free</span>
+                            <h4>Starter Access</h4>
+                            <p>Use the free chatbot model and manage up to 10 to-do tasks.</p>
+                        </div>
+                        <ul class="plan-feature-list">
+                            <li>Free chatbot mode only</li>
+                            <li>Up to 10 to-do tasks</li>
+                            <li>Product browsing and comparisons</li>
+                        </ul>
+                        <button class="btn-outline plan-action-btn" id="selectFreePlanBtn" type="button">Use Free</button>
+                    </article>
+                    <article class="plan-card featured" id="premiumPlanCard">
+                        <div class="plan-card-header">
+                            <span class="plan-badge premium">Premium</span>
+                            <h4>Pro Access</h4>
+                            <p>Unlock Pro chat mode, keep free mode too, and create unlimited to-do tasks.</p>
+                        </div>
+                        <ul class="plan-feature-list">
+                            <li>Toggle between Free and Pro chatbot</li>
+                            <li>Unlimited to-do tasks</li>
+                            <li>Stripe test checkout demo flow</li>
+                        </ul>
+                        <button class="btn-primary plan-action-btn" id="buyPremiumPlanBtn" type="button">Upgrade with Test Payment</button>
+                    </article>
+                </div>
+                <div class="upgrade-plan-footer-note">
+                    <span id="planStatusNote">Current plan: Free</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        window.dashboardBootstrap = {
+            paymentStatus: {{ (payment_status if payment_status is defined else none)|tojson }},
+            paymentMessage: {{ (payment_message if payment_message is defined else none)|tojson }}
+        };
+    </script>
     <script>
         // Force aggressive cache bust
         const script = document.createElement('script');
