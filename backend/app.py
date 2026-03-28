@@ -1195,7 +1195,7 @@ def create_checkout_session():
                     'price_data': {
                         'currency': 'usd',
                         'product_data': {'name': 'FinClarity AI Premium'},
-                        'unit_amount': 2000, # $20.00
+                        'unit_amount': 500, # $5.00
                     },
                     'quantity': 1,
                 },
