@@ -2387,10 +2387,11 @@ function renderCompareCategoryGrid() {
     `).join('');
 }
 
-let selectedCompareProviders = [];
+// Initialize Global Comparison State
+window.selectedCompareProviders = window.selectedCompareProviders || [];
 let currentCompareCategory = null;
 
-function renderCompareProviderGrid(categoryKey, title) {
+window.renderCompareProviderGrid = function (categoryKey, title) {
     const emptyState = document.getElementById('compareEmptyState');
     const multiSelectView = document.getElementById('compareProviderMultiSelectView');
     const tableContainer = document.getElementById('compareTableContainer');
@@ -2405,7 +2406,7 @@ function renderCompareProviderGrid(categoryKey, title) {
     multiSelectView.classList.remove('hidden');
 
     currentCompareCategory = { key: categoryKey, title: title };
-    selectedCompareProviders = []; // reset
+    window.selectedCompareProviders = []; // reset
 
     subtitle.textContent = `Select ${title} Providers`;
     grid.innerHTML = '';
@@ -2429,10 +2430,11 @@ function renderCompareProviderGrid(categoryKey, title) {
 
     providers.forEach(providerName => {
         const card = document.createElement('div');
+        card.dataset.provider = providerName;
         card.className = 'action-card provider-card selectable-card';
         card.innerHTML = `
-            <i class="fas fa-building" style="font-size: 24px; color: var(--primary-600); margin-bottom: 12px; display: block;"></i>
-            <span style="font-weight: 600; color: var(--text-primary); transition: color 0.2s;">${providerName}</span>
+            <i class="fas fa-building" style="font-size: 24px; color: var(--primary-600); margin-bottom: 12px; display: block; pointer-events: none;"></i>
+            <span style="font-weight: 600; color: var(--text-primary); transition: color 0.2s; pointer-events: none;">${providerName}</span>
             <div class="check-indicator" style="position: absolute; top: 8px; right: 8px; display: flex; color: white; background: var(--primary-600); border-radius: 50%; width: 32px; height: 32px; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; border: 3px solid white; z-index: 5; opacity: 0; transition: opacity 0.2s; box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);">
                 0
             </div>
@@ -2440,56 +2442,51 @@ function renderCompareProviderGrid(categoryKey, title) {
                 ×
             </div>
         `;
-
-        card.addEventListener('click', (e) => {
-            console.log("🔥 Provider card clicked:", providerName);
-            console.log("Current selectedCompareProviders:", selectedCompareProviders);
-            
-            // If they clicked the minus button specifically
-            if (e.target.closest('.remove-instance-btn')) {
-                console.log("Remove button clicked");
-                const idx = selectedCompareProviders.lastIndexOf(providerName);
-                if (idx !== -1) {
-                    selectedCompareProviders.splice(idx, 1);
-                }
-                renderCompareProviderGridUpdateCounts();
-                updateContinueBtn();
-                console.log("After remove:", selectedCompareProviders);
-                return;
-            }
-
-            const count = selectedCompareProviders.filter(p => p === providerName).length;
-            const totalCount = selectedCompareProviders.length;
-            
-            console.log(`Count for ${providerName}: ${count}, Total: ${totalCount}`);
-
-            if (totalCount >= 4 && count === 0) {
-                console.log("Limit reached");
-                showFinanceActionModal({
-                    title: 'Limit Reached',
-                    message: 'You can compare a maximum of 4 items at once. Remove one to add another.',
-                    confirmText: 'OK',
-                    cancelText: 'Cancel',
-                    destructive: true,
-                    hideCancel: true
-                });
-                return;
-            }
-
-            selectedCompareProviders.push(providerName);
-            console.log("After push:", selectedCompareProviders);
-            
-            if (selectedCompareProviders.length > 4) {
-                selectedCompareProviders.shift();
-            }
-
-            renderCompareProviderGridUpdateCounts();
-            updateContinueBtn();
-            console.log("Final state:", selectedCompareProviders);
-        });
-
+        // Card click listeners removed in favor of event delegation on the grid container itself
         grid.appendChild(card);
     });
+
+    // Add robust event delegation to the grid (only once)
+    grid.onclick = function(e) {
+        const card = e.target.closest('.provider-card');
+        if (!card) return;
+
+        const pName = card.dataset.provider;
+        console.log("🔥 Delegation: Provider card clicked:", pName);
+
+        // If clicking the remove button
+        if (e.target.closest('.remove-instance-btn')) {
+            const idx = window.selectedCompareProviders.lastIndexOf(pName);
+            if (idx !== -1) {
+                window.selectedCompareProviders.splice(idx, 1);
+            }
+            renderCompareProviderGridUpdateCounts();
+            updateContinueBtn();
+            return;
+        }
+
+        const count = window.selectedCompareProviders.filter(p => p === pName).length;
+        const totalCount = window.selectedCompareProviders.length;
+
+        if (totalCount >= 4 && count === 0) {
+            showFinanceActionModal({
+                title: 'Limit Reached',
+                message: 'You can compare a maximum of 4 items at once. Remove one to add another.',
+                confirmText: 'OK',
+                destructive: true,
+                hideCancel: true
+            });
+            return;
+        }
+
+        window.selectedCompareProviders.push(pName);
+        if (window.selectedCompareProviders.length > 4) {
+            window.selectedCompareProviders.shift();
+        }
+
+        renderCompareProviderGridUpdateCounts();
+        updateContinueBtn();
+    };
 
     // Ensure continue button listener is correctly bound
     const btn = document.getElementById('continueToCompareBtn');
@@ -2500,8 +2497,8 @@ function renderCompareProviderGrid(categoryKey, title) {
         
         const refreshedBtn = document.getElementById('continueToCompareBtn');
         refreshedBtn.addEventListener('click', () => {
-            console.log("Continue clicked, providers:", selectedCompareProviders);
-            if (selectedCompareProviders.length > 0) {
+            console.log("Continue clicked, providers:", window.selectedCompareProviders);
+            if (window.selectedCompareProviders.length > 0) {
                 renderCompareMatrixView();
             }
         });
@@ -2512,10 +2509,10 @@ function renderCompareProviderGrid(categoryKey, title) {
 }
 
 function renderCompareProviderGridUpdateCounts() {
-    console.log("🔄 Updating counts, selectedCompareProviders:", selectedCompareProviders);
+    console.log("🔄 Updating counts, selectedCompareProviders:", window.selectedCompareProviders);
     document.querySelectorAll('.provider-card').forEach(card => {
-        const name = card.querySelector('span').textContent.split(' (')[0];
-        const count = selectedCompareProviders.filter(p => p === name).length;
+        const name = card.dataset.provider;
+        const count = window.selectedCompareProviders.filter(p => p === name).length;
         const check = card.querySelector('.check-indicator');
         const removeBtn = card.querySelector('.remove-instance-btn');
         const span = card.querySelector('span');
@@ -2545,7 +2542,7 @@ function renderCompareProviderGridUpdateCounts() {
 function updateContinueBtn() {
     const btn = document.getElementById('continueToCompareBtn');
     if (btn) {
-        const isValid = selectedCompareProviders.length > 0;
+        const isValid = window.selectedCompareProviders.length > 0;
         btn.disabled = !isValid;
         btn.style.opacity = isValid ? '1' : '0.4';
         btn.style.cursor = isValid ? 'pointer' : 'not-allowed';
@@ -2566,7 +2563,7 @@ window.clearSelection = function () {
     if (oldClearSelection) oldClearSelection();
 
     // Reset our new views
-    selectedCompareProviders = [];
+    window.selectedCompareProviders = [];
     currentCompareCategory = null;
 
     const multiSelectView = document.getElementById('compareProviderMultiSelectView');
@@ -2578,7 +2575,8 @@ window.clearSelection = function () {
     if (emptyState) emptyState.classList.remove('hidden');
 };
 
-function renderCompareMatrixView() {
+window.renderCompareMatrixView = function () {
+    const providers = window.selectedCompareProviders;
     const multiSelectView = document.getElementById('compareProviderMultiSelectView');
     const tableContainer = document.getElementById('compareTableContainer');
     if (!multiSelectView || !tableContainer) return;
@@ -2618,7 +2616,7 @@ function renderCompareMatrixView() {
             </button>
             <div style="flex: 1; text-align: center;">
                 <h3 style="margin: 0; font-family: 'Poppins'; font-weight: 700; color: var(--primary-600);">${currentCompareCategory.title} Comparison</h3>
-                <p style="color: var(--text-secondary); font-size: 13px; margin: 4px 0 0 0;">Compare up to ${selectedCompareProviders.length} providers side-by-side.</p>
+                <p style="color: var(--text-secondary); font-size: 13px; margin: 4px 0 0 0;">Compare up to ${window.selectedCompareProviders.length} providers side-by-side.</p>
             </div>
             <div style="width: 140px;"></div> <!-- Spacer to keep title centered -->
         </div>
@@ -2640,7 +2638,7 @@ function renderCompareMatrixView() {
                 </div>
     `;
 
-    selectedCompareProviders.forEach((provider, idx) => {
+    window.selectedCompareProviders.forEach((provider, idx) => {
         const prodList = getProductsForProvider(provider);
         html += `
             <div class="compare-column" id="compare-col-${idx}" style="display: flex; flex-direction: column; position: relative; border-right: ${idx === selectedCompareProviders.length - 1 ? 'none' : '1px solid var(--border-color)'};">
@@ -2681,9 +2679,9 @@ function renderCompareMatrixView() {
 }
 
 window.removeCompareColumn = function (idx) {
-    if (selectedCompareProviders.length > 0) {
-        selectedCompareProviders.splice(idx, 1);
-        if (selectedCompareProviders.length === 0) {
+    if (window.selectedCompareProviders.length > 0) {
+        window.selectedCompareProviders.splice(idx, 1);
+        if (window.selectedCompareProviders.length === 0) {
             clearSelection();
         } else {
             renderCompareMatrixView();
@@ -2691,7 +2689,7 @@ window.removeCompareColumn = function (idx) {
     }
 };
 
-async function fetchProductDetails(productId, providerName, colIndex) {
+window.fetchProductDetails = async function (productId, providerName, colIndex) {
     const colBody = document.getElementById(`compare-body-${colIndex}`);
     if (!colBody) return;
 

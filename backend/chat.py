@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from supabase import create_client, Client
 
 load_dotenv(override=True)
+from services.embedding_service import get_embedding
 
 # -------------------------
 # SETUP & CLIENTS
