@@ -1,104 +1,127 @@
 # FinclarityAI Impact Model
 
-## What The Product Improves
+## Present Value Proposition
 
-FinclarityAI is aimed at reducing the effort required to discover, compare, and understand financial products. In its current form, the product creates value in four practical ways:
+FinclarityAI currently helps users do three things faster:
 
-- faster product discovery through search and comparison
-- lower friction for basic financial research through chat
-- centralized personal finance organization through todos, goals, and expenses
-- easier access for new users through guest mode and social login
+- understand financial products
+- shortlist options
+- turn research into tracked next steps
 
-## Present-Day Impact Areas
+Its strongest present-day value is not autonomous advice. It is structured, retrieval-backed assistance inside one dashboard.
 
-### 1. Research Time Saved
+## Where The Product Creates Impact Today
 
-Instead of manually opening multiple bank pages, users can:
-
-- ask the chat assistant for grounded answers from the indexed database
-- compare products side by side
-- open structured product-detail views generated from retrieved source content
-
-Expected effect:
-- fewer tabs opened
-- less repeated searching
-- faster first-pass decision making
-
-### 2. Better Shortlisting
-
-The strongest current product value is not full financial advice. It is structured shortlisting.
+### 1. Faster Product Research
 
 Users can:
 
-- compare fees, benefits, and eligibility at a glance
-- identify obvious mismatches earlier
-- narrow choices before visiting official issuer pages
+- ask finance questions in chat
+- get grounded answers when matching records exist in `financial_docs`
+- compare products without manually scanning multiple issuer pages
+- open deeper product-detail views generated from retrieved context
 
-Expected effect:
-- less overwhelm
-- better initial filtering
-- fewer poor-fit product selections
+Likely effect:
 
-### 3. Ongoing Personal Organization
+- fewer tabs opened
+- less repeated searching
+- faster first-pass understanding
 
-The dashboard now includes a finance data layer stored in Supabase:
+### 2. Better Shortlisting
 
-- `todos`
-- `goals`
-- `expenses`
+The current product is especially useful at the shortlist stage.
 
-Expected effect:
-- action items stay attached to the user account
-- users can move from research to execution inside the same app
+Users can:
 
-### 4. Accessibility
+- compare fees, benefits, eligibility, and trade-offs
+- filter obvious mismatches earlier
+- move from broad interest to a smaller set of candidates
 
-The app lowers access barriers with:
+Likely effect:
+
+- lower decision fatigue
+- fewer bad-fit options in the consideration set
+- more confidence before visiting official issuer pages
+
+### 3. Research-To-Action Continuity
+
+The dashboard now stores:
+
+- todos
+- AI-generated task suggestions
+- goals
+- expenses
+
+Likely effect:
+
+- research does not end as a dead conversation
+- users can capture follow-up actions in the same product
+- short-term planning stays attached to the same account state
+
+### 4. Lower Onboarding Friction
+
+Accessibility comes from:
 
 - guest mode
-- social login support
-- conversational UX
-- calculators for common finance scenarios
+- social sign-in options
+- conversational UI
+- built-in calculators
 
-Expected effect:
-- easier onboarding for non-experts
-- lower intimidation for users who are not comfortable with financial jargon
+Likely effect:
 
-## Realistic Impact Assumptions
+- easier first session for non-experts
+- lower friction before account creation
+- better usability for users who are uncomfortable with financial jargon
 
-Because the present codebase is still hackathon-stage, the most credible impact model is directional rather than revenue-perfect.
+### 5. Premium Monetization Potential
 
-Reasonable early assumptions:
+The repository now includes a real premium upgrade path through Stripe.
 
-- A user can save 10 to 30 minutes on one product research session.
-- Users benefit most when the indexed database contains the products they are asking about.
-- The value is highest for comparison-heavy tasks such as cards, loans, and account evaluation.
+Present implication:
 
-## Key Constraints On Impact
+- the product is no longer only a demo flow
+- the app can distinguish free versus premium usage patterns
+- premium can be measured as a willingness-to-pay signal once traffic exists
 
-- Answer quality depends on the quality and freshness of `financial_docs`.
-- If retrieval returns no matching documents, the chatbot intentionally refuses to answer.
-- The scraper and indexing pipeline are not yet an always-on production ingestion system.
-- No automated testing or formal analytics instrumentation is present yet.
-- Some dashboard sections are more polished than others, so user value is uneven across the app.
+## Reasonable Current Assumptions
 
-## How To Measure Impact Going Forward
+At the current maturity level, the most defensible assumptions are operational, not grand-market ones.
 
-If the team continues this project, the best next metrics would be:
+Reasonable near-term assumptions:
 
-- chat success rate on first question
+- one successful research session can save roughly 10 to 30 minutes
+- value is highest when the requested products exist in `financial_docs`
+- product comparison, card research, and loan evaluation are likely the clearest early use cases
+- premium value will depend on whether users perceive `pro` mode and unlimited task workflows as meaningfully better than free mode
+
+## Main Constraints On Impact
+
+- answer quality depends on the freshness and coverage of `financial_docs`
+- the ingestion pipeline is still manual, not always-on
+- no committed analytics layer is visible in the repository yet
+- no automated test suite is present
+- some impact depends on external configuration being correct, including Supabase, OpenAI, OpenRouter, and Stripe
+- the app still mixes several product concerns into a single large dashboard flow, which can make quality uneven
+
+## What Should Be Measured Next
+
+If the team continues the project, the most useful present-focused metrics would be:
+
+- first-question chat success rate
+- retrieval miss rate
 - compare flow completion rate
-- product detail view engagement
-- percentage of users creating todos/goals after research
-- repeat sessions per signed-in user
-- number of retrieval misses caused by missing database coverage
+- product detail view usage rate
+- guest-to-signup conversion
+- signup-to-premium conversion
+- number of todo/goals created after a research session
+- repeat weekly sessions per active user
 
 ## Bottom Line
 
-Today, FinclarityAI’s strongest measurable promise is:
+Today, FinclarityAI's clearest impact promise is:
 
 - helping users reach a useful shortlist faster
-- keeping finance research and action items in one place
-- making financial product exploration more approachable
+- keeping research and next actions in one place
+- making financial product exploration feel more approachable
 
-The app already shows product-market direction, but its long-term impact will depend on stronger data coverage, fresher ingestion, and production hardening.
+That is already meaningful for a hackathon-stage product. The next jump in impact will come from better data coverage, clearer measurement, and production hardening rather than from adding more conceptual architecture.

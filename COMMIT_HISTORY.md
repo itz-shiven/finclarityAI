@@ -1,11 +1,15 @@
 # FinclarityAI — Comprehensive Commit History
 
-Updated through `ad26a6c` on March 27, 2026.
+Updated through `74efb51` on March 28, 2026.
 
 ---
 
 ## Latest Highlights
 
+- `5bd5338` & `43cd324` feat: full Stripe payment integration
+- `554c255` docs: update project instructions and markdown files
+- `eff378c` fix: resolve chatbot response handling issues
+- `2bb3dc2` fix: correct settings button behavior in dashboard
 - `ad26a6c` feat: setup free-tier and pro-tier AI model selection
 - `4607282` fix: hero section layout and styling on landing page
 - `1dc5297` fix: finalize mobile-responsive dashboard and sidebar
@@ -19,6 +23,19 @@ Updated through `ad26a6c` on March 27, 2026.
 ---
 
 ## Chronological Timeline
+
+### March 28, 2026 — Stripe Integration & Bug Fixes
+
+| Hash | Description |
+|------|-------------|
+| `74efb51` | Merge branch `main` |
+| `554c255` | **Update instruction files** — update README, COMMIT_HISTORY, and docs |
+| `43cd324` | **Enhance Stripe payment logic** — update backend app and chat routing |
+| `5bd5338` | **Implement Stripe payment integration** — add billing logic, backend routes, and dashboard UI updates |
+| `2bb3dc2` | **Fix settings button** — resolve dashboard UI issues |
+| `eff378c` | **Fix chatbot** — correct chat message handling |
+
+---
 
 ### March 16, 2026 — Project Inception
 
@@ -230,10 +247,10 @@ Updated through `ad26a6c` on March 27, 2026.
 
 | Metric | Value |
 |--------|-------|
-| **Total Commits** | 102 |
-| **Development Period** | March 16 – March 27, 2026 (12 days) |
-| **Feature Commits** | ~60 |
-| **Bug Fix Commits** | ~20 |
-| **Documentation Commits** | ~15 |
-| **Merge Commits** | ~17 |
+| **Total Commits** | 108 |
+| **Development Period** | March 16 – March 28, 2026 (13 days) |
+| **Feature Commits** | ~62 |
+| **Bug Fix Commits** | ~22 |
+| **Documentation Commits** | ~16 |
+| **Merge Commits** | ~18 |
 | **Contributors** | Team itz-shiven |

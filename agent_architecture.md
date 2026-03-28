@@ -1,147 +1,157 @@
 # FinclarityAI Architecture
 
-## Current State
+## Present-Day View
 
-The repository currently implements a single Flask application with one AI blueprint. Earlier documentation described a multi-agent system, but the codebase today is better understood as a retrieval-augmented app with a few specialized endpoints.
+FinclarityAI currently runs as a single Flask application with one AI blueprint and several feature-focused routes. Earlier docs framed the system as a multi-agent architecture, but the code in this repository is better described as a retrieval-augmented web app with specialized endpoints.
 
-## System Components
+## Top-Level Components
 
-### 1. Flask Application Layer
+### 1. Application Layer
 
-`backend/app.py` is the main orchestration layer.
+[backend/app.py](/D:/1%20hackathon/finclarityAI/backend/app.py) is the primary application shell.
 
 Responsibilities:
 
-- bootstraps Flask
-- initializes Supabase
-- configures sessions and CORS
+- bootstraps Flask, sessions, CORS, and environment configuration
+- initializes Supabase and OpenAI clients
 - registers the chat blueprint
-- serves `index`, `login`, and `dashboard`
-- handles signup, login, guest access, logout, and profile updates
-- persists user finance data and chat state
-- applies a global error handler
+- renders `index`, `login`, and `dashboard`
+- manages auth and session state
+- exposes finance-data and user-data sync APIs
+- stores subscription state
+- handles Stripe checkout and webhook verification
+- applies the global exception handler
 
-### 2. AI Blueprint
+### 2. AI Layer
 
-`backend/chat.py` contains the AI-facing routes.
+[backend/chat.py](/D:/1%20hackathon/finclarityAI/backend/chat.py) contains the AI-facing routes.
 
 Routes:
 
 - `/chat`
-  - streaming chatbot route
-  - performs embedding generation
-  - calls Supabase RPC retrieval
-  - builds the LLM prompt
-  - streams the response with SSE
+  - streaming SSE chat endpoint
+  - builds a retrieval query from the message and recent history
+  - embeds the query with OpenAI
+  - calls Supabase RPC `match_financial_docs`
+  - injects retrieved context plus user memory into the prompt
+  - routes between `free` and `pro` chat providers
 - `/api/compare_product`
-  - generates concise JSON comparison fields
+  - returns compact comparison JSON for a product
 - `/api/product_details`
-  - generates deep structured JSON for a specific product
+  - returns a deeper structured JSON view of a product
 
-This is endpoint specialization, not independent long-running agents.
+This is endpoint specialization, not agent handoff.
 
-### 3. Supabase Layer
+### 3. Data Layer
 
-Supabase is used in three roles:
+Supabase currently serves three roles:
 
 - authentication
 - persistent user storage
-- vector-backed retrieval over indexed product documents
+- retrieval over embedded financial product documents
 
 Current backend assumptions:
 
-- `user_data` table stores chat payloads and memory
-- `financial_docs` table stores content, metadata, and embeddings
-- `match_financial_docs` RPC performs similarity search
+- `user_data` contains `user_id`, `chats`, and `memory`
+- `financial_docs` contains content, metadata, and embeddings
+- `match_financial_docs` performs vector similarity search
 
-### 4. Model Layer
+The `chats` field is now effectively an application state envelope containing:
 
-The current model stack is:
+- `chat_history`
+- `finance_data`
+- `subscription`
 
-- OpenAI embeddings: `text-embedding-3-small`
-- OpenAI chat: `gpt-4o-mini`
-- OpenAI detailed extraction: `gpt-4o`
-- Optional OpenRouter model for chatbot `free` mode
+### 4. Subscription Layer
 
-Mode behavior:
+Premium handling lives inside [backend/app.py](/D:/1%20hackathon/finclarityAI/backend/app.py).
 
-- `pro` mode uses the OpenAI client
-- `free` mode uses OpenRouter if configured, otherwise the app falls back to the OpenAI-backed path
+Current behavior:
+
+- free users can browse the product but are limited in some finance-task flows
+- premium state is persisted in Supabase-backed user data
+- Stripe Checkout is used to start upgrades
+- webhook and return-path verification both attempt subscription activation
+- selected chat mode is persisted as part of the subscription object
 
 ### 5. Frontend Layer
 
-The frontend is server-rendered HTML with large client-side JavaScript modules.
+The frontend is server-rendered HTML enhanced with large JavaScript modules.
 
 Key files:
 
-- `backend/templates/index.html`
-- `backend/templates/login.html`
-- `backend/templates/dashboard.html`
-- `backend/static/js/dashboard.js`
-- `backend/static/js/login.js`
+- [backend/templates/index.html](/D:/1%20hackathon/finclarityAI/backend/templates/index.html)
+- [backend/templates/login.html](/D:/1%20hackathon/finclarityAI/backend/templates/login.html)
+- [backend/templates/dashboard.html](/D:/1%20hackathon/finclarityAI/backend/templates/dashboard.html)
+- [backend/static/js/dashboard.js](/D:/1%20hackathon/finclarityAI/backend/static/js/dashboard.js)
+- [backend/static/js/login.js](/D:/1%20hackathon/finclarityAI/backend/static/js/login.js)
 
-The dashboard script manages:
+The dashboard JS currently manages:
 
-- auth/session checks
+- auth/session hydration
 - chat streaming
-- local chat history
-- memory extraction tags
+- local and backend state sync
+- plan switching and premium UI
 - comparison flows
 - calculators
-- responsive dashboard behavior
+- todo, goal, and expense interactions
+- guest-mode UX
 
-## Chat Logic Flow
+## Request Flows
 
-### User Message Path
+### Chat Flow
 
-1. Frontend posts to `/chat`.
-2. Backend validates session.
-3. The message and recent history are converted into a retrieval query.
-4. OpenAI generates an embedding.
-5. Supabase RPC `match_financial_docs` retrieves the top matching records.
-6. Retrieved context plus user memory are injected into the prompt.
-7. The selected model generates a streamed response.
-8. The frontend appends chunks live and stores the assistant reply.
+1. The dashboard posts a message to `/chat`.
+2. The backend checks guest/user session state.
+3. The app decides the active model path from the saved subscription.
+4. The query is embedded with OpenAI.
+5. Supabase RPC `match_financial_docs` returns relevant records.
+6. Retrieved context and saved memory are added to the prompt.
+7. The selected provider streams the answer back with SSE metadata.
 
-### Guardrails
+### User Data Flow
 
-The current chat design includes several explicit constraints:
+1. Authenticated users sync against `user_data`.
+2. Chat history, finance data, and subscription state are merged into the `chats` object.
+3. Long-term memory is stored separately in `memory`.
 
-- if no database documents match, the assistant is instructed to refuse
-- greetings are handled with a lighter path
-- responses are expected to end with a source label
-- persistent facts can be emitted with `[MEMORY: ...]` tags
+### Premium Flow
 
-## Data Ingestion Architecture
+1. The dashboard requests `/create-checkout-session`.
+2. Stripe Checkout is created with user metadata.
+3. The pending checkout session id is stored in session and in user subscription data.
+4. On success return or webhook completion, the backend verifies the payment and marks the user as premium.
 
-`backend/scrapper.py` is the ingestion script.
+## Ingestion Architecture
 
-Flow:
+[backend/scrapper.py](/D:/1%20hackathon/finclarityAI/backend/scrapper.py) is an offline ingestion script, not an in-app background worker.
 
-1. Firecrawl crawls configured target URLs.
-2. Page markdown is passed to OpenAI for product extraction.
-3. Each extracted product is converted into a structured text chunk.
-4. OpenAI generates embeddings for that chunk.
-5. The result is inserted into `financial_docs` in Supabase.
+Pipeline:
 
-This gives the chat and comparison features their retrieval base.
+1. Firecrawl crawls target URLs from `targets.json`.
+2. OpenAI extracts distinct financial products from page markdown.
+3. Each product is converted into a structured text chunk.
+4. OpenAI creates embeddings for that chunk.
+5. The chunk and embedding are inserted into `financial_docs`.
 
 ## What The Architecture Is Not
 
-The current codebase does not implement:
+The current repository does not implement:
 
-- autonomous multi-agent handoff between advisor/research/extractor services
-- a dedicated job queue or worker system
-- background scheduled indexing inside the app
-- formal observability, tracing, or automated validation pipelines
+- autonomous multi-agent collaboration
+- background job queues
+- scheduled ingestion inside the running web app
+- formal observability or tracing
+- automated tests or eval pipelines
 
-## Practical Architecture Summary
+## Best Short Description
 
 The most accurate present-day description is:
 
 - single Flask backend
-- Supabase-backed auth and persistence
-- OpenAI-powered retrieval and generation
+- Supabase-backed auth, persistence, and retrieval
+- OpenAI-powered RAG plus structured extraction
 - optional OpenRouter free-mode chat path
-- Firecrawl plus OpenAI ingestion script
-- dashboard-heavy frontend with chat, compare, and calculator tooling
+- Stripe-backed premium subscription flow
+- Firecrawl ingestion script
+- dashboard-centric frontend for chat, compare, calculators, and finance organization

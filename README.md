@@ -1,89 +1,79 @@
 # FinclarityAI
 
-FinclarityAI is a full-stack financial assistant built for the ET AI Hackathon 2026. The current app combines a Flask backend, a Supabase-backed user layer, a retrieval-based AI chat experience, product comparison flows, calculators, and a polished dashboard UI for exploring financial products.
+FinclarityAI is a hackathon-stage financial assistant built around a Flask backend, Supabase auth/data storage, retrieval-backed AI responses, and a dashboard for chat, comparison, calculators, and personal finance tracking.
 
-## Current Product Scope
+## What The App Does Today
 
-- AI chat with `free` and `pro` modes
-- Retrieval-augmented answers grounded in `financial_docs`
-- Product comparison and detailed product analysis endpoints
-- Email/password, guest, Google/Microsoft/Facebook session sync flows
-- Persistent user data in Supabase for chats, memory, todos, goals, and expenses
-- Dashboard tools including calculators, to-do management, and comparison workflows
-- Render deployment via `render.yaml`
+- Streams AI chat responses from `/chat`
+- Grounds product answers against `financial_docs` in Supabase
+- Supports `free` and `pro` chat modes
+- Lets users compare products and open detailed product breakdowns
+- Supports email/password, guest, Google, Microsoft, and Facebook login flows
+- Stores chat history, memory, subscription state, todos, goals, and expenses in Supabase
+- Includes a Stripe-powered Premium upgrade flow
+- Ships as a single Render web service rooted at `backend/`
 
-## Architecture
+## Present Architecture
 
-The present architecture is a single Flask application, not a separate multi-agent runtime.
+This repository does not run a true multi-agent system today.
 
-### Backend
+The current production shape is:
 
-- `backend/app.py` runs the Flask server, session management, auth APIs, finance-data APIs, profile updates, and template routes.
-- `backend/chat.py` provides the AI and comparison blueprint:
-  - `/chat` streams chat responses over Server-Sent Events
-  - `/api/compare_product` returns compact comparison JSON
-  - `/api/product_details` returns deeper structured product details
+- `backend/app.py`
+  - Flask app entrypoint
+  - session management, auth/session APIs, finance-data APIs, subscription APIs, and Stripe routes
+  - template rendering for landing, login, and dashboard
+- `backend/chat.py`
+  - AI blueprint with streaming chat
+  - retrieval against Supabase RPC `match_financial_docs`
+  - comparison and product-detail endpoints
+- `backend/scrapper.py`
+  - optional ingestion pipeline using Firecrawl + OpenAI + Supabase
+- `backend/templates/` and `backend/static/`
+  - server-rendered UI plus dashboard/login/landing assets
 
-### Data and Auth
+## Core Data Dependencies
 
-- Supabase is used for auth and persistence.
-- The backend expects a `user_data` table with:
+The running app expects a Supabase project with:
+
+- auth enabled
+- a `user_data` table storing:
   - `user_id`
   - `chats`
   - `memory`
-- The AI retrieval layer expects:
-  - a `financial_docs` table storing embeddings and metadata
-  - an RPC named `match_financial_docs` for semantic search
+- a `financial_docs` table storing product content, metadata, and embeddings
+- an RPC named `match_financial_docs` for semantic retrieval
 
-### AI Layer
+The `chats` payload is currently used as a compound document holding:
 
-- OpenAI is used for:
-  - embeddings via `text-embedding-3-small`
-  - chat/comparison/detail generation via `gpt-4o-mini` and `gpt-4o`
-- OpenRouter is optional and currently used only for the chatbot `free` mode if an API key is configured.
-- The chat flow injects:
-  - recent conversation history
-  - saved user memory
-  - retrieved Supabase documents
+- `chat_history`
+- `finance_data`
+- `subscription`
 
-### Frontend
+## AI Behavior Today
 
-- Server-rendered HTML lives in `backend/templates/`
-- Static assets live in `backend/static/`
-- Main screens:
-  - `index.html` for the landing page
-  - `login.html` for auth
-  - `dashboard.html` for the app shell
-- `backend/static/js/dashboard.js` drives:
-  - chat streaming
-  - comparison UI
-  - calculators
-  - todo/suggestions flows
-  - profile and session sync
+- Embeddings use `text-embedding-3-small`
+- Main chat defaults to `gpt-4o-mini`
+- Product details use `gpt-4o`
+- `free` mode can use OpenRouter if `OPENROUTER_API_KEY` is configured
+- If no matching financial documents are found for a product-style query, the chatbot refuses rather than inventing product facts
 
-## Request Flow
-
-1. A logged-in or guest user opens the dashboard.
-2. Dashboard JS restores local/backend state and checks auth.
-3. Chat requests post to `/chat` with message, history, memory, and chat mode.
-4. The backend generates an embedding for the retrieval query.
-5. Supabase RPC `match_financial_docs` returns relevant product documents.
-6. The selected model produces a streamed reply over SSE.
-7. The frontend renders chunks live and stores chat and memory state.
-
-## Build and Run
+## Local Development
 
 ### Prerequisites
 
-- Python 3.13 recommended
-- Supabase project with auth and database tables
+- Python `3.11+`
+- Supabase project and credentials
 - OpenAI API key
-- Optional OpenRouter API key for `free` chat mode
-- Optional Firecrawl API key if you want to run the scraper
+- Optional OpenRouter API key for free-mode chat
+- Optional Stripe keys for premium checkout testing
+- Optional Firecrawl key for ingestion
 
-### Local Setup
+Note: `backend/runtime.txt` currently pins `python-3.11.9`, while `render.yaml` sets `PYTHON_VERSION=3.13.5`. The codebase should be documented and tested against one chosen version before production hardening.
 
-```bash
+### Setup
+
+```powershell
 git clone https://github.com/itz-shiven/finclarityAI.git
 cd finclarityAI
 python -m venv venv
@@ -93,11 +83,11 @@ pip install -r requirements.txt
 python app.py
 ```
 
-Open `http://127.0.0.1:5000`.
+Open [http://127.0.0.1:5000](http://127.0.0.1:5000).
 
-### Environment Variables
+## Environment Variables
 
-The current backend uses these keys:
+### Required For Core App
 
 ```env
 SUPABASE_URL=
@@ -105,47 +95,79 @@ SUPABASE_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 SECRET_KEY=
 OPENAI_API_KEY=
+```
+
+### Optional For Chat Mode Routing
+
+```env
 OPENROUTER_API_KEY=
 CHATBOT_OPENAI_MODEL=gpt-4o-mini
 CHATBOT_OPENROUTER_MODEL=liquid/lfm-2.5-1.2b-instruct:free
 CHATBOT_OPENROUTER_FALLBACK_MODEL=
+TODO_SUGGEST_MODEL=gpt-4o-mini
+```
+
+### Optional For Premium Payments
+
+```env
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+```
+
+### Optional For Ingestion
+
+```env
 FIRECRAWL_API_KEY=
 ```
 
-## Deployment
+## Build And Deployment
 
-`render.yaml` currently deploys the backend as a Render web service with:
+Render is configured through [render.yaml](/D:/1%20hackathon/finclarityAI/render.yaml):
 
+- service type: `web`
 - root directory: `backend`
 - build command: `pip install -r requirements.txt`
 - start command: `python app.py`
-- Python version: `3.13.5`
+
+Current deployment note:
+
+- `render.yaml` starts the Flask dev server with `python app.py`
+- `gunicorn` is present in `requirements.txt` but is not currently the configured start command
+
+## Ingestion Workflow
+
+If you want to refresh the financial knowledge base:
+
+1. Add crawl targets in `backend/targets.json`.
+2. Configure `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`, and `FIRECRAWL_API_KEY`.
+3. Run `python scrapper.py` from `backend/`.
+
+The script crawls pages, extracts structured product information, generates embeddings, and inserts records into `financial_docs`.
 
 ## Project Structure
 
 ```text
 finclarityAI/
-├── backend/
-│   ├── app.py
-│   ├── chat.py
-│   ├── scrapper.py
-│   ├── check_db.py
-│   ├── requirements.txt
-│   ├── runtime.txt
-│   ├── targets.json
-│   ├── templates/
-│   └── static/
-├── README.md
-├── impact_model.md
-├── agent_architecture.md
-├── build_process_commits.md
-├── COMMIT_HISTORY.md
-└── render.yaml
+|-- backend/
+|   |-- app.py
+|   |-- chat.py
+|   |-- scrapper.py
+|   |-- check_db.py
+|   |-- requirements.txt
+|   |-- runtime.txt
+|   |-- targets.json
+|   |-- templates/
+|   `-- static/
+|-- README.md
+|-- impact_model.md
+|-- agent_architecture.md
+|-- build_process_commits.md
+|-- COMMIT_HISTORY.md
+`-- render.yaml
 ```
 
-## Important Notes
+## Current Caveats
 
-- The current system is retrieval-based, but it is not a true multi-agent orchestration stack.
-- The docs previously described a more ambitious architecture than the code currently implements.
-- There are no automated tests in the repository at the moment.
-- Some client-side Supabase values are currently embedded in templates and should be treated as deployment configuration that may need cleanup later.
+- No automated test suite is committed today.
+- Some deployment/runtime details still need consolidation.
+- The docs previously overstated the system as a multi-agent architecture; the current code is a single Flask app with specialized AI endpoints.
