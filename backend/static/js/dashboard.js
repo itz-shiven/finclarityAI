@@ -100,6 +100,7 @@ function updateCompareAccessUI() {
     }
 
     if (compareLockIndicator) {
+        compareLockIndicator.style.display = locked ? 'flex' : 'none';
         compareLockIndicator.setAttribute('aria-hidden', locked ? 'false' : 'true');
     }
 }
