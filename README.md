@@ -1,149 +1,151 @@
-# FinclarityAI — ET AI Hackathon 2026 🚀
+# FinclarityAI
 
-> An AI-powered financial clarity dashboard that leverages Generative AI to help users understand, compare, and plan their finances intelligently.
+FinclarityAI is a full-stack financial assistant built for the ET AI Hackathon 2026. The current app combines a Flask backend, a Supabase-backed user layer, a retrieval-based AI chat experience, product comparison flows, calculators, and a polished dashboard UI for exploring financial products.
 
----
+## Current Product Scope
 
-## 🧠 What is FinclarityAI?
+- AI chat with `free` and `pro` modes
+- Retrieval-augmented answers grounded in `financial_docs`
+- Product comparison and detailed product analysis endpoints
+- Email/password, guest, Google/Microsoft/Facebook session sync flows
+- Persistent user data in Supabase for chats, memory, todos, goals, and expenses
+- Dashboard tools including calculators, to-do management, and comparison workflows
+- Render deployment via `render.yaml`
 
-FinclarityAI is a full-stack web application built during the **ET AI Hackathon 2026**. It combines a modern financial dashboard with an OpenAI-powered conversational assistant that understands financial queries, remembers past context, and delivers personalized insights — all in real time.
+## Architecture
 
----
+The present architecture is a single Flask application, not a separate multi-agent runtime.
 
-## ✨ Key Features
+### Backend
 
-| Feature                      | Description                                                                 |
-| ---------------------------- | --------------------------------------------------------------------------- |
-| **AI Financial Assistant**   | GPT-4 powered chatbot that answers financial queries with persistent memory |
-| **Smart Product Comparison** | Side-by-side comparison of financial products across 8 categories           |
-| **Financial Calculators**    | SIP, Lumpsum, EMI, PPF, NPS, CAGR, GST, Income Tax and more                 |
-| **Secure Auth**              | Email/Password + Google OAuth via Supabase                                  |
-| **Guest Mode**               | Try the app without signing up                                              |
-| **Real-time Scraping**       | Live financial data fetched via custom scraper                              |
-| **Persistent Memory**        | Chat history and user preferences synced to Supabase                        |
+- `backend/app.py` runs the Flask server, session management, auth APIs, finance-data APIs, profile updates, and template routes.
+- `backend/chat.py` provides the AI and comparison blueprint:
+  - `/chat` streams chat responses over Server-Sent Events
+  - `/api/compare_product` returns compact comparison JSON
+  - `/api/product_details` returns deeper structured product details
 
----
+### Data and Auth
 
-## 🛠️ Tech Stack
+- Supabase is used for auth and persistence.
+- The backend expects a `user_data` table with:
+  - `user_id`
+  - `chats`
+  - `memory`
+- The AI retrieval layer expects:
+  - a `financial_docs` table storing embeddings and metadata
+  - an RPC named `match_financial_docs` for semantic search
 
-* **Backend**: Python 3 / Flask
-* **AI Engine**: OpenAI GPT-4 API
-* **Database & Auth**: Supabase (PostgreSQL + Auth)
-* **Frontend**: HTML5 / Vanilla JS / CSS3 (Glassmorphism UI)
-* **Data**: Custom web scraper (`scrapper.py`)
+### AI Layer
 
----
+- OpenAI is used for:
+  - embeddings via `text-embedding-3-small`
+  - chat/comparison/detail generation via `gpt-4o-mini` and `gpt-4o`
+- OpenRouter is optional and currently used only for the chatbot `free` mode if an API key is configured.
+- The chat flow injects:
+  - recent conversation history
+  - saved user memory
+  - retrieved Supabase documents
 
-## ⚙️ Setup Instructions
+### Frontend
+
+- Server-rendered HTML lives in `backend/templates/`
+- Static assets live in `backend/static/`
+- Main screens:
+  - `index.html` for the landing page
+  - `login.html` for auth
+  - `dashboard.html` for the app shell
+- `backend/static/js/dashboard.js` drives:
+  - chat streaming
+  - comparison UI
+  - calculators
+  - todo/suggestions flows
+  - profile and session sync
+
+## Request Flow
+
+1. A logged-in or guest user opens the dashboard.
+2. Dashboard JS restores local/backend state and checks auth.
+3. Chat requests post to `/chat` with message, history, memory, and chat mode.
+4. The backend generates an embedding for the retrieval query.
+5. Supabase RPC `match_financial_docs` returns relevant product documents.
+6. The selected model produces a streamed reply over SSE.
+7. The frontend renders chunks live and stores chat and memory state.
+
+## Build and Run
 
 ### Prerequisites
 
-* Python 3.8+
-* A Supabase project (URL + API keys)
-* An OpenAI API key
+- Python 3.13 recommended
+- Supabase project with auth and database tables
+- OpenAI API key
+- Optional OpenRouter API key for `free` chat mode
+- Optional Firecrawl API key if you want to run the scraper
 
-### 1. Clone & Enter Project
+### Local Setup
 
 ```bash
 git clone https://github.com/itz-shiven/finclarityAI.git
 cd finclarityAI
-```
-
-### 2. Create Virtual Environment
-
-```bash
 python -m venv venv
-# Windows
 venv\Scripts\activate
-# macOS/Linux
-source venv/bin/activate
-```
-
-### 3. Install Dependencies
-
-```bash
 cd backend
 pip install -r requirements.txt
-```
-
-### 4. Configure Environment
-
-Create a `.env` file inside `backend/`:
-
-```env
-SUPABASE_URL=your_supabase_project_url
-SUPABASE_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-SECRET_KEY=your_flask_secret_key
-OPENAI_API_KEY=your_openai_api_key
-```
-
-### 5. Run the App
-
-```bash
 python app.py
 ```
 
-Open **http://127.0.0.1:5000/** in your browser.
+Open `http://127.0.0.1:5000`.
 
----
+### Environment Variables
 
-## 📁 Project Structure
+The current backend uses these keys:
 
+```env
+SUPABASE_URL=
+SUPABASE_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+SECRET_KEY=
+OPENAI_API_KEY=
+OPENROUTER_API_KEY=
+CHATBOT_OPENAI_MODEL=gpt-4o-mini
+CHATBOT_OPENROUTER_MODEL=liquid/lfm-2.5-1.2b-instruct:free
+CHATBOT_OPENROUTER_FALLBACK_MODEL=
+FIRECRAWL_API_KEY=
 ```
+
+## Deployment
+
+`render.yaml` currently deploys the backend as a Render web service with:
+
+- root directory: `backend`
+- build command: `pip install -r requirements.txt`
+- start command: `python app.py`
+- Python version: `3.13.5`
+
+## Project Structure
+
+```text
 finclarityAI/
 ├── backend/
-│   ├── app.py              # Flask app, routes, auth, Supabase client
-│   ├── chat.py             # AI chat blueprint (OpenAI integration)
-│   ├── scrapper.py         # Financial data scraper
-│   ├── requirements.txt    # Python dependencies
-│   ├── templates/          # HTML templates (index, login, dashboard)
-│   └── static/             # CSS, JS, assets
-├── .env                    # Environment variables (not committed)
-├── .gitignore
+│   ├── app.py
+│   ├── chat.py
+│   ├── scrapper.py
+│   ├── check_db.py
+│   ├── requirements.txt
+│   ├── runtime.txt
+│   ├── targets.json
+│   ├── templates/
+│   └── static/
 ├── README.md
+├── impact_model.md
 ├── agent_architecture.md
-└── build_process_commits.md
+├── build_process_commits.md
+├── COMMIT_HISTORY.md
+└── render.yaml
 ```
 
----
+## Important Notes
 
-## 📝 Documentation & Build Process
-
-* **Agent Architecture** (`agent_architecture.md`)
-  → Detailed explanation of AI roles, communication flow, and error-handling mechanisms
-
-* **Development Journey** (`build_process_commits.md`)
-  → Chronological timeline showing how the project evolved during the hackathon
-
----
-
-## 📎 Raw Commit History
-
-The following commit history demonstrates iterative development, feature evolution, and real-time debugging throughout the hackathon.
-
-Refer to the complete commit log inside:
-`build_process_commits.md`
-
----
-
-## 🧠 Key Highlights
-
-* Multi-agent AI system (Advisor, Extractor, Research agents)
-* Retrieval-Augmented Generation (RAG) for accurate financial responses
-* Real-time streaming chatbot using Server-Sent Events (SSE)
-* Persistent user memory with Supabase
-* Structured JSON pipelines for comparison and deep analysis
-* Robust error handling and fallback mechanisms
-
----
-## ⚠️ Limitations
-
-- Limited to supported financial data sources  
-- Dependent on scraping reliability  
-- May not cover all financial institutions  
-- Performance may vary under high load  
-
-## 📜 License
-
-Built for the **ET AI Hackathon 2026**. All rights reserved by the team.
+- The current system is retrieval-based, but it is not a true multi-agent orchestration stack.
+- The docs previously described a more ambitious architecture than the code currently implements.
+- There are no automated tests in the repository at the moment.
+- Some client-side Supabase values are currently embedded in templates and should be treated as deployment configuration that may need cleanup later.

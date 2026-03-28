@@ -1,94 +1,104 @@
-# 📊 Impact Model — FinclarityAI
+# FinclarityAI Impact Model
 
-## 🧠 Overview
+## What The Product Improves
 
-FinclarityAI is designed to reduce the time, complexity, and inefficiency involved in financial decision-making by providing instant, AI-driven insights and comparisons.
+FinclarityAI is aimed at reducing the effort required to discover, compare, and understand financial products. In its current form, the product creates value in four practical ways:
 
-This impact model estimates the potential value created through time savings, improved decision-making, and productivity gains.
+- faster product discovery through search and comparison
+- lower friction for basic financial research through chat
+- centralized personal finance organization through todos, goals, and expenses
+- easier access for new users through guest mode and social login
 
----
+## Present-Day Impact Areas
 
-## 🎯 Key Assumptions
+### 1. Research Time Saved
 
-| Parameter                     | Value                          |
-|-----------------------------|--------------------------------|
-| Average time spent on financial research/week | 2–3 hours         |
-| Time saved using FinclarityAI | ~70%                          |
-| Effective time saved/user/week | 1.5–2 hours                  |
-| Estimated user base (initial) | 10,000 users                  |
-| Monetary value of time       | ₹200/hour                     |
+Instead of manually opening multiple bank pages, users can:
 
----
+- ask the chat assistant for grounded answers from the indexed database
+- compare products side by side
+- open structured product-detail views generated from retrieved source content
 
-## ⏱️ Time Savings Calculation
+Expected effect:
+- fewer tabs opened
+- less repeated searching
+- faster first-pass decision making
 
-- Time saved per user per week:
-  → **1.5 to 2 hours**
+### 2. Better Shortlisting
 
-- Total weekly time saved:
-  → 10,000 users × 1.5–2 hrs  
-  → **15,000 – 20,000 hours/week**
+The strongest current product value is not full financial advice. It is structured shortlisting.
 
-- Monthly time saved:
-  → **60,000 – 80,000 hours/month**
+Users can:
 
----
+- compare fees, benefits, and eligibility at a glance
+- identify obvious mismatches earlier
+- narrow choices before visiting official issuer pages
 
-## 💰 Economic Value Generated
+Expected effect:
+- less overwhelm
+- better initial filtering
+- fewer poor-fit product selections
 
-Assuming ₹200/hour value:
+### 3. Ongoing Personal Organization
 
-- Weekly value created:
-  → ₹30,00,000 – ₹40,00,000
+The dashboard now includes a finance data layer stored in Supabase:
 
-- Monthly value created:
-  → **₹1.2 Cr – ₹1.6 Cr**
+- `todos`
+- `goals`
+- `expenses`
 
----
+Expected effect:
+- action items stay attached to the user account
+- users can move from research to execution inside the same app
 
-## 📈 Additional Value Drivers
+### 4. Accessibility
 
-### 1. Better Financial Decisions
-- Reduced chances of choosing suboptimal financial products
-- Increased returns through better planning (SIP, tax savings, etc.)
+The app lowers access barriers with:
 
-### 2. Reduced Cognitive Load
-- Simplifies complex financial jargon into actionable insights
-- Eliminates need for manual comparison across platforms
+- guest mode
+- social login support
+- conversational UX
+- calculators for common finance scenarios
 
-### 3. Increased Accessibility
-- Enables non-experts to make informed financial decisions
-- Removes dependency on advisors for basic queries
+Expected effect:
+- easier onboarding for non-experts
+- lower intimidation for users who are not comfortable with financial jargon
 
----
+## Realistic Impact Assumptions
 
-## 🚀 Business Impact Potential
+Because the present codebase is still hackathon-stage, the most credible impact model is directional rather than revenue-perfect.
 
-| Metric                  | Impact                              |
-|------------------------|-------------------------------------|
-| User Engagement        | High (interactive AI assistant)     |
-| Retention              | Strong (persistent memory)          |
-| Scalability            | High (AI-driven automation)         |
-| Cost Efficiency        | Reduced need for manual support     |
+Reasonable early assumptions:
 
----
+- A user can save 10 to 30 minutes on one product research session.
+- Users benefit most when the indexed database contains the products they are asking about.
+- The value is highest for comparison-heavy tasks such as cards, loans, and account evaluation.
 
-## ⚠️ Assumptions & Limitations
+## Key Constraints On Impact
 
-- Estimates are based on early-stage projections
-- Actual impact depends on:
-  - User adoption rate
-  - Data accuracy
-  - System performance under scale
-- Monetary value may vary across user segments
+- Answer quality depends on the quality and freshness of `financial_docs`.
+- If retrieval returns no matching documents, the chatbot intentionally refuses to answer.
+- The scraper and indexing pipeline are not yet an always-on production ingestion system.
+- No automated testing or formal analytics instrumentation is present yet.
+- Some dashboard sections are more polished than others, so user value is uneven across the app.
 
----
+## How To Measure Impact Going Forward
 
-## 🧾 Conclusion
+If the team continues this project, the best next metrics would be:
 
-FinclarityAI has the potential to:
-- Save **tens of thousands of hours monthly**
-- Generate **₹1+ crore in economic value**
-- Democratize access to financial intelligence
+- chat success rate on first question
+- compare flow completion rate
+- product detail view engagement
+- percentage of users creating todos/goals after research
+- repeat sessions per signed-in user
+- number of retrieval misses caused by missing database coverage
 
-By combining AI with structured financial workflows, the platform creates measurable and scalable real-world impact.
+## Bottom Line
+
+Today, FinclarityAI’s strongest measurable promise is:
+
+- helping users reach a useful shortlist faster
+- keeping finance research and action items in one place
+- making financial product exploration more approachable
+
+The app already shows product-market direction, but its long-term impact will depend on stronger data coverage, fresher ingestion, and production hardening.

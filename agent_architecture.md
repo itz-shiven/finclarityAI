@@ -1,155 +1,147 @@
-🚀 FinclarityAI: Agent Architecture & Logic Flow
+# FinclarityAI Architecture
 
-FinclarityAI is a multi-agent, retrieval-augmented generative AI system designed to deliver accurate, explainable, and personalized financial intelligence. The system leverages specialized AI agents, a vector-based knowledge layer, and a resilient backend orchestration pipeline built using Flask, Supabase, and OpenAI APIs.
+## Current State
 
-🤖 1. Agent Roles & Capabilities
+The repository currently implements a single Flask application with one AI blueprint. Earlier documentation described a multi-agent system, but the codebase today is better understood as a retrieval-augmented app with a few specialized endpoints.
 
-FinclarityAI adopts a modular multi-agent architecture, where each agent is optimized for a specific task:
+## System Components
 
-A. Financial Advisor Agent (Conversational Core)
+### 1. Flask Application Layer
 
-Model: gpt-4o-mini (Streaming)
-Purpose: Primary user-facing chatbot for financial guidance and Q&A
+`backend/app.py` is the main orchestration layer.
 
-Capabilities:
+Responsibilities:
 
-Context-aware conversational responses
-Personalized financial advice
-Natural dialogue handling (follow-ups, small talk)
+- bootstraps Flask
+- initializes Supabase
+- configures sessions and CORS
+- registers the chat blueprint
+- serves `index`, `login`, and `dashboard`
+- handles signup, login, guest access, logout, and profile updates
+- persists user finance data and chat state
+- applies a global error handler
 
-Constraints:
+### 2. AI Blueprint
 
-Operates strictly on retrieved context (RAG-based)
-Enforces mandatory source citations
-Generates structured memory tokens like:
-[MEMORY: User prefers low-risk investments]
-Builds long-term user intelligence
-B. Comparative Extractor Agent (Structured Intelligence Engine)
+`backend/chat.py` contains the AI-facing routes.
 
-Model: gpt-4o-mini (JSON Output)
-Purpose: Converts unstructured financial documents into structured comparison data
+Routes:
 
-Capabilities:
+- `/chat`
+  - streaming chatbot route
+  - performs embedding generation
+  - calls Supabase RPC retrieval
+  - builds the LLM prompt
+  - streams the response with SSE
+- `/api/compare_product`
+  - generates concise JSON comparison fields
+- `/api/product_details`
+  - generates deep structured JSON for a specific product
 
-Extracts features, pricing, eligibility, pros/cons
-Outputs strict JSON schemas dynamically based on category
+This is endpoint specialization, not independent long-running agents.
 
-Example Output:
-{
-"product": "Credit Cards",
-"features": [...],
-"fees": [...],
-"pros": [...],
-"cons": [...]
-}
+### 3. Supabase Layer
 
-C. Deep Research Agent (High-Reasoning Specialist)
+Supabase is used in three roles:
 
-Model: gpt-4o (Advanced reasoning, JSON Output)
-Purpose: Performs deep analysis of individual financial products
+- authentication
+- persistent user storage
+- vector-backed retrieval over indexed product documents
 
-Capabilities:
+Current backend assumptions:
 
-Detects hidden fees and fine print
-Evaluates forex markup, eligibility, rewards
-Produces structured verdicts
+- `user_data` table stores chat payloads and memory
+- `financial_docs` table stores content, metadata, and embeddings
+- `match_financial_docs` RPC performs similarity search
 
-Output Format:
-{
-"pros": [...],
-"cons": [...],
-"verdict": "Best for frequent travelers..."
-}
+### 4. Model Layer
 
-🔄 2. Agent Communication & Lifecycle
+The current model stack is:
 
-All agents are orchestrated through a central Flask backend that manages context, routing, and memory.
+- OpenAI embeddings: `text-embedding-3-small`
+- OpenAI chat: `gpt-4o-mini`
+- OpenAI detailed extraction: `gpt-4o`
+- Optional OpenRouter model for chatbot `free` mode
 
-End-to-End Flow:
+Mode behavior:
 
-User Query Input
-User sends a query via the frontend (JavaScript / EventSource)
-Query Vectorization
-Converted into embeddings using text-embedding-3-small (1536-dimensional vector)
-Semantic Retrieval (Supabase)
-An RPC call (match_financial_docs) performs cosine similarity search using pgvector
-Context Assembly
-Combines:
-Retrieved documents
-Chat history
-Persistent user memory
-Agent Routing
-Based on query type:
-Advice → Advisor Agent
-Comparison → Extractor Agent
-Deep analysis → Research Agent
-Inference Execution
-Asynchronous API call to OpenAI
-Response Delivery
-Advisor Agent → Streaming via Server-Sent Events (SSE)
-Extractor/Research Agents → JSON responses
-🔌 3. Tool Integrations
+- `pro` mode uses the OpenAI client
+- `free` mode uses OpenRouter if configured, otherwise the app falls back to the OpenAI-backed path
 
-Supabase (Vector Database Layer):
+### 5. Frontend Layer
 
-PostgreSQL with pgvector
-Stores document embeddings
-Enables semantic similarity search
+The frontend is server-rendered HTML with large client-side JavaScript modules.
 
-OpenAI APIs:
+Key files:
 
-Embeddings: text-embedding-3-small
-Models: gpt-4o-mini, gpt-4o
-Handles reasoning, generation, and structured outputs
+- `backend/templates/index.html`
+- `backend/templates/login.html`
+- `backend/templates/dashboard.html`
+- `backend/static/js/dashboard.js`
+- `backend/static/js/login.js`
 
-Custom Scraper (scrapper.py):
+The dashboard script manages:
 
-Headless scraping pipeline
-Extracts financial data (banks, policies, etc.)
-Pushes processed data into Supabase vector store
-🛡️ 4. Resilience & Error Handling
+- auth/session checks
+- chat streaming
+- local chat history
+- memory extraction tags
+- comparison flows
+- calculators
+- responsive dashboard behavior
 
-FinclarityAI is designed with defensive AI principles to ensure reliability and prevent hallucinations.
+## Chat Logic Flow
 
-A. Hallucination Prevention
-If vector search fails, system injects:
-"❌ NO DATA AVAILABLE"
-LLM is strictly instructed to refuse answering without context
-Ensures fully grounded financial responses
-B. API Failure Handling
+### User Message Path
 
-Embedding Failure:
+1. Frontend posts to `/chat`.
+2. Backend validates session.
+3. The message and recent history are converted into a retrieval query.
+4. OpenAI generates an embedding.
+5. Supabase RPC `match_financial_docs` retrieves the top matching records.
+6. Retrieved context plus user memory are injected into the prompt.
+7. The selected model generates a streamed response.
+8. The frontend appends chunks live and stores the assistant reply.
 
-Wrapped in try/except
-Returns fallback message:
-"I'm having trouble connecting to my knowledge base right now."
+### Guardrails
 
-JSON Formatting Issues:
+The current chat design includes several explicit constraints:
 
-Cleans malformed responses (e.g., removing ```json blocks)
-Uses safe parsing with json.loads()
+- if no database documents match, the assistant is instructed to refuse
+- greetings are handled with a lighter path
+- responses are expected to end with a source label
+- persistent facts can be emitted with `[MEMORY: ...]` tags
 
-Parsing Failure Fallback:
+## Data Ingestion Architecture
 
-Injects safe object:
-{
-"Status": "Not Found"
-}
-Prevents frontend crashes
-C. Global Crash Handler
-Implemented using @app.errorhandler
-Returns safe response:
-{
-"error": "An unexpected server error occurred"
-}
+`backend/scrapper.py` is the ingestion script.
 
-Prevents:
+Flow:
 
-Stack trace leaks
-UI failures
-🧠 Key Innovation Summary
-Multi-agent AI system with specialized roles
-Retrieval-Augmented Generation (RAG) with strict grounding
-Real-time streaming and structured JSON pipelines
-Persistent user memory for personalization
-Robust error handling and fallback mechanisms
+1. Firecrawl crawls configured target URLs.
+2. Page markdown is passed to OpenAI for product extraction.
+3. Each extracted product is converted into a structured text chunk.
+4. OpenAI generates embeddings for that chunk.
+5. The result is inserted into `financial_docs` in Supabase.
+
+This gives the chat and comparison features their retrieval base.
+
+## What The Architecture Is Not
+
+The current codebase does not implement:
+
+- autonomous multi-agent handoff between advisor/research/extractor services
+- a dedicated job queue or worker system
+- background scheduled indexing inside the app
+- formal observability, tracing, or automated validation pipelines
+
+## Practical Architecture Summary
+
+The most accurate present-day description is:
+
+- single Flask backend
+- Supabase-backed auth and persistence
+- OpenAI-powered retrieval and generation
+- optional OpenRouter free-mode chat path
+- Firecrawl plus OpenAI ingestion script
+- dashboard-heavy frontend with chat, compare, and calculator tooling
