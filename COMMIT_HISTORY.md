@@ -1,24 +1,38 @@
 # FinclarityAI — Comprehensive Commit History
 
-Updated through `74efb51` on March 28, 2026.
+Updated through `4fbbdbf` on March 29, 2026.
 
 ---
 
 ## Latest Highlights
 
+- `63019a9` feat: lock premium product comparison feature
+- `839fcbc` & `ade899d` fix: resolve premium feature lock and icon display
+- `104a163` fix: correct comparison table display on search
+- `1feab81` fix: remove irrelevant tracking and UI cards
+- `f74b43e` fix: resolve structural bugs with free AI model tier
+- `43b1464` fix: stabilize llm and everything functionality
 - `5bd5338` & `43cd324` feat: full Stripe payment integration
-- `554c255` docs: update project instructions and markdown files
-- `eff378c` fix: resolve chatbot response handling issues
-- `2bb3dc2` fix: correct settings button behavior in dashboard
 - `ad26a6c` feat: setup free-tier and pro-tier AI model selection
-- `4607282` fix: hero section layout and styling on landing page
-- `1dc5297` fix: finalize mobile-responsive dashboard and sidebar
-- `b5965aa` feat: add mobile CSS/JS optimizations for dashboard
-- `3e93e65` feat: initial mobile-responsive layout for dashboard & login
-- `e9c773b` feat: integrate Facebook OAuth on login page
-- `21ed729` feat: implement Microsoft OAuth login flow
-- `6763781` feat: redesign user profile section in dashboard
-- `c6e374f` fix: resolve dashboard to-do widget bugs
+
+---
+
+## Chronological Timeline
+
+### March 29, 2026 — Premium Features Lock & UI Polish
+
+| Hash | Description |
+|------|-------------|
+| `4fbbdbf` | Merge branch `main` |
+| `1feab81` | **Remove irrelevant cards** — cleanup unused UI dashboard components |
+| `104a163` | **Fix compare table on search** — resolve search and comparison data display bugs |
+| `ade899d` | **Fix lock behavior** — refine premium feature restrictions |
+| `839fcbc` | **Fix lock icon** — correct visual display of locked options |
+| `63019a9` | **Lock compare feature** — restrict product comparisons to pro users |
+| `732bd85` | **Finalize system functionality** — global fix to ensure everything works seamlessly |
+| `43b1464` | **Stabilize LLM and system** — confirm chatbot model responses are working perfectly |
+| `f74b43e` | **Fix free model structure issues** — address structural bugs affecting free tier API |
+| `16f064e` | **Update instruction files** — latest documentation changes |
 
 ---
 
@@ -247,10 +261,10 @@ Updated through `74efb51` on March 28, 2026.
 
 | Metric | Value |
 |--------|-------|
-| **Total Commits** | 108 |
-| **Development Period** | March 16 – March 28, 2026 (13 days) |
-| **Feature Commits** | ~62 |
-| **Bug Fix Commits** | ~22 |
-| **Documentation Commits** | ~16 |
-| **Merge Commits** | ~18 |
+| **Total Commits** | 118 |
+| **Development Period** | March 16 – March 29, 2026 (14 days) |
+| **Feature Commits** | ~65 |
+| **Bug Fix Commits** | ~27 |
+| **Documentation Commits** | ~17 |
+| **Merge Commits** | ~19 |
 | **Contributors** | Team itz-shiven |

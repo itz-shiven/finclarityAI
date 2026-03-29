@@ -1,184 +1,190 @@
-# FinclarityAI Build Process
+# 🏗️ FinclarityAI — Build Process & Log
 
-This document summarizes how the repository evolved into its present state as of March 28, 2026.
+> A comprehensive chronological log of how the FinclarityAI repository evolved from inception to its fully-functional premium state, logged between **March 16** and **March 29, 2026**.
 
-## Phase 1: Foundation And Hosting
+---
 
-Dates: March 16-18, 2026
+## 🚀 Phase 1: Foundation & Hosting
+📅 **Date(s):** March 16-18, 2026
 
-Focus:
+**🎯 Core Focus:**
+- **Repository Bootstrap:** Initializing the codebase.
+- **Flask Backend:** Creating the core API layer.
+- **Supabase Connectivity:** Linking database and authentication flows.
+- **Render Deployment:** First live deployment setup.
 
-- repository bootstrap
-- Flask backend creation
-- Supabase connectivity
-- first Render deployment setup
-
-Representative commits:
-
+**📝 Key Commits:**
 - `5795225` Initial commit
-- `ec4e89f` Flask server made
-- `b62147e` Hosting on Render
-- `aed9ebe` added gunicorn
-- `f6506ae` connecting to supabase
-- `6e2cc00` added .env to gitignore
+- `ec4e89f` Create Flask server
+- `b62147e` Configure Render hosting
+- `aed9ebe` Add Gunicorn
+- `f6506ae` Connect to Supabase
+- `6e2cc00` Add .env to gitignore
 
-## Phase 2: Auth Flow Formation
+---
 
-Dates: March 19-20, 2026
+## 🔐 Phase 2: Auth Flow Formation
+📅 **Date(s):** March 19-20, 2026
 
-Focus:
+**🎯 Core Focus:**
+- **Dependency Cleanup:** Stabilizing Python requirements.
+- **Google OAuth Integration:** First major social login capability.
+- **Login Redirect Repairs:** Fixing deep-linking and post-login routing.
+- **Dashboard Entry Stabilization:** Cementing the authenticated user experience.
 
-- dependency cleanup
-- Google OAuth integration
-- login redirect repairs
-- dashboard entry flow stabilization
+**📝 Key Commits:**
+- `30cb4ad` Partial Google Auth
+- `e7fbf79` OAuth processing
+- `a8a7070` Fix dashboard redirecting
+- `d307fbc` Fix OAuth redirect
+- `ecbecfe` Finalize Google OAuth
 
-Representative commits:
+---
 
-- `30cb4ad` partial_google_auth
-- `e7fbf79` o auth processing
-- `a8a7070` dashboard redirecting fixed
-- `d307fbc` o auth redirect fix try1
-- `ecbecfe` final google
+## 💬 Phase 3: Dashboard, Chat & Retrieval Foundations
+📅 **Date(s):** March 21-24, 2026
 
-## Phase 3: Dashboard, Chat, And Retrieval Foundations
+**🎯 Core Focus:**
+- **Dashboard UI Buildout:** Main interface structure and interactivity.
+- **Theme System:** Added full dark/light mode context.
+- **Retrieval-Backed Chatbot:** The core LLM pipeline linked to Supabase matching.
+- **Streamed Responses:** SSE implementation for real-time generative answers.
+- **Scraper & Knowledge Base:** Firecrawl data ingestion via `scrapper.py`.
+- **Comparison Flow:** Groundwork for the table comparison interface.
 
-Dates: March 21-24, 2026
+**📝 Key Commits:**
+- `79849fa` Build dashboard
+- `5990a46` Update dashboard with multiple features
+- `30742c7` Implement dark/light theme system
+- `cc15043` Add LLM which responds with database
+- `bbeab63` Enable streaming responses
+- `52debe4` Add scraper
+- `6c690bd` Finalize scraper
+- `1fc4a83` Build compare section
 
-Focus:
+---
 
-- dashboard UI buildout
-- theme system
-- retrieval-backed chatbot
-- streamed responses
-- scraper and knowledge-base ingestion
-- comparison flow foundations
+## 🛡️ Phase 4: Stability & Submission Packaging
+📅 **Date(s):** March 23-27, 2026
 
-Representative commits:
+**🎯 Core Focus:**
+- **Global Error Handling:** Centralized response failsafes.
+- **Render Fixes:** Resolved production building/serving issues.
+- **Runtime Cleanup:** Locked correct python runtime versions.
+- **Hackathon Documentation:** Polished repo context for external readers.
 
-- `79849fa` Dashboard
-- `5990a46` updated dashbooard with lot of features
-- `30742c7` changed theme of project
-- `cc15043` added llm which responds with Database
-- `bbeab63` streamenable type shi8
-- `52debe4` scrapper added
-- `6c690bd` final scrapper added
-- `1fc4a83` compare section
+**📝 Key Commits:**
+- `c73e9be` Fix LLM responses
+- `3c4bf28` Make error handling global
+- `0235570` Update render.yaml
+- `c9377bb` Add Python runtime config for Render
+- `dcca2aa` Update runtime version
+- `81fa0e0` Fix Render build requirements
+- `2588b17` Docs: Add comprehensive AI agent architecture
+- `0cdd080` Docs: Finalize ET AI Hackathon submission package
+- `aaca618` Docs: Finalize exhaustive build process log
 
-## Phase 4: Stability And Submission Packaging
+---
 
-Dates: March 23-27, 2026
+## 📊 Phase 5: Dashboard Expansion & Social Auth
+📅 **Date(s):** March 27, 2026
 
-Focus:
+**🎯 Core Focus:**
+- **Calculators & Comparisons:** Restored and repaired missing tools.
+- **Profile Redesign:** Upgraded account-viewing UI.
+- **Finance Data:** Expanded user persistence (To-Dos).
+- **Expanded Providers:** Added Microsoft and Facebook login paradigms.
 
-- global error handling
-- Render fixes
-- runtime cleanup
-- hackathon documentation
+**📝 Key Commits:**
+- `19daccb` Fix comparison table and dark mode
+- `b963cc3` Fix calculator
+- `6763781` Change user profile UI
+- `c6e374f` Fix to-do bugs
+- `7a74579` Change LinkedIn to Microsoft
+- `21ed729` Implement Microsoft login
+- `a25f2cf` Add Facebook Auth backend
+- `e9c773b` Integrate Facebook Auth on login page
+- `cfff4ca` Redesign login page
 
-Representative commits:
+---
 
-- `c73e9be` fixed llm
-- `3c4bf28` error handling made global...
-- `0235570` render.yaml updated
-- `c9377bb` render
-- `dcca2aa` runtime
-- `81fa0e0` renderfix
-- `2588b17` docs: add comprehensive AI agent architecture documentation
-- `0cdd080` docs: finalize ET AI Hackathon 2026 submission package
-- `aaca618` docs: finalize exhaustive comprehensive build process log
+## 📱 Phase 6: Mobile Polish & Model Tiering
+📅 **Date(s):** March 27, 2026
 
-## Phase 5: Dashboard Expansion, Personal Data, And Social Auth
+**🎯 Core Focus:**
+- **Mobile Optimization:** Heavy CSS overhaul for smaller viewports.
+- **Landing-Page Polish:** Fixed hero alignments and media.
+- **Model Tiers:** Structured the split between "Free" models and "Pro" reasoning.
 
-Date: March 27, 2026
+**📝 Key Commits:**
+- `3e93e65` Initial mobile optimization
+- `b5965aa` Expand mobile optimizations
+- `1dc5297` Finalize mobile responsive dashboard
+- `4607282` Fix hero section on landing page
+- `ad26a6c` Setup free and pro AI models
 
-Focus:
+---
 
-- calculator and comparison fixes
-- profile redesign
-- to-do and finance-data improvements
-- Microsoft and Facebook auth expansion
+## 💳 Phase 7: Premium Subscription Flow
+📅 **Date(s):** March 28, 2026
 
-Representative commits:
+**🎯 Core Focus:**
+- **Stripe Integration:** Created full billing/checkout pipelines.
+- **State Persistence:** Supabase now correctly retains `.plan` status.
+- **Payment Verification:** Webhooks ensuring true account upgrades.
 
-- `19daccb` fixed fourth table,name in dark mode and compare-count
-- `b963cc3` fixed calculator and first 2 points
-- `6763781` Profile changed
-- `c6e374f` to do fixes
-- `7a74579` changed linkedin to microsoft
-- `21ed729` microsoft login done
-- `a25f2cf` added facebook auth
-- `e9c773b` added facebook auth
-- `cfff4ca` login page
+**📝 Key Commits:**
+- `5bd5338` Implement Stripe logic
+- `43cd324` Enhance Stripe logic
+- `eff378c` Fix chatbot handling
+- `2bb3dc2` Fix settings button
+- `554c255` Update instruction files
 
-## Phase 6: Mobile And Model Tiering
+---
 
-Date: March 27, 2026
+## 💎 Phase 8: Premium Feature Locking & Final Polish
+📅 **Date(s):** March 29, 2026
 
-Focus:
+**🎯 Core Focus:**
+- **Product Lockout:** Restricting product comparisons strictly to premium users.
+- **Visual Indicators:** UI lock icons visually state restricted components.
+- **Structure Fixes:** Repaired Free/Pro LLM model backend errors.
+- **Cleanups:** Removed irrelevant display cards; fixed compare table rendering.
 
-- mobile optimization
-- landing-page polish
-- chatbot free/pro model split
+**📝 Key Commits:**
+- `63019a9` Lock compare features
+- `ade899d` Fix lock behavior
+- `839fcbc` Fix lock icon
+- `104a163` Fix compare table on search
+- `1feab81` Remove irrelevant tracking and UI cards
+- `f74b43e` Fix free model structure issues
+- `43b1464` Stabilize LLM and functionality
 
-Representative commits:
+---
 
-- `3e93e65` mobile opt
-- `b5965aa` mobile optimizationsss
-- `1dc5297` final mobileopt
-- `4607282` fixed hero page
-- `ad26a6c` set up free and pro ai models
+## 📌 Present Build Picture
 
-## Phase 7: Premium Subscription Flow
+The repository currently centers around:
+- **Core App:** One Flask web app root located in `backend/app.py`
+- **AI Backend:** Specialized LLM logic located in `backend/chat.py`
+- **Frontend Architecture:** Server-rendered templates utilizing dense client-side dashboard JS
+- **Supabase Integration:** Backs auth, profile storage/memory, and vector retrieval (`financial_docs`)
+- **LLM Pipeline:** OpenAI-powered generation & embeddings, scaling optional OpenRouter models on "free" tiers
+- **Monetization:** Stripe-backed subscription upgrades and webhooks
+- **Crawler:** Firecrawl and OpenAI extraction script inside `backend/scrapper.py`
 
-Date: March 28, 2026
+## ⚙️ Build & Run Process
 
-Focus:
+**Local Fast Start:**
+1. Generate `venv` and activate
+2. Install dependencies: `pip install -r requirements.txt`
+3. Provide Supabase, Stripe, and OpenAI environment configurations (`.env`)
+4. Root launch: `python app.py` (inside `backend/`)
 
-- Stripe checkout integration
-- premium plan state persistence
-- payment verification logic
-- docs refresh
+**Render Deployment:**
+The `render.yaml` orchestrates the remote process:
+1. Targets `backend/` directory
+2. Initiates `pip install -r requirements.txt`
+3. Start command invokes `python app.py` natively
 
-Representative commits:
-
-- `5bd5338` stripe done
-- `43cd324` stripe added
-- `eff378c` Chatbot fixed
-- `2bb3dc2` settings button fixed
-- `554c255` update instr files
-
-## Present Build Picture
-
-The repository is currently built around:
-
-- one Flask web app in `backend/app.py`
-- one AI blueprint in `backend/chat.py`
-- server-rendered templates with large client-side dashboard logic
-- Supabase-backed auth, storage, and retrieval
-- OpenAI-powered embeddings and generation
-- optional OpenRouter routing for free chat mode
-- Stripe-backed premium upgrades
-- optional Firecrawl ingestion through `backend/scrapper.py`
-
-## Current Build And Run Process
-
-For local development, the present workflow is:
-
-1. Create a virtual environment.
-2. Install `backend/requirements.txt`.
-3. Provide Supabase and OpenAI environment variables.
-4. Run `python app.py` inside `backend/`.
-
-For deployment, `render.yaml` currently:
-
-1. builds from `backend/`
-2. installs Python dependencies with `pip`
-3. starts the app with `python app.py`
-
-## Important Corrections To Older Docs
-
-- The live codebase is not a multi-agent runtime.
-- Premium billing and plan selection are now part of the current application surface.
-- The app stores more than chat history now; it also persists finance data and subscription state inside the `user_data` record.
-- Build/runtime documentation still needs one final cleanup around Python version alignment and whether Render should run Flask directly or switch to Gunicorn.
+> **Note:** Both Render and Local environments have been unified to mandate `python-3.11.9` for strict compatibility.

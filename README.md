@@ -1,5 +1,7 @@
 # FinclarityAI
 
+**Live Demo:** [https://finclarityai.onrender.com/](https://finclarityai.onrender.com/)
+
 FinclarityAI is a hackathon-stage financial assistant built around a Flask backend, Supabase auth/data storage, retrieval-backed AI responses, and a dashboard for chat, comparison, calculators, and personal finance tracking.
 
 ## What The App Does Today
@@ -10,7 +12,7 @@ FinclarityAI is a hackathon-stage financial assistant built around a Flask backe
 - Lets users compare products and open detailed product breakdowns
 - Supports email/password, guest, Google, Microsoft, and Facebook login flows
 - Stores chat history, memory, subscription state, todos, goals, and expenses in Supabase
-- Includes a Stripe-powered Premium upgrade flow
+- Includes a Stripe-powered Premium upgrade flow that restricts features like Product Comparison to pro users
 - Ships as a single Render web service rooted at `backend/`
 
 ## Present Architecture
@@ -54,7 +56,7 @@ The `chats` payload is currently used as a compound document holding:
 
 - Embeddings use `text-embedding-3-small`
 - Main chat defaults to `gpt-4o-mini`
-- Product details use `gpt-4o`
+- Product details use `gpt-4o-mini`
 - `free` mode can use OpenRouter if `OPENROUTER_API_KEY` is configured
 - If no matching financial documents are found for a product-style query, the chatbot refuses rather than inventing product facts
 
@@ -69,7 +71,7 @@ The `chats` payload is currently used as a compound document holding:
 - Optional Stripe keys for premium checkout testing
 - Optional Firecrawl key for ingestion
 
-Note: `backend/runtime.txt` currently pins `python-3.11.9`, while `render.yaml` sets `PYTHON_VERSION=3.13.5`. The codebase should be documented and tested against one chosen version before production hardening.
+Note: Render deployment and local development are both configured for `python-3.11.9`.
 
 ### Setup
 
@@ -152,22 +154,24 @@ finclarityAI/
 |   |-- app.py
 |   |-- chat.py
 |   |-- scrapper.py
+|   |-- decision_engine.py
 |   |-- check_db.py
 |   |-- requirements.txt
 |   |-- runtime.txt
 |   |-- targets.json
 |   |-- templates/
-|   `-- static/
+|   |-- static/
+|   `-- services/
 |-- README.md
-|-- impact_model.md
-|-- agent_architecture.md
 |-- build_process_commits.md
 |-- COMMIT_HISTORY.md
-`-- render.yaml
+|-- render.yaml
+|-- verify_new_logic.py
+`-- debug_fin.py
 ```
 
 ## Current Caveats
 
+- **Limited Database Output:** Due to the hackathon scale and current scraping limits, our database currently has a limited subset of financial product data ingested. As a result, some specific product queries or comparisons may not yield results. The system is designed to seamlessly become fully functional and support all queries once more data is scraped and ingested into the `financial_docs` table.
 - No automated test suite is committed today.
-- Some deployment/runtime details still need consolidation.
 - The docs previously overstated the system as a multi-agent architecture; the current code is a single Flask app with specialized AI endpoints.
