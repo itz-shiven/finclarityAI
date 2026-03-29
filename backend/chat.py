@@ -610,21 +610,58 @@ def compare_product():
         except Exception as e:
             print(f"🚨 Supabase Error in compare_product: {e}")
             docs = []
-        
+
+        # ABSOLUTE STRICTNESS: Keyword Shield
+        # If the returned documents don't even mention the product name keywords, discard them.
         if docs:
-            context = "\n\n".join([doc['content'] for doc in docs])
-        else:
-            context = "❌ NO DATA AVAILABLE: The database does not contain information on this product."
+            product_words = [w.lower() for w in product_name.split() if len(w) > 2]
+            if not product_words:
+                product_words = [product_name.lower()]
+                
+            filtered_docs = []
+            for doc in docs:
+                content_lower = doc.get('content', '').lower()
+                # Check if at least one meaningful word from the product name is in the doc
+                if any(word in content_lower for word in product_words):
+                    filtered_docs.append(doc)
+            docs = filtered_docs
+        
+        # DEFINITIVE FIX: If no documents are found, return "Not Available" for all required keys immediately.
+        # This completely bypasses the LLM and eliminates hallucination.
+        def get_empty_features(category):
+            if category.lower() == "cards":
+                return {"Joining Fee": "Not Available", "Annual Fee": "Not Available", "Reward Rate": "Not Available", "Lounge Access": "Not Available", "Forex Markup": "Not Available", "Milestones/Offers": "Not Available", "Best For": "Not Available"}
+            elif category.lower() == "loans":
+                return {"Interest Rate": "Not Available", "Processing Fee": "Not Available", "Max Loan Amount": "Not Available", "Tenure": "Not Available", "Eligibility": "Not Available", "Foreclosure Charges": "Not Available"}
+            elif category.lower() == "stocks" or category.lower() == "stock market":
+                return {"Brokerage (Intraday)": "Not Available", "Brokerage (Delivery)": "Not Available", "Account Opening Fee": "Not Available", "AMC": "Not Available", "Platforms": "Not Available", "Margin/Leverage": "Not Available"}
+            return {"Feature 1": "Not Available", "Feature 2": "Not Available", "Feature 3": "Not Available", "Pricing": "Not Available", "Pros": "Not Available", "Cons": "Not Available"}
+
+        if not docs:
+            print(f"[COMPARE DEBUG] No high-confidence docs found for {product_name}. Bypassing LLM.")
+            return jsonify({
+                "status": "success",
+                "product_name": product_name,
+                "provider": provider,
+                "features": get_empty_features(category)
+            })
+
+        context = "\n\n".join([doc['content'] for doc in docs])
 
         system_prompt = f"""
-You are an expert financial data extractor. You must extract key comparison details for the product '{product_name}' by '{provider}'.
-Category: {category}
+You are an expert financial data extractor for Finclarity AI.
+Your ONLY source of truth is the provided CONTEXT.
 
-### INSTRUCTIONS:
-1. ONLY return a JSON object. No other text.
-2. Use the provided context to fill in values.
-3. If a value is missing from the context, use "Not Available" for that field.
-4. Keep values extremely concise (under 8 words).
+### THE GOLDEN RULE (NO EXCEPTIONS):
+- You MUST only use the facts found in the CONTEXT.
+- If a value is missing or unclear in the provided context, you MUST use "Not Available" for that field.
+- DO NOT use your internal training data, knowledge, or common facts to guess rates, fees, or features. 
+- DO NOT be conversational. Return ONLY the JSON object.
+
+### EXTRACTION INSTRUCTIONS:
+1. Return a strict JSON object containing comparison details for the product '{product_name}' by '{provider}'.
+2. Category: {category}
+3. Keep values extremely concise (under 8 words).
 
 ### STRICT KEY LIST (ONLY use these keys for {category}):
 """
@@ -644,35 +681,18 @@ Category: {category}
             {"role": "user", "content": f"Context:\n{context}\n\nExtract requested JSON for {product_name}."}
         ]
 
-        print(f"[COMPARE DEBUG] Fetching JSON for {product_name}...")
+        print(f"[COMPARE DEBUG] Fetching JSON for {product_name} with high-confidence docs...")
 
         ai_res = openai_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=messages,
-            temperature=0.1,
-            max_tokens=300
+            temperature=0,
+            max_tokens=300,
+            response_format={ "type": "json_object" }
         )
 
         reply = ai_res.choices[0].message.content.strip()
-        
-        if reply.startswith("```json"):
-            reply = reply[7:]
-        if reply.startswith("```"):
-            reply = reply[3:]
-        if reply.endswith("```"):
-            reply = reply[:-3]
-        
-        reply = reply.strip()
-        
-        try:
-            features = json.loads(reply)
-            if isinstance(features, str):
-                features = {"Info": features}
-            if not isinstance(features, dict):
-                features = {"Info": str(features)}
-        except json.JSONDecodeError:
-            print(f"[COMPARE DEBUG] LLM Failed to output valid JSON. Output was: {reply}")
-            features = {"Status": "Not Found", "Details": "The database contains limited info about this specific product." if "NO DATA AVAILABLE" in context else "Unable to parse data."}
+        features = json.loads(reply)
 
         return jsonify({
             "status": "success",

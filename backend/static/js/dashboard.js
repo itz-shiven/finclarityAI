@@ -2064,13 +2064,13 @@ const productsData = {
             name: "AXIS Atlas",
             icon: "fas fa-plane",
             details: {
-                "Joining Fee": "₹5,000 + GST",
-                "Annual Fee": "₹5,000 (5,000 Edge Miles reward)",
-                "Reward Rate": "5% (Edge Miles) on Travel",
-                "Lounge Access": "Unlimited Domestic + 8 Intl",
-                "Forex Markup": "3.5% + GST",
-                "Milestones": "Up to 10,000 Miles on Spends",
-                "Best For": "Frequent Flyers"
+                "Joining Fee": "Not Available",
+                "Annual Fee": "Not Available",
+                "Reward Rate": "Not Available",
+                "Lounge Access": "Not Available",
+                "Forex Markup": "Not Available",
+                "Milestones": "Not Available",
+                "Best For": "Not Available"
             },
             recommended: false
         },
@@ -2081,13 +2081,13 @@ const productsData = {
             name: "SBI Cashback Card",
             icon: "fas fa-wallet",
             details: {
-                "Joining Fee": "₹999 + GST",
-                "Annual Fee": "₹999 (Waived on ₹2L spend)",
-                "Reward Rate": "5% Unlimited Cashback (Online)",
-                "Lounge Access": "None",
-                "Forex Markup": "3.5% + GST",
-                "Milestones": "Fuel Surcharge Waiver",
-                "Best For": "Online Shopping"
+                "Joining Fee": "Not Available",
+                "Annual Fee": "Not Available",
+                "Reward Rate": "Not Available",
+                "Lounge Access": "Not Available",
+                "Forex Markup": "Not Available",
+                "Milestones": "Not Available",
+                "Best For": "Not Available"
             },
             recommended: false
         },
@@ -2098,13 +2098,13 @@ const productsData = {
             name: "Amazon Pay ICICI",
             icon: "fab fa-amazon",
             details: {
-                "Joining Fee": "Lifetime Free (₹0)",
-                "Annual Fee": "Lifetime Free (₹0)",
-                "Reward Rate": "5% for Prime Customers",
-                "Lounge Access": "None",
-                "Forex Markup": "3.5% + GST",
-                "Milestones": "Unlimited Earnings",
-                "Best For": "Amazon Loyalists"
+                "Joining Fee": "Not Available",
+                "Annual Fee": "Not Available",
+                "Reward Rate": "Not Available",
+                "Lounge Access": "Not Available",
+                "Forex Markup": "Not Available",
+                "Milestones": "Not Available",
+                "Best For": "Not Available"
             },
             recommended: false
         }
@@ -2117,13 +2117,13 @@ const productsData = {
             name: "Star Health Comprehensive",
             icon: "fas fa-heartbeat",
             details: {
-                "Sum Insured": "₹5L - ₹1Cr",
-                "Premium": "Starts at ₹12,000/yr",
-                "Waiting Period": "36 Months (PED)",
-                "No Claim Bonus": "Up to 100%",
-                "Restoration": "100% Automatic",
-                "OPD Cover": "Included up to ₹5,000",
-                "Best For": "Family Floater"
+                "Sum Insured": "Not Available",
+                "Premium": "Not Available",
+                "Waiting Period": "Not Available",
+                "No Claim Bonus": "Not Available",
+                "Restoration": "Not Available",
+                "OPD Cover": "Not Available",
+                "Best For": "Not Available"
             },
             recommended: true
         },
@@ -2153,13 +2153,13 @@ const productsData = {
             name: "Kotak 811",
             icon: "fas fa-piggy-bank",
             details: {
-                "Min Balance": "Zero Balance",
-                "Interest Rate": "Up to 7% p.a.",
-                "Debit Card": "Virtual (Free)",
-                "Account Type": "Full Digital",
-                "Mobile App": "Industry Leading",
-                "ATM Access": "Any ATM",
-                "Best For": "Digital Savvy Users"
+                "Min Balance": "Not Available",
+                "Interest Rate": "Not Available",
+                "Debit Card": "Not Available",
+                "Account Type": "Not Available",
+                "Mobile App": "Not Available",
+                "ATM Access": "Not Available",
+                "Best For": "Not Available"
             },
             recommended: true
         },
@@ -2247,8 +2247,14 @@ function setupComparisonFeature() {
 window.toggleSelection = function (productId) {
     const index = comparisonList.indexOf(productId);
     if (index === -1) {
-        if (comparisonList.length >= 3) {
-            alert("You can only select up to 3 products at a time.");
+        if (comparisonList.length >= 4) {
+            showFinanceActionModal({
+                title: 'Limit Reached',
+                message: 'You can only select up to 4 products at a time. Remove one to add another.',
+                confirmText: 'Okay',
+                hideCancel: true,
+                destructive: true
+            });
             return;
         }
         comparisonList.push(productId);
